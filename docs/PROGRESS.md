@@ -74,3 +74,13 @@
 - Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `git diff --check`.
 - Quyết định quan trọng: admission không tự tạo Note/Card từ raw input để tránh đưa dữ liệu ingest thô vào SRS; trạng thái `Admitted` là quyết định đủ ngân sách, bước chuyển đổi nội dung thành note được giữ tách biệt.
 - Tiếp theo: Milestone 8 — đồng bộ cursor và realtime.
+
+## Milestone 8 — Đồng bộ cursor và realtime
+
+- Trạng thái: Hoàn thành.
+- Commit: Sẽ được bổ sung sau khi tạo commit milestone.
+- Đã push: Không thể push vì repository chưa có remote `origin`.
+- Đã thực hiện: thêm `SyncEvent` append-only với sequence SQL Server monotonic, push idempotent theo `(userId, clientEventId)`, pull cursor tối đa 500 events và status cursor; Socket.IO gateway xác thực JWT, chỉ tham gia room `user:<userId>` và chỉ phát thông báo `sync.required`.
+- Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `git diff --check`.
+- Quyết định quan trọng: REST pull cursor là nguồn sự thật; Socket.IO không mang payload riêng tư và chỉ báo client cần pull lại.
+- Tiếp theo: Milestone 9 — media storage an toàn.
