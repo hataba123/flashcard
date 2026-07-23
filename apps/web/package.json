@@ -13,12 +13,12 @@
   "dependencies": {
     "@flashcard/scheduling": "workspace:*",
     "@tanstack/react-query": "5.90.20",
-    "dexie": "^4.4.4",
+    "dexie": "4.4.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "7.71.1",
-    "react-router-dom": "7.13.1",
-    "socket.io-client": "^4.8.3",
+    "react-router-dom": "7.15.0",
+    "socket.io-client": "4.8.3",
     "zod": "4.3.6",
     "zustand": "5.0.12"
   },
@@ -29,8 +29,8 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "5.1.4",
     "jsdom": "27.4.0",
-    "vite": "7.3.1",
-    "vite-plugin-pwa": "^1.3.0",
+    "vite": "7.3.5",
+    "vite-plugin-pwa": "1.3.0",
     "vitest": "4.1.0"
   }
 }

@@ -12,7 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "3.970.0",
+    "@aws-sdk/client-s3": "3.1092.0",
     "@flashcard/contracts": "workspace:*",
     "@flashcard/scheduling": "workspace:*",
     "@nestjs/common": "11.1.28",
@@ -22,6 +22,7 @@
     "@nestjs/platform-express": "11.1.28",
     "@nestjs/platform-socket.io": "11.1.28",
     "@nestjs/swagger": "11.4.6",
+    "@nestjs/throttler": "6.5.0",
     "@nestjs/typeorm": "11.0.3",
     "@nestjs/websockets": "11.1.28",
     "argon2": "0.45.1",
@@ -30,7 +31,7 @@
     "cookie-parser": "1.4.7",
     "helmet": "8.1.0",
     "mssql": "12.7.0",
-    "multer": "2.0.2",
+    "multer": "2.2.0",
     "nestjs-pino": "4.6.1",
     "pino": "10.3.1",
     "reflect-metadata": "0.2.2",

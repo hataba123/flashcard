@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
 
@@ -19,6 +21,7 @@ import { SyncModule } from './sync/sync.module.js';
       isGlobal: true,
       validate: parseEnvironment
     }),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
@@ -51,6 +54,7 @@ import { SyncModule } from './sync/sync.module.js';
     ReviewsModule,
     SyncModule
   ],
-  controllers: [HealthController]
+  controllers: [HealthController],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }]
 })
 export class AppModule {}

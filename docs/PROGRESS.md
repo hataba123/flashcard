@@ -130,3 +130,12 @@
 - Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `git diff --check`.
 - Quyết định quan trọng: retention là retrievability server tính trước review; truy vấn dashboard aggregate tại SQL Server, không quét review log trong bộ nhớ.
 - Tiếp theo: Milestone 14 — hardening và release readiness.
+
+## Milestone 14 — Hardening và release readiness
+
+- Trạng thái: Hoàn thành.
+- Commit: Sẽ được bổ sung sau khi tạo commit milestone.
+- Đã thực hiện: global rate limit, CSP/Helmet, giới hạn body request, ngưỡng leech 8 lần lapse, cập nhật dependency vá lỗ hổng high/critical, CI audit, README và tài liệu security/release.
+- Kiểm tra đã chạy: `pnpm audit --audit-level high`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `git diff --check`; Docker Compose không kiểm tra được vì máy hiện tại chưa cài Docker CLI.
+- Quyết định quan trọng: CI chặn vulnerability high/critical; low transitive dependency được ghi nhận trong `docs/security.md` để theo dõi cập nhật tiếp theo.
+- Tiếp theo: Theo dõi CI trên GitHub và kiểm thử migration với SQL Server local trước rollout production.

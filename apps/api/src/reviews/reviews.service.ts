@@ -102,6 +102,7 @@ export class ReviewsService {
         input.reviewedAtUtc
       );
       this.applySchedulingResult(card, schedulingResult.card);
+      card.isLeech = card.lapseCount >= 8;
       card.version += 1;
       await cardRepository.save(card);
 
