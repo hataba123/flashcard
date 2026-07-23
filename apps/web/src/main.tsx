@@ -21,12 +21,8 @@ import { z } from 'zod';
 import { create } from 'zustand';
 
 import { ApiError, api } from './api.js';
-import {
-  nextReviewIndex,
-  ratingForShortcut,
-  reviewRatings,
-  type ReviewRating
-} from './review-utils.js';
+import { ReviewControls } from './review-controls.js';
+import { nextReviewIndex, ratingForShortcut, type ReviewRating } from './review-utils.js';
 import './styles.css';
 
 interface User {
@@ -105,7 +101,11 @@ type LoginForm = z.infer<typeof loginSchema>;
 type DeckForm = z.infer<typeof deckSchema>;
 type NoteForm = z.infer<typeof noteSchema>;
 const errorMessage = (error: unknown) =>
-  error instanceof ApiError ? error.message : 'Đã xảy ra lỗi. Vui lòng thử lại.';
+  error instanceof ApiError
+    ? error.message
+    : error instanceof z.ZodError
+      ? (error.issues[0]?.message ?? 'Dữ liệu không hợp lệ.')
+      : 'Đã xảy ra lỗi. Vui lòng thử lại.';
 const FormError = ({ message }: { message?: string | undefined }) =>
   message === undefined ? null : (
     <span className="form-error" role="alert">
@@ -693,35 +693,23 @@ function Review() {
         <p className="review-face">{front}</p>
         <AudioControl mediaId={fields.audioMediaId} />
         {revealedAt === null ? (
-          <button className="reveal" onClick={() => setRevealedAt(new Date())}>
-            Hiện đáp án <kbd>Space</kbd>
-          </button>
+          <ReviewControls
+            revealed={false}
+            previews={undefined}
+            isSubmitting={grade.isPending}
+            onReveal={() => setRevealedAt(new Date())}
+            onGrade={() => undefined}
+          />
         ) : (
           <>
             <p className="answer">{back}</p>
-            <div className="grade-actions">
-              {reviewRatings.map((rating, ratingIndex) => {
-                const preview = previews.data?.find((item) => item.rating === rating);
-                return (
-                  <button
-                    key={rating}
-                    className={`rating ${rating.toLowerCase()}`}
-                    disabled={grade.isPending}
-                    onClick={() => grade.mutate(rating)}
-                  >
-                    <span>{rating}</span>
-                    <small>
-                      {preview === undefined
-                        ? '…'
-                        : preview.scheduledDays === 0
-                          ? 'bây giờ'
-                          : `${preview.scheduledDays} ngày`}
-                    </small>
-                    <kbd>{ratingIndex + 1}</kbd>
-                  </button>
-                );
-              })}
-            </div>
+            <ReviewControls
+              revealed
+              previews={previews.data}
+              isSubmitting={grade.isPending}
+              onReveal={() => undefined}
+              onGrade={(rating) => grade.mutate(rating)}
+            />
           </>
         )}
       </section>

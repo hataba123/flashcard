@@ -105,8 +105,10 @@
 
 ## Milestone 11 — Review UI
 
-- Trạng thái: Đang triển khai.
+- Trạng thái: Hoàn thành.
+- Commit: Sẽ được bổ sung sau khi tạo commit milestone.
+- Đã push: Chưa thể push vì repository chưa có remote `origin`.
 - Đã thực hiện: trang ôn tập lấy queue từ API, reveal bắt buộc trước grading, interval preview do server tính, phím tắt Space và 1–4, submit optimistic có rollback, undo lần chấm gần nhất, conflict UI có nút tải lại queue, preload note/audio của thẻ kế tiếp và phát audio qua Blob URL có Bearer authorization.
-- Kiểm tra đã chạy: thêm Vitest cho web và unit test quy tắc grading keyboard; workspace lint, typecheck, unit test, build và Prettier đều pass.
-- Còn lại: test component/E2E và trải nghiệm conflict chuyên biệt hơn cho từng loại lỗi.
-- Tiếp theo: hoàn thiện Milestone 11 trước khi triển khai PWA/offline sync ở Milestone 12.
+- Kiểm tra đã chạy: Vitest unit/component test cho grading/reveal, Playwright E2E cho validation login và login đến dashboard bằng API mock; workspace lint, typecheck, unit test, build và Prettier đều pass.
+- Quyết định quan trọng: browser chạy E2E local dùng Chrome đã cài trên Windows; CI tải Chromium chính thức bằng Playwright.
+- Tiếp theo: Milestone 12 — PWA và offline sync.
