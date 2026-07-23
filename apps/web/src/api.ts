@@ -27,6 +27,9 @@ class ApiClient {
   delete(path: string): Promise<void> {
     return this.request<void>(path, { method: 'DELETE' });
   }
+  getBlob(path: string): Promise<Blob> {
+    return this.requestBlob(path);
+  }
   refresh(): Promise<{ accessToken: string }> {
     return this.request('/auth/refresh', { method: 'POST' });
   }
@@ -45,6 +48,17 @@ class ApiClient {
       throw new ApiError(response.status, error.message ?? 'Không thể hoàn tất yêu cầu.');
     }
     return response.status === 204 ? (undefined as T) : (response.json() as Promise<T>);
+  }
+  private async requestBlob(path: string): Promise<Blob> {
+    const response = await fetch(`${apiUrl}${path}`, {
+      credentials: 'include',
+      headers: this.accessToken === null ? {} : { Authorization: `Bearer ${this.accessToken}` }
+    });
+    if (!response.ok) {
+      const error = (await response.json().catch(() => ({}))) as ApiErrorResponse;
+      throw new ApiError(response.status, error.message ?? 'Không thể tải media.');
+    }
+    return response.blob();
   }
 }
 export const api = new ApiClient();

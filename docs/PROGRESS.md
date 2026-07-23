@@ -106,7 +106,7 @@
 ## Milestone 11 — Review UI
 
 - Trạng thái: Đang triển khai.
-- Đã thực hiện: trang ôn tập lấy queue từ API, reveal bắt buộc trước grading, interval preview do server tính, phím tắt Space và 1–4, submit review có timestamp/session/device ID, undo lần chấm gần nhất và hiển thị lỗi conflict từ API.
-- Kiểm tra đã chạy: workspace lint, typecheck, unit test và build đều pass.
-- Còn lại: render/audio media, preload card tiếp theo, optimistic UI nâng cao, conflict UI chuyên biệt và test component/E2E.
+- Đã thực hiện: trang ôn tập lấy queue từ API, reveal bắt buộc trước grading, interval preview do server tính, phím tắt Space và 1–4, submit optimistic có rollback, undo lần chấm gần nhất, conflict UI có nút tải lại queue, preload note/audio của thẻ kế tiếp và phát audio qua Blob URL có Bearer authorization.
+- Kiểm tra đã chạy: thêm Vitest cho web và unit test quy tắc grading keyboard; workspace lint, typecheck, unit test, build và Prettier đều pass.
+- Còn lại: test component/E2E và trải nghiệm conflict chuyên biệt hơn cho từng loại lỗi.
 - Tiếp theo: hoàn thiện Milestone 11 trước khi triển khai PWA/offline sync ở Milestone 12.

@@ -21,6 +21,12 @@ import { z } from 'zod';
 import { create } from 'zustand';
 
 import { ApiError, api } from './api.js';
+import {
+  nextReviewIndex,
+  ratingForShortcut,
+  reviewRatings,
+  type ReviewRating
+} from './review-utils.js';
 import './styles.css';
 
 interface User {
@@ -70,7 +76,7 @@ interface ReviewQueue {
   budgetSeconds: number;
 }
 interface ReviewPreview {
-  rating: 'Again' | 'Hard' | 'Good' | 'Easy';
+  rating: ReviewRating;
   dueAtUtc: string;
   scheduledDays: number;
 }
@@ -544,6 +550,7 @@ function Review() {
   const [revealedAt, setRevealedAt] = useState<Date | null>(null);
   const [lastReviewId, setLastReviewId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [hasConflict, setHasConflict] = useState(false);
   const sessionId = useState(() => crypto.randomUUID())[0];
   const deviceId = useState(() => crypto.randomUUID())[0];
   const queue = useQuery({
@@ -561,8 +568,25 @@ function Review() {
     queryFn: () => api.get<ReviewPreview[]>(`/cards/${card!.id}/review-preview`),
     enabled: card !== undefined && revealedAt !== null
   });
+  useEffect(() => {
+    const nextCard = queue.data?.cards[index + 1];
+    if (nextCard !== undefined) {
+      const nextNote = client.fetchQuery({
+        queryKey: ['review-note', nextCard.noteId],
+        queryFn: () => api.get<Note>(`/notes/${nextCard.noteId}`)
+      });
+      void nextNote.then((note) => {
+        const fields = JSON.parse(note.fieldsJson) as Record<string, string>;
+        if (fields.audioMediaId !== undefined)
+          void client.prefetchQuery({
+            queryKey: ['media', fields.audioMediaId],
+            queryFn: () => api.getBlob(`/media/${fields.audioMediaId}`)
+          });
+      });
+    }
+  }, [client, index, queue.data]);
   const grade = useMutation({
-    mutationFn: (rating: ReviewPreview['rating']) => {
+    mutationFn: (rating: ReviewRating) => {
       if (card === undefined || revealedAt === null)
         throw new Error('Hãy xem đáp án trước khi chấm điểm.');
       const now = new Date();
@@ -579,13 +603,28 @@ function Review() {
         cardVersionBefore: card.version
       });
     },
-    onSuccess: (result) => {
-      setLastReviewId(result.reviewLog.id);
-      setIndex((value) => value + 1);
+    onMutate: () => {
+      const previousIndex = index;
+      const previousShownAt = shownAt;
+      const previousRevealedAt = revealedAt;
+      setIndex(nextReviewIndex);
       setRevealedAt(null);
       setShownAt(new Date());
+      return { previousIndex, previousShownAt, previousRevealedAt };
     },
-    onError: (error) => setSubmitError(errorMessage(error))
+    onSuccess: (result) => {
+      setHasConflict(false);
+      setLastReviewId(result.reviewLog.id);
+    },
+    onError: (error, _rating, context) => {
+      if (context !== undefined) {
+        setIndex(context.previousIndex);
+        setShownAt(context.previousShownAt);
+        setRevealedAt(context.previousRevealedAt);
+      }
+      setHasConflict(error instanceof ApiError && error.status === 409);
+      setSubmitError(errorMessage(error));
+    }
   });
   const undo = useMutation({
     mutationFn: (reviewLogId: string) => api.post(`/reviews/${reviewLogId}/undo`, {}),
@@ -604,14 +643,8 @@ function Review() {
         event.preventDefault();
         setRevealedAt(new Date());
       }
-      const ratings: Record<string, ReviewPreview['rating']> = {
-        '1': 'Again',
-        '2': 'Hard',
-        '3': 'Good',
-        '4': 'Easy'
-      };
-      const rating = ratings[event.key];
-      if (rating !== undefined && revealedAt !== null && !grade.isPending) grade.mutate(rating);
+      const rating = ratingForShortcut(event.key);
+      if (rating !== null && revealedAt !== null && !grade.isPending) grade.mutate(rating);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -658,6 +691,7 @@ function Review() {
       </header>
       <section className="review-card">
         <p className="review-face">{front}</p>
+        <AudioControl mediaId={fields.audioMediaId} />
         {revealedAt === null ? (
           <button className="reveal" onClick={() => setRevealedAt(new Date())}>
             Hiện đáp án <kbd>Space</kbd>
@@ -666,7 +700,7 @@ function Review() {
           <>
             <p className="answer">{back}</p>
             <div className="grade-actions">
-              {(['Again', 'Hard', 'Good', 'Easy'] as const).map((rating, ratingIndex) => {
+              {reviewRatings.map((rating, ratingIndex) => {
                 const preview = previews.data?.find((item) => item.rating === rating);
                 return (
                   <button
@@ -696,7 +730,41 @@ function Review() {
           {submitError}
         </p>
       )}
+      {hasConflict && (
+        <button
+          className="secondary"
+          onClick={() => {
+            setHasConflict(false);
+            setSubmitError(null);
+            setIndex(0);
+            void client.invalidateQueries({ queryKey: ['review-queue'] });
+          }}
+        >
+          Tải lại hàng đợi
+        </button>
+      )}
     </Shell>
+  );
+}
+function AudioControl({ mediaId }: { mediaId: string | undefined }) {
+  const media = useQuery({
+    queryKey: ['media', mediaId],
+    queryFn: () => api.getBlob(`/media/${mediaId!}`),
+    enabled: mediaId !== undefined
+  });
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (media.data === undefined) return;
+    const objectUrl = URL.createObjectURL(media.data);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [media.data]);
+  if (mediaId === undefined) return null;
+  if (media.isError) return <p className="form-error">Không thể tải âm thanh của thẻ.</p>;
+  return url === null ? (
+    <p className="muted">Đang tải âm thanh…</p>
+  ) : (
+    <audio controls preload="auto" src={url} />
   );
 }
 function App() {
