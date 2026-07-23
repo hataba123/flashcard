@@ -47,8 +47,8 @@
 
 ## Milestone 5 — Shared FSRS scheduling
 
-- Trạng thái: Hoàn thành cục bộ; chờ commit.
-- Commit: Chưa tạo.
+- Trạng thái: Hoàn thành.
+- Commit: `1b8491f` — `feat(scheduling): integrate shared FSRS scheduling engine`.
 - Đã push: Chưa thể push vì repository chưa có remote `origin`.
 - Đã thực hiện: thêm wrapper duy nhất quanh `ts-fsrs` 5.4.1 tại `packages/scheduling`; mapping tập trung giữa card ứng dụng và FSRS; preview bốn mức đánh giá, tính review và retrievability; fuzz được bật nhưng có seed theo card để frontend/API cho cùng kết quả.
 - Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`; 3 unit test fixed-clock của scheduling đều pass.
