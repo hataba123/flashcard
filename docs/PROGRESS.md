@@ -57,8 +57,8 @@
 
 ## Milestone 6 — Review engine
 
-- Trạng thái: Hoàn thành cục bộ; chờ commit.
-- Commit: Chưa tạo.
+- Trạng thái: Hoàn thành.
+- Commit: `77c684e` — `feat(review): implement transactional review workflow`.
 - Đã push: Chưa thể push vì repository chưa có remote `origin`.
 - Đã thực hiện: thêm `ReviewLog` append-only và migration; submit review trong transaction với lock card, optimistic concurrency và idempotency `(userId, clientEventId)`; queue theo ngân sách; bulk submit; preview; undo tạo event bù và chỉ cho phép khi card chưa có review mới hơn.
 - Kiểm tra đã chạy: API typecheck, lint, Prettier và unit test review service (idempotency).
