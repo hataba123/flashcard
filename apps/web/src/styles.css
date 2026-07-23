@@ -1,0 +1,44 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #172033;
+  background: #f7f8fc;
+}
+body {
+  margin: 0;
+}
+main {
+  max-width: 720px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+}
+.auth {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}
+form {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 360px);
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px #17203318;
+}
+label {
+  display: grid;
+  gap: 0.4rem;
+}
+input,
+button {
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #cbd2df;
+}
+button {
+  background: #2857d9;
+  color: white;
+  border: 0;
+  font-weight: 700;
+  cursor: pointer;
+}

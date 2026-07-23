@@ -92,3 +92,9 @@
 - Đã thực hiện: MediaFile và migration; upload multipart memory-only, giới hạn 20 MiB, allowlist MIME kèm kiểm tra magic bytes, SHA-256 deduplicate theo user, local và S3-compatible storage sử dụng UUID, kiểm tra ownership khi đọc/xóa mềm.
 - Quyết định quan trọng: xóa API chỉ soft-delete metadata; `cleanupDeleted(beforeUtc)` là hook cho scheduled cleanup, nhờ đó media vẫn tồn tại trong thời gian grace period để tránh xóa nhầm reference trễ.
 - Tiếp theo: Milestone 10 — frontend foundation.
+
+## Milestone 10 — Frontend foundation
+
+- Trạng thái: Đang triển khai.
+- Đã thực hiện: React/Vite, TanStack Query, Zustand session memory, protected routes, API client cookie credentials, responsive login và danh sách deck tối thiểu.
+- Còn lại: form quản lý deck/note đầy đủ, React Hook Form/Zod validation, dashboard shell và PWA.
