@@ -28,10 +28,19 @@
 
 ## Milestone 3 — Authentication và device sessions
 
-- Trạng thái: Hoàn thành cục bộ; chờ commit.
-- Commit: Chưa tạo.
+- Trạng thái: Hoàn thành.
+- Commit: `2ef3a45` — `feat(auth): implement secure authentication and device sessions`.
 - Đã push: Chưa thể push vì repository chưa có remote `origin`.
 - Đã thực hiện: User, Device, RefreshSession entity và migration; register/login/refresh/logout/logout-all/me; Argon2id password; JWT access token; refresh token HttpOnly xoay vòng, phát hiện reuse và revoke token family.
 - Kiểm tra đã chạy: API TypeScript typecheck, ESLint và Prettier.
 - Quyết định quan trọng: Refresh token chỉ gửi bằng cookie và database chỉ lưu SHA-256 hash token; access token không được ghi vào persistent storage.
-- Tiếp theo: Milestone 4 — deck, note, card domain và ownership CRUD.
+
+## Milestone 4 — Deck, note và card domain
+
+- Trạng thái: Hoàn thành cục bộ; chờ commit.
+- Commit: Chưa tạo.
+- Đã push: Chưa thể push vì repository chưa có remote `origin`.
+- Đã thực hiện: entity/migration Deck, Note, Card; CRUD soft delete cho deck/note; Basic, BasicAndReverse, Cloze note type; generate card idempotent.
+- Kiểm tra đã chạy: contracts build, API TypeScript typecheck, ESLint và Prettier.
+- Quyết định quan trọng: ownership lấy từ JWT, không bao giờ lấy `userId` từ body request.
+- Tiếp theo: Milestone 5 — shared FSRS scheduling.
