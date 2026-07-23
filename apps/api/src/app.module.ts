@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { CardsModule } from './cards/cards.module.js';
 import { parseEnvironment, type Environment } from './config/environment.js';
 import { HealthController } from './health/health.controller.js';
+import { ReviewsModule } from './reviews/reviews.module.js';
 
 @Module({
   imports: [
@@ -39,7 +40,8 @@ import { HealthController } from './health/health.controller.js';
       })
     }),
     AuthModule,
-    CardsModule
+    CardsModule,
+    ReviewsModule
   ],
   controllers: [HealthController]
 })

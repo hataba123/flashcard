@@ -38,6 +38,9 @@ importers:
       '@flashcard/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@flashcard/scheduling':
+        specifier: workspace:*
+        version: link:../../packages/scheduling
       '@nestjs/common':
         specifier: 11.1.28
         version: 11.1.28(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -102,6 +105,9 @@ importers:
       tsx:
         specifier: 4.20.6
         version: 4.20.6
+      vitest:
+        specifier: 4.1.0
+        version: 4.1.0(@types/node@22.18.12)(vite@8.1.5(@types/node@22.18.12)(tsx@4.20.6))
 
   apps/web: {}
 

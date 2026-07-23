@@ -54,3 +54,13 @@
 - Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`; 3 unit test fixed-clock của scheduling đều pass.
 - Quyết định quan trọng: retention mặc định là 0.86, deck core mặc định 0.90, learning/relearning step là 10 phút, short-term scheduling bật và interval tối đa 3650 ngày.
 - Tiếp theo: Milestone 6 — review engine append-only và giao dịch review.
+
+## Milestone 6 — Review engine
+
+- Trạng thái: Hoàn thành cục bộ; chờ commit.
+- Commit: Chưa tạo.
+- Đã push: Chưa thể push vì repository chưa có remote `origin`.
+- Đã thực hiện: thêm `ReviewLog` append-only và migration; submit review trong transaction với lock card, optimistic concurrency và idempotency `(userId, clientEventId)`; queue theo ngân sách; bulk submit; preview; undo tạo event bù và chỉ cho phép khi card chưa có review mới hơn.
+- Kiểm tra đã chạy: API typecheck, lint, Prettier và unit test review service (idempotency).
+- Quyết định quan trọng: review log lưu đủ snapshot scheduling trước/sau để undo khôi phục đúng card state mà không cập nhật/xóa lịch sử cũ.
+- Tiếp theo: Milestone 7 — admission control và backlog.
