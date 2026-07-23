@@ -197,6 +197,7 @@
 ## Release polish — PWA installability và local launcher
 
 - Trạng thái: Hoàn thành.
-- Commit: Sẽ được bổ sung sau khi tạo commit release polish.
+- Commit: `6bf05ea` — `feat(web): polish PWA installation and local launcher`.
+- Đã push: Có, lên `origin/main`.
 - Đã thực hiện: thêm SVG icon maskable cho manifest/favicon, chia vendor chunks cho React/offline/scheduling, thêm launcher `run-web.bat` cho local API/web và cập nhật Prettier ignore cho asset/batch script.
 - Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `pnpm audit --audit-level low`, Playwright E2E 4/4 pass, `git diff --check`.
