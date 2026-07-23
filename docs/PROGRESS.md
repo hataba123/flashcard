@@ -112,3 +112,12 @@
 - Kiểm tra đã chạy: Vitest unit/component test cho grading/reveal, Playwright E2E cho validation login và login đến dashboard bằng API mock; workspace lint, typecheck, unit test, build và Prettier đều pass.
 - Quyết định quan trọng: browser chạy E2E local dùng Chrome đã cài trên Windows; CI tải Chromium chính thức bằng Playwright.
 - Tiếp theo: Milestone 12 — PWA và offline sync.
+
+## Milestone 12 — PWA và offline sync
+
+- Trạng thái: Hoàn thành.
+- Commit: Sẽ được bổ sung sau khi tạo commit milestone.
+- Đã thực hiện: thêm PWA manifest/service worker, IndexedDB Dexie cho queue, note, event, cursor và conflict; device identity ổn định; đồng bộ review theo thứ tự khi online với Web Locks và fallback leader lease; Socket.IO kích hoạt pull cursor; UI trạng thái online/offline.
+- Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `git diff --check`.
+- Quyết định quan trọng: API có thông tin phiên hoặc nội dung riêng tư không được service worker runtime-cache; FSRS phía client chỉ là dự đoán tạm thời, server vẫn là nguồn trạng thái cuối cùng.
+- Tiếp theo: Milestone 13 — dashboard và operational metrics.

@@ -18,32 +18,16 @@ import {
   useNavigate
 } from 'react-router-dom';
 import { z } from 'zod';
-import { create } from 'zustand';
+import { schedulingService } from '@flashcard/scheduling';
 
 import { ApiError, api } from './api.js';
+import { offlineDb, getDeviceId, type CachedReviewCard } from './offline-db.js';
+import { OfflineProvider, useOffline } from './offline-provider.js';
 import { ReviewControls } from './review-controls.js';
 import { nextReviewIndex, ratingForShortcut, type ReviewRating } from './review-utils.js';
+import { useSession, type User } from './session.js';
 import './styles.css';
 
-interface User {
-  id: string;
-  email: string;
-  timezone: string;
-}
-interface Session {
-  accessToken: string | null;
-  user: User | null;
-  initialized: boolean;
-  setSession(accessToken: string | null, user: User | null): void;
-  setInitialized(): void;
-}
-const useSession = create<Session>((set) => ({
-  accessToken: null,
-  user: null,
-  initialized: false,
-  setSession: (accessToken, user) => set({ accessToken, user }),
-  setInitialized: () => set({ initialized: true })
-}));
 interface Deck {
   id: string;
   name: string;
@@ -64,7 +48,16 @@ interface ReviewCard {
   id: string;
   noteId: string;
   version: number;
-  state: string;
+  state: 'New' | 'Learning' | 'Review' | 'Relearning';
+  dueAtUtc: string;
+  lastReviewAtUtc: string | null;
+  stability: number;
+  difficulty: number;
+  elapsedDays: number;
+  scheduledDays: number;
+  learningStep: number;
+  reviewCount: number;
+  lapseCount: number;
 }
 interface ReviewQueue {
   cards: ReviewCard[];
@@ -78,6 +71,7 @@ interface ReviewPreview {
 }
 interface ReviewSubmission {
   reviewLog: { id: string };
+  offline?: boolean;
 }
 const loginSchema = z.object({
   email: z.email('Email không hợp lệ.'),
@@ -154,7 +148,7 @@ function Login() {
       const input = loginSchema.parse(values);
       const result = await api.post<{ accessToken: string }>('/auth/login', {
         ...input,
-        deviceId: crypto.randomUUID(),
+        deviceId: await getDeviceId(),
         deviceName: 'Web browser',
         platform: navigator.userAgent.slice(0, 100)
       });
@@ -199,6 +193,7 @@ function Login() {
 function Shell({ children }: { children: ReactNode }) {
   const user = useSession((state) => state.user);
   const setSession = useSession((state) => state.setSession);
+  const offline = useOffline();
   const navigate = useNavigate();
   const logout = async () => {
     try {
@@ -225,6 +220,10 @@ function Shell({ children }: { children: ReactNode }) {
         </nav>
         <div className="account">
           <span>{user?.email}</span>
+          <span className={offline.online ? 'sync-state' : 'sync-state offline'}>
+            {offline.online ? 'Online' : 'Offline'}
+            {offline.pendingCount > 0 ? ` · ${offline.pendingCount} pending` : ''}
+          </span>
           <button className="button-link" onClick={() => void logout()}>
             Đăng xuất
           </button>
@@ -552,15 +551,44 @@ function Review() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [hasConflict, setHasConflict] = useState(false);
   const sessionId = useState(() => crypto.randomUUID())[0];
-  const deviceId = useState(() => crypto.randomUUID())[0];
+  const [deviceId, setDeviceId] = useState<string>(() => crypto.randomUUID());
+  const offline = useOffline();
+  useEffect(() => {
+    void getDeviceId().then(setDeviceId);
+  }, []);
   const queue = useQuery({
     queryKey: ['review-queue'],
-    queryFn: () => api.get<ReviewQueue>('/reviews/queue')
+    queryFn: async () => {
+      try {
+        const response = await api.get<ReviewQueue>('/reviews/queue');
+        await offlineDb.reviewQueue.put({
+          id: 'current',
+          ...response,
+          cachedAtUtc: new Date().toISOString()
+        });
+        return response;
+      } catch {
+        const cached = await offlineDb.reviewQueue.get('current');
+        if (cached === undefined) throw new Error('No offline review queue is available yet.');
+        return cached;
+      }
+    }
   });
   const card = queue.data?.cards[index];
   const note = useQuery({
     queryKey: ['review-note', card?.noteId],
-    queryFn: () => api.get<Note>(`/notes/${card!.noteId}`),
+    queryFn: async () => {
+      try {
+        const response = await api.get<Note>(`/notes/${card!.noteId}`);
+        await offlineDb.notes.put(response);
+        return response;
+      } catch {
+        const cached = await offlineDb.notes.get(card!.noteId);
+        if (cached === undefined)
+          throw new Error('The card content is not cached for offline use.');
+        return cached;
+      }
+    },
     enabled: card !== undefined
   });
   const previews = useQuery({
@@ -586,11 +614,11 @@ function Review() {
     }
   }, [client, index, queue.data]);
   const grade = useMutation({
-    mutationFn: (rating: ReviewRating) => {
+    mutationFn: async (rating: ReviewRating) => {
       if (card === undefined || revealedAt === null)
         throw new Error('Hãy xem đáp án trước khi chấm điểm.');
       const now = new Date();
-      return api.post<ReviewSubmission>('/reviews', {
+      const event = {
         clientEventId: crypto.randomUUID(),
         cardId: card.id,
         sessionId,
@@ -601,7 +629,41 @@ function Review() {
         gradedAtUtc: now.toISOString(),
         reviewedAtUtc: now.toISOString(),
         cardVersionBefore: card.version
-      });
+      };
+      if (navigator.onLine) {
+        try {
+          return await api.post<ReviewSubmission>('/reviews', event);
+        } catch (error) {
+          if (error instanceof ApiError) throw error;
+        }
+      }
+      const scheduled = schedulingService.review(
+        {
+          ...card,
+          dueAtUtc: new Date(card.dueAtUtc),
+          lastReviewAtUtc: card.lastReviewAtUtc === null ? null : new Date(card.lastReviewAtUtc)
+        },
+        rating,
+        now
+      ).card;
+      const locallyUpdatedCard: CachedReviewCard = {
+        ...card,
+        ...scheduled,
+        dueAtUtc: scheduled.dueAtUtc.toISOString(),
+        lastReviewAtUtc: scheduled.lastReviewAtUtc?.toISOString() ?? null,
+        version: card.version + 1
+      };
+      await offlineDb.pendingReviewEvents.put({ ...event, createdAtUtc: now.toISOString() });
+      const cachedQueue = await offlineDb.reviewQueue.get('current');
+      if (cachedQueue !== undefined) {
+        await offlineDb.reviewQueue.put({
+          ...cachedQueue,
+          cards: cachedQueue.cards.map((queuedCard) =>
+            queuedCard.id === locallyUpdatedCard.id ? locallyUpdatedCard : queuedCard
+          )
+        });
+      }
+      return { reviewLog: { id: event.clientEventId }, offline: true };
     },
     onMutate: () => {
       const previousIndex = index;
@@ -614,7 +676,7 @@ function Review() {
     },
     onSuccess: (result) => {
       setHasConflict(false);
-      setLastReviewId(result.reviewLog.id);
+      setLastReviewId(result.offline ? null : result.reviewLog.id);
     },
     onError: (error, _rating, context) => {
       if (context !== undefined) {
@@ -689,6 +751,11 @@ function Review() {
           </button>
         )}
       </header>
+      {!offline.online && (
+        <p className="offline-notice" role="status">
+          Offline reviews are saved on this device and will synchronize after reconnecting.
+        </p>
+      )}
       <section className="review-card">
         <p className="review-face">{front}</p>
         <AudioControl mediaId={fields.audioMediaId} />
@@ -802,7 +869,9 @@ createRoot(document.getElementById('root')!).render(
   <QueryClientProvider client={client}>
     <BrowserRouter>
       <SessionBootstrap>
-        <App />
+        <OfflineProvider>
+          <App />
+        </OfflineProvider>
       </SessionBootstrap>
     </BrowserRouter>
   </QueryClientProvider>
