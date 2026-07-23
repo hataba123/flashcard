@@ -13,7 +13,14 @@ export default defineConfig({
         theme_color: '#F9F4DF',
         background_color: '#F9F4DF',
         start_url: '/',
-        icons: []
+        icons: [
+          {
+            src: '/icon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
+          }
+        ]
       },
       workbox: {
         navigateFallback: '/index.html',
@@ -21,5 +28,16 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          offline: ['dexie', 'socket.io-client'],
+          scheduling: ['@flashcard/scheduling']
+        }
+      }
+    }
+  },
   test: { environment: 'jsdom', exclude: ['e2e/**', '**/node_modules/**', '**/dist/**'] }
 });

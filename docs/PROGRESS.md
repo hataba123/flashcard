@@ -193,3 +193,10 @@
 - Kết quả security: `pnpm audit` báo 0 vulnerability.
 - CI: thêm SQL Server service và chạy migration trước lint/typecheck/test/build để kiểm chứng schema trên GitHub Actions.
 - Integration test: register/login foundation, tạo deck và ownership isolation chạy trên SQL Server thật.
+
+## Release polish — PWA installability và local launcher
+
+- Trạng thái: Hoàn thành.
+- Commit: Sẽ được bổ sung sau khi tạo commit release polish.
+- Đã thực hiện: thêm SVG icon maskable cho manifest/favicon, chia vendor chunks cho React/offline/scheduling, thêm launcher `run-web.bat` cho local API/web và cập nhật Prettier ignore cho asset/batch script.
+- Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `pnpm audit --audit-level low`, Playwright E2E 4/4 pass, `git diff --check`.

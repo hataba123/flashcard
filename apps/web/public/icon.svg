@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Flashcard</title>
+  <rect width="512" height="512" rx="112" fill="#f4bf46"/>
+  <path d="M132 154c0-22 18-40 40-40h188c22 0 40 18 40 40v180c0 22-18 40-40 40H172c-22 0-40-18-40-40V154Z" fill="#201f1a" opacity=".18" transform="rotate(7 266 244)"/>
+  <rect x="112" y="130" width="288" height="236" rx="36" fill="#fffdf6"/>
+  <rect x="112" y="130" width="288" height="236" rx="36" fill="none" stroke="#201f1a" stroke-width="20"/>
+  <path d="M177 300v-61m53 61v-98m53 98v-133m53 133v-76" fill="none" stroke="#201f1a" stroke-linecap="round" stroke-width="28"/>
+  <circle cx="177" cy="218" r="14" fill="#e36b4f"/>
+  <circle cx="230" cy="181" r="14" fill="#e36b4f"/>
+  <circle cx="283" cy="146" r="14" fill="#e36b4f"/>
+  <circle cx="336" cy="203" r="14" fill="#e36b4f"/>
+</svg>
