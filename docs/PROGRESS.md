@@ -204,6 +204,6 @@
 
 ## Sửa lỗi CI SQL Server
 
-- Trạng thái: Đã sửa cấu hình service container.
-- Đã thực hiện: ghim workflow CI trên `ubuntu-22.04`; bỏ cú pháp escape dành riêng cho Docker Compose và dấu nháy đơn đang ngăn shell trong container mở rộng `MSSQL_SA_PASSWORD`; thêm 30 giây khởi động trước khi tính lỗi healthcheck.
-- Kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` và Prettier đều đạt; chưa thể chạy Docker cục bộ vì máy phát triển chưa cài Docker CLI; sẽ xác nhận service container bằng lượt GitHub Actions được kích hoạt sau khi push.
+- Trạng thái: Đã sửa cấu hình service container và khởi tạo database CI.
+- Đã thực hiện: ghim workflow CI trên `ubuntu-22.04`; bỏ cú pháp escape dành riêng cho Docker Compose đang làm sai giá trị `MSSQL_SA_PASSWORD`; thêm 30 giây khởi động trước khi tính lỗi healthcheck; tạo database `DB_NAME` theo cách idempotent trước khi chạy migration.
+- Kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` và Prettier đều đạt; GitHub Actions #25 đã khởi động SQL Server thành công và giúp phát hiện database đích chưa tồn tại; chưa thể chạy Docker cục bộ vì máy phát triển chưa cài Docker CLI.
