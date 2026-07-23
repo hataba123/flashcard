@@ -192,3 +192,4 @@
 - Kiểm tra đã chạy: `docker compose config`, SQL Server healthy, `pnpm --filter @flashcard/api migration:run`, `pnpm --filter @flashcard/api seed:demo`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `pnpm audit --audit-level low`, `git diff --check`.
 - Kết quả security: `pnpm audit` báo 0 vulnerability.
 - CI: thêm SQL Server service và chạy migration trước lint/typecheck/test/build để kiểm chứng schema trên GitHub Actions.
+- Integration test: register/login foundation, tạo deck và ownership isolation chạy trên SQL Server thật.

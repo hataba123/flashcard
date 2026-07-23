@@ -44,8 +44,11 @@
     "zod": "4.1.12"
   },
   "devDependencies": {
+    "@nestjs/testing": "11.1.28",
     "@types/cookie-parser": "1.4.9",
     "@types/multer": "2.0.0",
+    "@types/supertest": "6.0.3",
+    "supertest": "7.1.4",
     "tsx": "4.20.6",
     "vitest": "4.1.0"
   }
