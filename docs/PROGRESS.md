@@ -151,3 +151,12 @@
 - Kiểm tra đã chạy: web typecheck, web production build, workspace lint, Prettier và `git diff --check`.
 - Quyết định quan trọng: giữ CSS thuần và component/route hiện hữu; không thêm UI framework hoặc thay đổi API, authentication hay luồng nghiệp vụ.
 - Tiếp theo: cải thiện app shell, dashboard, bộ thẻ và ghi chú.
+
+## Milestone 15.2 — Điều hướng và màn hình nội dung
+
+- Trạng thái: Hoàn thành.
+- Commit: `style(layout): improve navigation and content screen states`.
+- Đã thực hiện: thêm drawer điều hướng mobile, dashboard dùng số liệu thật với overview rõ ràng hơn, tìm kiếm bộ thẻ cục bộ, empty/error/skeleton state và form nhập deck/note dễ sử dụng hơn.
+- Kiểm tra đã chạy: web typecheck, Vitest, Playwright E2E ở viewport 375px, workspace lint, Prettier và `git diff --check`.
+- Quyết định quan trọng: không thêm API hoặc mock production data; mọi số liệu và thao tác tạo/xóa vẫn gọi đúng endpoint, payload và soft-delete flow hiện hữu.
+- Tiếp theo: cải thiện trải nghiệm ôn tập flashcard.

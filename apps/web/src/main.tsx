@@ -115,16 +115,86 @@ type DeckForm = z.infer<typeof deckSchema>;
 type NoteForm = z.infer<typeof noteSchema>;
 const errorMessage = (error: unknown) =>
   error instanceof ApiError
-    ? error.message
+    ? error.status === 401
+      ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+      : error.status === 403
+        ? 'Bạn không có quyền thực hiện thao tác này.'
+        : error.status === 404
+          ? 'Không tìm thấy dữ liệu bạn yêu cầu.'
+          : error.status >= 500
+            ? 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.'
+            : error.message
     : error instanceof z.ZodError
       ? (error.issues[0]?.message ?? 'Dữ liệu không hợp lệ.')
       : 'Đã xảy ra lỗi. Vui lòng thử lại.';
+
+function ButtonContent({ loading, children }: { loading: boolean; children: ReactNode }) {
+  return (
+    <>
+      {loading && <span className="button-spinner" aria-hidden="true" />}
+      <span>{children}</span>
+    </>
+  );
+}
+
 const FormError = ({ message }: { message?: string | undefined }) =>
   message === undefined ? null : (
     <span className="form-error" role="alert">
       {message}
     </span>
   );
+
+function ListSkeleton() {
+  return (
+    <div className="card-list" aria-label="Đang tải dữ liệu" aria-busy="true">
+      {[1, 2, 3].map((item) => (
+        <div className="skeleton-card" key={item}>
+          <span className="skeleton" style={{ width: '42%', height: 24 }} />
+          <span className="skeleton" style={{ width: '88%', height: 16, marginTop: 20 }} />
+          <span className="skeleton" style={{ width: '60%', height: 16, marginTop: 12 }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function QueryError({ title, onRetry }: { title: string; onRetry(): void }) {
+  return (
+    <section className="page-state error" role="alert">
+      <h2>{title}</h2>
+      <p>Vui lòng kiểm tra kết nối và thử lại.</p>
+      <button className="secondary" onClick={onRetry}>
+        Thử lại
+      </button>
+    </section>
+  );
+}
+
+function EmptyState({
+  title,
+  description,
+  action
+}: {
+  title: string;
+  description: string;
+  action?: ReactNode;
+}) {
+  return (
+    <section className="page-state">
+      <h2>{title}</h2>
+      <p>{description}</p>
+      {action}
+    </section>
+  );
+}
+
+function parseJson<T>(value: string, fallback: T): T {
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
 
 function SessionBootstrap({ children }: { children: ReactNode }) {
   const setSession = useSession((state) => state.setSession);
@@ -201,8 +271,10 @@ function Login() {
             {submitError}
           </p>
         )}
-        <button disabled={login.isPending}>
-          {login.isPending ? 'Đang đăng nhập…' : 'Đăng nhập'}
+        <button disabled={login.isPending} aria-busy={login.isPending}>
+          <ButtonContent loading={login.isPending}>
+            {login.isPending ? 'Đang đăng nhập…' : 'Đăng nhập'}
+          </ButtonContent>
         </button>
       </form>
     </main>
@@ -214,6 +286,7 @@ function Shell({ children }: { children: ReactNode }) {
   const setSession = useSession((state) => state.setSession);
   const offline = useOffline();
   const navigate = useNavigate();
+  const [navigationOpen, setNavigationOpen] = useState(false);
   const logout = async () => {
     try {
       await api.post('/auth/logout', {});
@@ -225,17 +298,38 @@ function Shell({ children }: { children: ReactNode }) {
   };
   return (
     <div className="app-shell">
-      <aside>
+      <button
+        className="mobile-menu"
+        aria-label={navigationOpen ? 'Đóng điều hướng' : 'Mở điều hướng'}
+        aria-expanded={navigationOpen}
+        onClick={() => setNavigationOpen((isOpen) => !isOpen)}
+      >
+        Menu
+      </button>
+      {navigationOpen && (
+        <button
+          className="navigation-scrim"
+          aria-label="Đóng menu bằng vùng nền"
+          onClick={() => setNavigationOpen(false)}
+        />
+      )}
+      <aside className={navigationOpen ? 'navigation-open' : undefined}>
         <Link className="brand" to="/">
           Flashcard
         </Link>
         <nav>
-          <NavLink to="/" end>
+          <NavLink to="/" end onClick={() => setNavigationOpen(false)}>
             Tổng quan
           </NavLink>
-          <NavLink to="/decks">Bộ thẻ</NavLink>
-          <NavLink to="/notes">Ghi chú</NavLink>
-          <NavLink to="/review">Ôn tập</NavLink>
+          <NavLink to="/decks" onClick={() => setNavigationOpen(false)}>
+            Bộ thẻ
+          </NavLink>
+          <NavLink to="/notes" onClick={() => setNavigationOpen(false)}>
+            Ghi chú
+          </NavLink>
+          <NavLink to="/review" onClick={() => setNavigationOpen(false)}>
+            Ôn tập
+          </NavLink>
         </nav>
         <div className="account">
           <span>{user?.email}</span>
@@ -278,67 +372,96 @@ function Dashboard() {
     queryFn: () => api.get<DashboardActivity[]>('/dashboard/activity')
   });
   const offline = useOffline();
+  const queries = [decks, notes, today, retention, backlog, activity];
+  const isLoading = queries.every((query) => query.isLoading);
+  const hasError = queries.some((query) => query.isError);
+  const retry = () => {
+    void Promise.all(queries.map((query) => query.refetch()));
+  };
   return (
     <Shell>
-      <header>
-        <p className="eyebrow">Tổng quan</p>
-        <h1>Học có chủ đích.</h1>
-        <p className="muted">Bắt đầu bằng cách tạo bộ thẻ và ghi chú đầu tiên của bạn.</p>
-      </header>
-      <div className="metric-grid">
-        <Metric
-          label="Bộ thẻ đang dùng"
-          value={decks.data?.filter((deck) => !deck.isArchived).length ?? '—'}
-        />
-        <Metric label="Ghi chú" value={notes.data?.length ?? '—'} />
-        <Metric label="Đồng bộ" value="Sẵn sàng" />
-      </div>
-      <section className="panel dashboard-details">
-        <Metric label="Due today" value={today.data?.dueCount ?? '—'} />
-        <Metric
-          label="Average retention"
-          value={
-            retention.data === undefined
-              ? '—'
-              : `${Math.round(retention.data.averageRetrievability * 100)}%`
-          }
-        />
-        <Metric
-          label="Review time"
-          value={
-            today.data?.reviewTimeSeconds === undefined
-              ? '—'
-              : `${Math.ceil(today.data.reviewTimeSeconds / 60)} min`
-          }
-        />
-        <Metric
-          label="Sync"
-          value={offline.pendingCount === 0 ? 'Ready' : `${offline.pendingCount} pending`}
-        />
+      <header className="page-header">
         <div>
-          <h2>Ingest backlog</h2>
-          <p>
-            {backlog.data?.map((item) => `${item.status}: ${item.count}`).join(' · ') || 'Empty.'}
-          </p>
+          <p className="eyebrow">Tổng quan</p>
+          <h1>Học có chủ đích.</h1>
+          <p className="muted">Theo dõi tiến độ và tiếp tục nhịp học của bạn.</p>
         </div>
-        <div>
-          <h2>14-day activity</h2>
-          <p>
-            {activity.data?.map((item) => `${item.day}: ${item.reviews}`).join(' · ') ||
-              'No reviews yet.'}
-          </p>
-        </div>
-      </section>
-      <section className="panel">
-        <h2>Việc tiếp theo</h2>
-        <p>
-          Quản lý nội dung học của bạn từ Bộ thẻ và Ghi chú. Phiên ôn tập sẽ xuất hiện tại đây ở
-          milestone tiếp theo.
-        </p>
         <Link className="button" to="/decks">
           Tạo bộ thẻ
         </Link>
-      </section>
+      </header>
+      {isLoading ? (
+        <ListSkeleton />
+      ) : hasError ? (
+        <QueryError title="Không thể tải tổng quan." onRetry={retry} />
+      ) : (
+        <>
+          <div className="metric-grid">
+            <Metric
+              label="Bộ thẻ đang dùng"
+              value={decks.data?.filter((deck) => !deck.isArchived).length ?? '—'}
+            />
+            <Metric label="Ghi chú" value={notes.data?.length ?? '—'} />
+            <Metric label="Cần ôn hôm nay" value={today.data?.dueCount ?? '—'} />
+            <Metric
+              label="Thời gian ôn"
+              value={
+                today.data?.reviewTimeSeconds === undefined
+                  ? '—'
+                  : `${Math.ceil(today.data.reviewTimeSeconds / 60)} phút`
+              }
+            />
+          </div>
+          <section className="panel dashboard-details">
+            <Metric
+              label="Khả năng ghi nhớ"
+              value={
+                retention.data === undefined
+                  ? '—'
+                  : `${Math.round(retention.data.averageRetrievability * 100)}%`
+              }
+            />
+            <Metric
+              label="Sync"
+              value={offline.pendingCount === 0 ? 'Ready' : `${offline.pendingCount} pending`}
+            />
+            <div>
+              <h3>Hàng đợi nhập liệu</h3>
+              <p>
+                {backlog.data?.map((item) => `${item.status}: ${item.count}`).join(' · ') ||
+                  'Không có dữ liệu tồn đọng.'}
+              </p>
+            </div>
+            <div>
+              <h3>Hoạt động 14 ngày</h3>
+              <p>
+                {activity.data?.map((item) => `${item.day}: ${item.reviews}`).join(' · ') ||
+                  'Chưa có lượt ôn nào.'}
+              </p>
+            </div>
+          </section>
+          <section className="panel">
+            <h2>Tiếp tục học</h2>
+            <p>Hàng đợi ôn tập của bạn được sắp xếp theo lịch học hiện tại.</p>
+            <Link className="button" to="/review">
+              Bắt đầu ôn tập
+            </Link>
+          </section>
+          {decks.data !== undefined && decks.data.length > 0 && (
+            <section>
+              <h2 className="section-title">Bộ thẻ gần đây</h2>
+              <div className="dashboard-deck-grid">
+                {decks.data.slice(0, 3).map((deck) => (
+                  <Link className="dashboard-deck" to="/decks" key={deck.id}>
+                    <h3>{deck.name}</h3>
+                    <p>{deck.description || 'Chưa có mô tả.'}</p>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
     </Shell>
   );
 }
@@ -371,8 +494,13 @@ function DeckEditor({ deck, done }: { deck: Deck | null; done(): void }) {
         noValidate
       >
         <label>
-          Tên
-          <input {...form.register('name')} />
+          <span className="field-label">
+            Tên{' '}
+            <span className="required" aria-hidden="true">
+              *
+            </span>
+          </span>
+          <input aria-required="true" {...form.register('name')} />
         </label>
         <FormError message={form.formState.errors.name?.message} />
         <label>
@@ -404,7 +532,11 @@ function DeckEditor({ deck, done }: { deck: Deck | null; done(): void }) {
           </p>
         )}
         <div className="actions">
-          <button disabled={save.isPending}>{save.isPending ? 'Đang lưu…' : 'Lưu'}</button>
+          <button disabled={save.isPending} aria-busy={save.isPending}>
+            <ButtonContent loading={save.isPending}>
+              {save.isPending ? 'Đang lưu…' : 'Lưu'}
+            </ButtonContent>
+          </button>
           <button type="button" className="secondary" onClick={done}>
             Hủy
           </button>
@@ -416,30 +548,78 @@ function DeckEditor({ deck, done }: { deck: Deck | null; done(): void }) {
 function Decks() {
   const client = useQueryClient();
   const [editing, setEditing] = useState<Deck | null | undefined>();
+  const [search, setSearch] = useState('');
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const decks = useQuery({ queryKey: ['decks'], queryFn: () => api.get<Deck[]>('/decks') });
   const remove = useMutation({
     mutationFn: (id: string) => api.delete(`/decks/${id}`),
-    onSuccess: () => void client.invalidateQueries({ queryKey: ['decks'] })
+    onSuccess: () => {
+      setRemoveError(null);
+      void client.invalidateQueries({ queryKey: ['decks'] });
+    },
+    onError: (error) => setRemoveError(errorMessage(error))
   });
   const done = () => {
     setEditing(undefined);
     void client.invalidateQueries({ queryKey: ['decks'] });
   };
+  const visibleDecks = decks.data?.filter((deck) => {
+    const query = search.trim().toLocaleLowerCase();
+    return (
+      query.length === 0 ||
+      `${deck.name} ${deck.description ?? ''}`.toLocaleLowerCase().includes(query)
+    );
+  });
   return (
     <Shell>
       <header className="page-header">
         <div>
           <p className="eyebrow">Nội dung</p>
           <h1>Bộ thẻ</h1>
+          <p className="muted">
+            {decks.data === undefined ? 'Đang tải số lượng…' : `${decks.data.length} bộ thẻ`}
+          </p>
         </div>
         <button onClick={() => setEditing(null)}>Tạo bộ thẻ</button>
       </header>
       {editing !== undefined && <DeckEditor deck={editing} done={done} />}
+      <label className="search-field">
+        <span className="sr-only">Tìm kiếm bộ thẻ</span>
+        <input
+          type="search"
+          value={search}
+          placeholder="Tìm kiếm bộ thẻ"
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </label>
+      {removeError !== null && (
+        <p className="form-error" role="alert">
+          {removeError}
+        </p>
+      )}
       {decks.isLoading ? (
-        <p>Đang tải…</p>
+        <ListSkeleton />
+      ) : decks.isError ? (
+        <QueryError title="Không thể tải danh sách bộ thẻ." onRetry={() => void decks.refetch()} />
+      ) : decks.data?.length === 0 ? (
+        <EmptyState
+          title="Bạn chưa có bộ thẻ nào"
+          description="Tạo bộ thẻ đầu tiên để bắt đầu học."
+          action={<button onClick={() => setEditing(null)}>Tạo bộ thẻ</button>}
+        />
+      ) : visibleDecks?.length === 0 ? (
+        <EmptyState
+          title="Không tìm thấy kết quả"
+          description="Thử thay đổi từ khóa tìm kiếm."
+          action={
+            <button className="secondary" onClick={() => setSearch('')}>
+              Xóa tìm kiếm
+            </button>
+          }
+        />
       ) : (
         <div className="card-list">
-          {decks.data?.map((deck) => (
+          {visibleDecks?.map((deck) => (
             <article className="card" key={deck.id}>
               <div>
                 <h2>{deck.name}</h2>
@@ -455,6 +635,7 @@ function Decks() {
                 </button>
                 <button
                   className="danger"
+                  disabled={remove.isPending}
                   onClick={() => {
                     if (confirm(`Xóa mềm bộ thẻ “${deck.name}”?`)) remove.mutate(deck.id);
                   }}
@@ -522,13 +703,23 @@ function NoteEditor({ decks, done }: { decks: Deck[]; done(): void }) {
           </select>
         </label>
         <label>
-          Mặt trước / nội dung
-          <input {...form.register('front')} />
+          <span className="field-label">
+            Mặt trước / nội dung{' '}
+            <span className="required" aria-hidden="true">
+              *
+            </span>
+          </span>
+          <textarea aria-required="true" {...form.register('front')} />
         </label>
         <FormError message={form.formState.errors.front?.message} />
         <label>
-          Mặt sau
-          <input {...form.register('back')} />
+          <span className="field-label">
+            Mặt sau{' '}
+            <span className="required" aria-hidden="true">
+              *
+            </span>
+          </span>
+          <textarea aria-required="true" {...form.register('back')} />
         </label>
         <FormError message={form.formState.errors.back?.message} />
         <label>
@@ -541,8 +732,10 @@ function NoteEditor({ decks, done }: { decks: Deck[]; done(): void }) {
           </p>
         )}
         <div className="actions">
-          <button disabled={save.isPending}>
-            {save.isPending ? 'Đang lưu…' : 'Lưu và tạo thẻ'}
+          <button disabled={save.isPending} aria-busy={save.isPending}>
+            <ButtonContent loading={save.isPending}>
+              {save.isPending ? 'Đang lưu…' : 'Lưu và tạo thẻ'}
+            </ButtonContent>
           </button>
           <button type="button" className="secondary" onClick={done}>
             Hủy
@@ -555,11 +748,16 @@ function NoteEditor({ decks, done }: { decks: Deck[]; done(): void }) {
 function Notes() {
   const client = useQueryClient();
   const [creating, setCreating] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const notes = useQuery({ queryKey: ['notes'], queryFn: () => api.get<Note[]>('/notes') });
   const decks = useQuery({ queryKey: ['decks'], queryFn: () => api.get<Deck[]>('/decks') });
   const remove = useMutation({
     mutationFn: (id: string) => api.delete(`/notes/${id}`),
-    onSuccess: () => void client.invalidateQueries({ queryKey: ['notes'] })
+    onSuccess: () => {
+      setRemoveError(null);
+      void client.invalidateQueries({ queryKey: ['notes'] });
+    },
+    onError: (error) => setRemoveError(errorMessage(error))
   });
   const done = () => {
     setCreating(false);
@@ -571,34 +769,70 @@ function Notes() {
         <div>
           <p className="eyebrow">Nội dung</p>
           <h1>Ghi chú</h1>
+          <p className="muted">
+            {notes.data === undefined ? 'Đang tải số lượng…' : `${notes.data.length} ghi chú`}
+          </p>
         </div>
-        <button disabled={!decks.data?.length} onClick={() => setCreating(true)}>
+        <button disabled={decks.isLoading || !decks.data?.length} onClick={() => setCreating(true)}>
           Tạo ghi chú
         </button>
       </header>
-      {!decks.data?.length && (
-        <section className="panel">Tạo một bộ thẻ trước khi thêm ghi chú.</section>
+      {!decks.isLoading && decks.data?.length === 0 && (
+        <EmptyState
+          title="Bạn cần một bộ thẻ trước"
+          description="Tạo bộ thẻ để bắt đầu thêm ghi chú và flashcard."
+          action={
+            <Link className="button" to="/decks">
+              Tạo bộ thẻ
+            </Link>
+          }
+        />
       )}
       {creating && <NoteEditor decks={decks.data ?? []} done={done} />}
+      {removeError !== null && (
+        <p className="form-error" role="alert">
+          {removeError}
+        </p>
+      )}
       {notes.isLoading ? (
-        <p>Đang tải…</p>
+        <ListSkeleton />
+      ) : notes.isError ? (
+        <QueryError title="Không thể tải danh sách ghi chú." onRetry={() => void notes.refetch()} />
+      ) : notes.data?.length === 0 ? (
+        <EmptyState
+          title="Bạn chưa có ghi chú nào"
+          description="Thêm ghi chú để tạo flashcard cho bộ thẻ của bạn."
+          action={
+            decks.data?.length ? (
+              <button onClick={() => setCreating(true)}>Tạo ghi chú</button>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="card-list">
           {notes.data?.map((note) => {
-            const fields = JSON.parse(note.fieldsJson) as Record<string, string>;
-            const tags = JSON.parse(note.tagsJson) as string[];
+            const fields = parseJson<Record<string, string>>(note.fieldsJson, {});
+            const tags = parseJson<string[]>(note.tagsJson, []);
             return (
               <article className="card" key={note.id}>
                 <div>
                   <h2>{fields.front ?? fields.text ?? 'Ghi chú'}</h2>
                   <p>{fields.back ?? ''}</p>
-                  <small>
-                    {note.noteType} · {tags.join(', ') || 'Không có nhãn'}
-                  </small>
+                  <small>{note.noteType}</small>
+                  {tags.length > 0 && (
+                    <div className="tag-list" aria-label="Nhãn">
+                      {tags.map((tag) => (
+                        <span className="tag" key={tag}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="actions">
                   <button
                     className="danger"
+                    disabled={remove.isPending}
                     onClick={() => {
                       if (confirm('Xóa mềm ghi chú này?')) remove.mutate(note.id);
                     }}
