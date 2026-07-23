@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -7,15 +8,23 @@ import {
   Param,
   Patch,
   Post,
-  UseGuards
+  UploadedFile,
+  UseGuards,
+  UseInterceptors
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import { UserEntity } from '../auth/entities/user.entity.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { CardsService } from './cards.service.js';
 import { CreateDeckDto, CreateNoteDto, UpdateDeckDto, UpdateNoteDto } from './dto/cards.dto.js';
+
+interface UploadedSpreadsheet {
+  buffer: Buffer;
+  size: number;
+}
 
 @ApiTags('decks', 'notes')
 @ApiBearerAuth()
@@ -72,5 +81,16 @@ export class CardsController {
     @Param('id') id: string
   ) {
     return this.cardsService.generateCards(user.id, id);
+  }
+  @Post('decks/:id/import-excel')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  importExcel(
+    @CurrentUser() user: UserEntity,
+    @Param('id') id: string,
+    @UploadedFile() file: UploadedSpreadsheet | undefined
+  ) {
+    if (file === undefined) throw new BadRequestException('Vui lòng chọn tệp Excel.');
+    return this.cardsService.importNotesFromExcel(user.id, id, file.buffer);
   }
 }

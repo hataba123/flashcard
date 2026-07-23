@@ -14,7 +14,7 @@ export class ReviewLogEntity {
   @Column('uuid') sessionId!: string;
   @Column('uuid') deviceId!: string;
   @Column({ length: 16 }) eventType!: ReviewEventType;
-  @Column({ length: 8, nullable: true }) rating!: ReviewRating | null;
+  @Column({ type: 'nvarchar', length: 8, nullable: true }) rating!: ReviewRating | null;
   @Column({ type: 'datetime2' }) shownAtUtc!: Date;
   @Column({ type: 'datetime2', nullable: true }) revealedAtUtc!: Date | null;
   @Column({ type: 'datetime2' }) gradedAtUtc!: Date;

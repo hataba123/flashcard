@@ -41,6 +41,7 @@ export class AuthService {
 
     const user = await this.users.save(
       this.users.create({
+        id: randomUUID(),
         email,
         normalizedEmail,
         passwordHash: await argon2.hash(input.password, { type: argon2.argon2id })

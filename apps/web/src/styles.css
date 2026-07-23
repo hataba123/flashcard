@@ -425,6 +425,26 @@ nav a:hover {
   margin-bottom: 32px;
 }
 
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.import-deck select {
+  min-height: 42px;
+}
+
+.import-help,
+.import-result {
+  margin: -16px 0 24px;
+}
+
+.import-result {
+  color: #166534;
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -826,6 +846,10 @@ audio {
   }
 
   .page-header > button,
+  .page-actions,
+  .page-actions > button,
+  .import-deck,
+  .import-deck select,
   .review-header > button {
     width: 100%;
   }

@@ -169,3 +169,9 @@
 - Kiểm tra đã chạy: workspace typecheck, unit test, Playwright E2E, lint, production build, Prettier và `git diff --check`.
 - Quyết định quan trọng: không sửa request/event review, mapping Again/Hard/Good/Easy, FSRS, queue, undo hoặc offline-sync; các thay đổi chỉ thuộc presentation và trạng thái UI.
 - Tiếp theo: rà soát cuối về accessibility, responsive và release readiness.
+
+## Milestone 16 — Tạo và import thẻ
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: sửa luồng tạo thẻ để luôn cấp UUID cho note/card trên SQL Server; thêm import `.xlsx` vào bộ thẻ đã chọn với kiểm tra dữ liệu, giới hạn 1.000 dòng và phản hồi các dòng bị bỏ qua; đổi nhãn giao diện từ “Ghi chú” thành “Thẻ”.
+- Kiểm tra đã chạy: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm format:check`, `git diff --check` và kiểm tra parser Excel trong bộ nhớ.

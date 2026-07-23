@@ -6,7 +6,7 @@ import {
   useQueryClient
 } from '@tanstack/react-query';
 import { createRoot } from 'react-dom/client';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   BrowserRouter,
@@ -43,6 +43,12 @@ interface Note {
   noteType: 'Basic' | 'BasicAndReverse' | 'Cloze';
   fieldsJson: string;
   tagsJson: string;
+}
+interface ExcelImportResult {
+  importedNotes: number;
+  createdCards: number;
+  skippedRows: number;
+  errors: string[];
 }
 interface ReviewCard {
   id: string;
@@ -325,7 +331,7 @@ function Shell({ children }: { children: ReactNode }) {
             Bộ thẻ
           </NavLink>
           <NavLink to="/notes" onClick={() => setNavigationOpen(false)}>
-            Ghi chú
+            Thẻ
           </NavLink>
           <NavLink to="/review" onClick={() => setNavigationOpen(false)}>
             Ôn tập
@@ -401,7 +407,7 @@ function Dashboard() {
               label="Bộ thẻ đang dùng"
               value={decks.data?.filter((deck) => !deck.isArchived).length ?? '—'}
             />
-            <Metric label="Ghi chú" value={notes.data?.length ?? '—'} />
+            <Metric label="Thẻ" value={notes.data?.length ?? '—'} />
             <Metric label="Cần ôn hôm nay" value={today.data?.dueCount ?? '—'} />
             <Metric
               label="Thời gian ôn"
@@ -678,7 +684,7 @@ function NoteEditor({ decks, done }: { decks: Deck[]; done(): void }) {
   });
   return (
     <section className="panel">
-      <h2>Tạo ghi chú</h2>
+      <h2>Tạo thẻ</h2>
       <form
         className="editor-form"
         onSubmit={form.handleSubmit((values) => save.mutate(values))}
@@ -695,7 +701,7 @@ function NoteEditor({ decks, done }: { decks: Deck[]; done(): void }) {
           </select>
         </label>
         <label>
-          Loại ghi chú
+          Loại thẻ
           <select {...form.register('noteType')}>
             <option value="Basic">Basic</option>
             <option value="BasicAndReverse">Basic và đảo chiều</option>
@@ -749,6 +755,10 @@ function Notes() {
   const client = useQueryClient();
   const [creating, setCreating] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<ExcelImportResult | null>(null);
+  const [importDeckId, setImportDeckId] = useState('');
+  const fileInput = useRef<HTMLInputElement>(null);
   const notes = useQuery({ queryKey: ['notes'], queryFn: () => api.get<Note[]>('/notes') });
   const decks = useQuery({ queryKey: ['decks'], queryFn: () => api.get<Deck[]>('/decks') });
   const remove = useMutation({
@@ -759,28 +769,110 @@ function Notes() {
     },
     onError: (error) => setRemoveError(errorMessage(error))
   });
+  const importExcel = useMutation({
+    mutationFn: ({ deckId, file }: { deckId: string; file: File }) => {
+      const data = new FormData();
+      data.append('file', file);
+      return api.postForm<ExcelImportResult>(`/decks/${deckId}/import-excel`, data);
+    },
+    onSuccess: (result) => {
+      setImportError(null);
+      setImportResult(result);
+      void client.invalidateQueries({ queryKey: ['notes'] });
+    },
+    onError: (error) => setImportError(errorMessage(error))
+  });
   const done = () => {
     setCreating(false);
     void client.invalidateQueries({ queryKey: ['notes'] });
   };
+  const selectedImportDeckId = importDeckId || decks.data?.[0]?.id || '';
   return (
     <Shell>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Nội dung</p>
-          <h1>Ghi chú</h1>
+          <p className="eyebrow">Nội dung học</p>
+          <h1>Thẻ</h1>
           <p className="muted">
-            {notes.data === undefined ? 'Đang tải số lượng…' : `${notes.data.length} ghi chú`}
+            {notes.data === undefined ? 'Đang tải số lượng…' : `${notes.data.length} thẻ`}
           </p>
         </div>
-        <button disabled={decks.isLoading || !decks.data?.length} onClick={() => setCreating(true)}>
-          Tạo ghi chú
-        </button>
+        <div className="page-actions">
+          <label className="import-deck">
+            <span className="sr-only">Bộ thẻ nhận dữ liệu import</span>
+            <select
+              aria-label="Bộ thẻ nhận dữ liệu import"
+              disabled={decks.isLoading || !decks.data?.length || importExcel.isPending}
+              value={selectedImportDeckId}
+              onChange={(event) => setImportDeckId(event.target.value)}
+            >
+              {decks.data?.map((deck) => (
+                <option key={deck.id} value={deck.id}>
+                  {deck.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <input
+            ref={fileInput}
+            className="sr-only"
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = '';
+              if (file !== undefined && selectedImportDeckId)
+                importExcel.mutate({ deckId: selectedImportDeckId, file });
+            }}
+          />
+          <button
+            type="button"
+            className="secondary"
+            disabled={decks.isLoading || !decks.data?.length || importExcel.isPending}
+            onClick={() => fileInput.current?.click()}
+          >
+            <ButtonContent loading={importExcel.isPending}>
+              {importExcel.isPending ? 'Đang import…' : 'Import Excel'}
+            </ButtonContent>
+          </button>
+          <button
+            disabled={decks.isLoading || !decks.data?.length}
+            onClick={() => setCreating(true)}
+          >
+            Tạo thẻ
+          </button>
+        </div>
       </header>
+      <p className="muted import-help">
+        Excel cần có cột Front và Back; có thể thêm Tags (ngăn cách bằng dấu phẩy) và Type (Basic,
+        BasicAndReverse hoặc Cloze). Cũng hỗ trợ tiêu đề Mặt trước, Mặt sau, Nhãn và Loại.
+      </p>
+      {importResult !== null && (
+        <div className="import-result" role="status">
+          <p>
+            Đã tạo {importResult.importedNotes} thẻ và {importResult.createdCards} thẻ ôn tập.
+            {importResult.skippedRows > 0
+              ? ` Bỏ qua ${importResult.skippedRows} dòng không hợp lệ.`
+              : ''}
+          </p>
+          {importResult.errors.length > 0 && (
+            <ul>
+              {importResult.errors.slice(0, 3).map((error) => (
+                <li key={error}>{error}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {importError !== null && (
+        <p className="form-error" role="alert">
+          {importError}
+        </p>
+      )}
       {!decks.isLoading && decks.data?.length === 0 && (
         <EmptyState
           title="Bạn cần một bộ thẻ trước"
-          description="Tạo bộ thẻ để bắt đầu thêm ghi chú và flashcard."
+          description="Tạo bộ thẻ để bắt đầu thêm thẻ học."
           action={
             <Link className="button" to="/decks">
               Tạo bộ thẻ
@@ -797,14 +889,14 @@ function Notes() {
       {notes.isLoading ? (
         <ListSkeleton />
       ) : notes.isError ? (
-        <QueryError title="Không thể tải danh sách ghi chú." onRetry={() => void notes.refetch()} />
+        <QueryError title="Không thể tải danh sách thẻ." onRetry={() => void notes.refetch()} />
       ) : notes.data?.length === 0 ? (
         <EmptyState
-          title="Bạn chưa có ghi chú nào"
-          description="Thêm ghi chú để tạo flashcard cho bộ thẻ của bạn."
+          title="Bạn chưa có thẻ nào"
+          description="Thêm thẻ để bắt đầu ôn tập với bộ thẻ của bạn."
           action={
             decks.data?.length ? (
-              <button onClick={() => setCreating(true)}>Tạo ghi chú</button>
+              <button onClick={() => setCreating(true)}>Tạo thẻ</button>
             ) : undefined
           }
         />
@@ -816,7 +908,7 @@ function Notes() {
             return (
               <article className="card" key={note.id}>
                 <div>
-                  <h2>{fields.front ?? fields.text ?? 'Ghi chú'}</h2>
+                  <h2>{fields.front ?? fields.text ?? 'Thẻ'}</h2>
                   <p>{fields.back ?? ''}</p>
                   <small>{note.noteType}</small>
                   {tags.length > 0 && (
@@ -834,7 +926,7 @@ function Notes() {
                     className="danger"
                     disabled={remove.isPending}
                     onClick={() => {
-                      if (confirm('Xóa mềm ghi chú này?')) remove.mutate(note.id);
+                      if (confirm('Xóa mềm thẻ này?')) remove.mutate(note.id);
                     }}
                   >
                     Xóa

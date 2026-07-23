@@ -21,6 +21,9 @@ class ApiClient {
   post<T>(path: string, body: unknown): Promise<T> {
     return this.request<T>(path, { method: 'POST', body: JSON.stringify(body) });
   }
+  postForm<T>(path: string, body: FormData): Promise<T> {
+    return this.request<T>(path, { method: 'POST', body });
+  }
   patch<T>(path: string, body: unknown): Promise<T> {
     return this.request<T>(path, { method: 'PATCH', body: JSON.stringify(body) });
   }
@@ -38,7 +41,9 @@ class ApiClient {
       ...options,
       credentials: 'include',
       headers: {
-        ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...(options.body === undefined || options.body instanceof FormData
+          ? {}
+          : { 'Content-Type': 'application/json' }),
         ...(this.accessToken === null ? {} : { Authorization: `Bearer ${this.accessToken}` }),
         ...options.headers
       }
