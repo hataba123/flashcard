@@ -142,3 +142,12 @@
 - Kiểm tra đã chạy: `pnpm audit --audit-level high`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `git diff --check`; Docker Compose không kiểm tra được vì máy hiện tại chưa cài Docker CLI.
 - Quyết định quan trọng: CI chặn vulnerability high/critical; low transitive dependency được ghi nhận trong `docs/security.md` để theo dõi cập nhật tiếp theo.
 - Tiếp theo: Theo dõi CI trên GitHub và kiểm thử migration với SQL Server local trước rollout production.
+
+## Milestone 15.1 — Chuẩn hoá nền tảng UI
+
+- Trạng thái: Hoàn thành.
+- Commit: `style(ui): standardize visual foundation and responsive primitives`.
+- Đã thực hiện: chuẩn hoá màu sắc, typography, spacing, button, form, card, focus-visible, reduced motion và responsive layout; đồng bộ theme PWA với giao diện mới.
+- Kiểm tra đã chạy: web typecheck, web production build, workspace lint, Prettier và `git diff --check`.
+- Quyết định quan trọng: giữ CSS thuần và component/route hiện hữu; không thêm UI framework hoặc thay đổi API, authentication hay luồng nghiệp vụ.
+- Tiếp theo: cải thiện app shell, dashboard, bộ thẻ và ghi chú.
