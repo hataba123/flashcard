@@ -84,3 +84,10 @@
 - Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `git diff --check`.
 - Quyết định quan trọng: REST pull cursor là nguồn sự thật; Socket.IO không mang payload riêng tư và chỉ báo client cần pull lại.
 - Tiếp theo: Milestone 9 — media storage an toàn.
+
+## Milestone 9 — Media
+
+- Trạng thái: Đang triển khai.
+- Commit: Sẽ được bổ sung sau khi tạo commit phần local storage.
+- Đã thực hiện: MediaFile và migration; upload multipart memory-only, giới hạn 20 MiB, allowlist MIME kèm kiểm tra magic bytes, SHA-256 deduplicate theo user, local storage sử dụng UUID và kiểm tra ownership khi đọc/xóa mềm.
+- Còn lại: S3-compatible storage và chính sách cleanup orphan có độ trễ.

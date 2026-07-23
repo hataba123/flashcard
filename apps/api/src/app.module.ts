@@ -9,6 +9,7 @@ import { CardsModule } from './cards/cards.module.js';
 import { parseEnvironment, type Environment } from './config/environment.js';
 import { HealthController } from './health/health.controller.js';
 import { ReviewsModule } from './reviews/reviews.module.js';
+import { MediaModule } from './media/media.module.js';
 import { SyncModule } from './sync/sync.module.js';
 
 @Module({
@@ -44,6 +45,7 @@ import { SyncModule } from './sync/sync.module.js';
     AuthModule,
     AdmissionModule,
     CardsModule,
+    MediaModule,
     ReviewsModule,
     SyncModule
   ],
