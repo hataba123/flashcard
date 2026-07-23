@@ -19,10 +19,19 @@
 
 ## Milestone 2 — API infrastructure và database
 
-- Trạng thái: Hoàn thành cục bộ; chờ commit.
-- Commit: Chưa tạo.
+- Trạng thái: Hoàn thành.
+- Commit: `b729895` — `feat(api): add database and application infrastructure`.
 - Đã push: Chưa thể push vì repository chưa có remote `origin`.
 - Đã thực hiện: NestJS API, TypeORM SQL Server, cấu hình Zod, Pino redaction, Helmet/CORS/cookie, validation và format lỗi thống nhất, Swagger, health probes, migration runner và Docker Compose SQL Server.
 - Kiểm tra đã chạy: API TypeScript typecheck, ESLint và Prettier.
 - Quyết định quan trọng: `synchronize` luôn tắt; migration chỉ chạy bằng lệnh riêng.
-- Tiếp theo: Milestone 3 — authentication, device session và ownership foundation.
+
+## Milestone 3 — Authentication và device sessions
+
+- Trạng thái: Hoàn thành cục bộ; chờ commit.
+- Commit: Chưa tạo.
+- Đã push: Chưa thể push vì repository chưa có remote `origin`.
+- Đã thực hiện: User, Device, RefreshSession entity và migration; register/login/refresh/logout/logout-all/me; Argon2id password; JWT access token; refresh token HttpOnly xoay vòng, phát hiện reuse và revoke token family.
+- Kiểm tra đã chạy: API TypeScript typecheck, ESLint và Prettier.
+- Quyết định quan trọng: Refresh token chỉ gửi bằng cookie và database chỉ lưu SHA-256 hash token; access token không được ghi vào persistent storage.
+- Tiếp theo: Milestone 4 — deck, note, card domain và ownership CRUD.

@@ -15,8 +15,12 @@ export const appDataSource = new DataSource({
   database: environment.DB_NAME,
   synchronize: false,
   migrationsRun: false,
-  entities: ['dist/**/*.entity.js'],
-  migrations: ['dist/database/migrations/*.js'],
+  entities: [environment.NODE_ENV === 'production' ? 'dist/**/*.entity.js' : 'src/**/*.entity.ts'],
+  migrations: [
+    environment.NODE_ENV === 'production'
+      ? 'dist/database/migrations/*.js'
+      : 'src/database/migrations/*.ts'
+  ],
   options: {
     encrypt: environment.NODE_ENV === 'production',
     trustServerCertificate: environment.NODE_ENV !== 'production'

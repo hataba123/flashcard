@@ -11,3 +11,4 @@ ignoredBuiltDependencies:
 allowBuilds:
   esbuild: true
   '@scarf/scarf': true
+  argon2: true

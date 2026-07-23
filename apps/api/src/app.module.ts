@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
 
+import { AuthModule } from './auth/auth.module.js';
 import { parseEnvironment, type Environment } from './config/environment.js';
 import { HealthController } from './health/health.controller.js';
 
@@ -35,7 +36,8 @@ import { HealthController } from './health/health.controller.js';
           trustServerCertificate: configService.get('NODE_ENV', { infer: true }) !== 'production'
         }
       })
-    })
+    }),
+    AuthModule
   ],
   controllers: [HealthController]
 })
