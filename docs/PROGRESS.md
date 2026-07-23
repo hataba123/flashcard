@@ -186,7 +186,8 @@
 ## Post-release verification — Docker, migration và dependency audit
 
 - Trạng thái: Hoàn thành.
-- Commit: Sẽ được bổ sung sau khi tạo commit verification.
+- Commit: `c64864a` — `chore: verify local release environment`.
+- Đã push: Có, lên `origin/main`.
 - Đã thực hiện: cập nhật dependency và pnpm override để loại bỏ toàn bộ advisory; Docker Desktop/Engine, SQL Server Compose healthcheck, migration và seed demo đã chạy thành công; migration/API tự nạp `.env` ở root workspace; các cột TypeORM dùng type SQL Server tường minh khi chạy source bằng `tsx`.
 - Kiểm tra đã chạy: `docker compose config`, SQL Server healthy, `pnpm --filter @flashcard/api migration:run`, `pnpm --filter @flashcard/api seed:demo`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `pnpm audit --audit-level low`, `git diff --check`.
 - Kết quả security: `pnpm audit` báo 0 vulnerability.
