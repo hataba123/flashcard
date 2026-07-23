@@ -160,3 +160,12 @@
 - Kiểm tra đã chạy: web typecheck, Vitest, Playwright E2E ở viewport 375px, workspace lint, Prettier và `git diff --check`.
 - Quyết định quan trọng: không thêm API hoặc mock production data; mọi số liệu và thao tác tạo/xóa vẫn gọi đúng endpoint, payload và soft-delete flow hiện hữu.
 - Tiếp theo: cải thiện trải nghiệm ôn tập flashcard.
+
+## Milestone 15.3 — Trải nghiệm ôn tập flashcard
+
+- Trạng thái: Hoàn thành.
+- Commit: `style(study): improve flashcard review progress and states`.
+- Đã thực hiện: bổ sung thanh tiến độ có accessibility metadata, layout top bar rõ ràng, skeleton cho queue/nội dung thẻ, retry khi lỗi tải và loading feedback khi chấm điểm; tối ưu lại bố cục mobile cho thẻ và nút đánh giá.
+- Kiểm tra đã chạy: workspace typecheck, unit test, Playwright E2E, lint, production build, Prettier và `git diff --check`.
+- Quyết định quan trọng: không sửa request/event review, mapping Again/Hard/Good/Easy, FSRS, queue, undo hoặc offline-sync; các thay đổi chỉ thuộc presentation và trạng thái UI.
+- Tiếp theo: rà soát cuối về accessibility, responsive và release readiness.

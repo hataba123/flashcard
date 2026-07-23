@@ -910,7 +910,7 @@ function Review() {
         queryFn: () => api.get<Note>(`/notes/${nextCard.noteId}`)
       });
       void nextNote.then((note) => {
-        const fields = JSON.parse(note.fieldsJson) as Record<string, string>;
+        const fields = parseJson<Record<string, string>>(note.fieldsJson, {});
         if (fields.audioMediaId !== undefined)
           void client.prefetchQuery({
             queryKey: ['media', fields.audioMediaId],
@@ -1020,17 +1020,31 @@ function Review() {
   if (queue.isLoading)
     return (
       <Shell>
-        <p>Đang chuẩn bị phiên ôn tập…</p>
+        <section className="review-card" aria-busy="true" aria-label="Đang chuẩn bị phiên ôn tập">
+          <span className="skeleton" style={{ width: '56%', height: 40, justifySelf: 'center' }} />
+          <span className="skeleton" style={{ width: '82%', height: 24, justifySelf: 'center' }} />
+          <span className="skeleton" style={{ width: 224, height: 48, justifySelf: 'center' }} />
+        </section>
+      </Shell>
+    );
+  if (queue.isError)
+    return (
+      <Shell>
+        <QueryError title="Không thể chuẩn bị phiên ôn tập." onRetry={() => void queue.refetch()} />
       </Shell>
     );
   if (card === undefined)
     return (
       <Shell>
-        <header>
-          <p className="eyebrow">Ôn tập</p>
-          <h1>Hoàn thành!</h1>
-          <p className="muted">Không còn thẻ đến hạn trong ngân sách hôm nay.</p>
+        <header className="review-header">
+          <Link className="button-link" to="/">
+            Kết thúc phiên
+          </Link>
         </header>
+        <EmptyState
+          title="Hoàn thành!"
+          description="Không còn thẻ đến hạn trong ngân sách hôm nay."
+        />
         {lastReviewId !== null && (
           <button className="secondary" onClick={() => undo.mutate(lastReviewId)}>
             Hoàn tác lần chấm cuối
@@ -1039,17 +1053,36 @@ function Review() {
       </Shell>
     );
   const fields =
-    note.data === undefined ? {} : (JSON.parse(note.data.fieldsJson) as Record<string, string>);
+    note.data === undefined ? {} : parseJson<Record<string, string>>(note.data.fieldsJson, {});
   const front = fields.front ?? fields.text ?? 'Đang tải nội dung…';
   const back = fields.back ?? '';
+  const totalCards = queue.data?.cards.length ?? 0;
+  const completedCards = Math.min(index, totalCards);
+  const progress = totalCards === 0 ? 0 : Math.round((completedCards / totalCards) * 100);
   return (
     <Shell>
       <header className="review-header">
-        <div>
+        <Link className="button-link" to="/">
+          Kết thúc phiên
+        </Link>
+        <div className="review-title">
           <p className="eyebrow">Ôn tập</p>
-          <h1>
-            Thẻ {index + 1}/{queue.data?.cards.length ?? 0}
-          </h1>
+          <h1>Phiên ôn tập</h1>
+        </div>
+        <div className="review-progress" aria-label="Tiến độ phiên ôn tập">
+          <span>
+            Thẻ {index + 1} / {totalCards}
+          </span>
+          <div
+            className="progress-track"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={totalCards}
+            aria-valuenow={completedCards}
+            aria-valuetext={`Đã hoàn thành ${completedCards} trên ${totalCards} thẻ`}
+          >
+            <span className="progress-value" style={{ width: `${progress}%` }} />
+          </div>
         </div>
         {lastReviewId !== null && (
           <button className="secondary" onClick={() => undo.mutate(lastReviewId)}>
@@ -1059,33 +1092,52 @@ function Review() {
       </header>
       {!offline.online && (
         <p className="offline-notice" role="status">
-          Offline reviews are saved on this device and will synchronize after reconnecting.
+          Lượt ôn offline được lưu trên thiết bị này và sẽ đồng bộ khi có kết nối lại.
         </p>
       )}
-      <section className="review-card">
-        <p className="review-face">{front}</p>
-        <AudioControl mediaId={fields.audioMediaId} />
-        {revealedAt === null ? (
-          <ReviewControls
-            revealed={false}
-            previews={undefined}
-            isSubmitting={grade.isPending}
-            onReveal={() => setRevealedAt(new Date())}
-            onGrade={() => undefined}
-          />
-        ) : (
-          <>
-            <p className="answer">{back}</p>
-            <ReviewControls
-              revealed
-              previews={previews.data}
-              isSubmitting={grade.isPending}
-              onReveal={() => undefined}
-              onGrade={(rating) => grade.mutate(rating)}
-            />
-          </>
-        )}
-      </section>
+      {note.isError ? (
+        <QueryError title="Không thể tải nội dung thẻ." onRetry={() => void note.refetch()} />
+      ) : (
+        <section className="review-card" aria-busy={note.isLoading || grade.isPending}>
+          {note.isLoading ? (
+            <>
+              <span
+                className="skeleton"
+                style={{ width: '72%', height: 40, justifySelf: 'center' }}
+              />
+              <span
+                className="skeleton"
+                style={{ width: 224, height: 48, justifySelf: 'center' }}
+              />
+            </>
+          ) : (
+            <>
+              <p className="review-face">{front}</p>
+              <AudioControl mediaId={fields.audioMediaId} />
+              {revealedAt === null ? (
+                <ReviewControls
+                  revealed={false}
+                  previews={undefined}
+                  isSubmitting={grade.isPending}
+                  onReveal={() => setRevealedAt(new Date())}
+                  onGrade={() => undefined}
+                />
+              ) : (
+                <>
+                  <p className="answer">{back}</p>
+                  <ReviewControls
+                    revealed
+                    previews={previews.data}
+                    isSubmitting={grade.isPending}
+                    onReveal={() => undefined}
+                    onGrade={(rating) => grade.mutate(rating)}
+                  />
+                </>
+              )}
+            </>
+          )}
+        </section>
+      )}
       {submitError !== null && (
         <p className="form-error" role="alert">
           {submitError}

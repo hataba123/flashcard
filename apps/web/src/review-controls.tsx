@@ -36,8 +36,10 @@ export function ReviewControls({
             key={rating}
             className={`rating ${rating.toLowerCase()}`}
             disabled={isSubmitting}
+            aria-busy={isSubmitting}
             onClick={() => onGrade(rating)}
           >
+            {isSubmitting && <span className="button-spinner" aria-hidden="true" />}
             <span>{rating}</span>
             <small>
               {preview === undefined

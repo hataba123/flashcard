@@ -585,6 +585,41 @@ nav a:hover {
   margin-bottom: 24px;
 }
 
+.review-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(160px, 220px) auto;
+  align-items: center;
+}
+
+.review-title h1,
+.review-title .eyebrow {
+  margin-bottom: 0;
+}
+
+.review-progress {
+  display: grid;
+  gap: 8px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.progress-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.progress-value {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #4f46e5;
+  transition: width 200ms ease;
+}
+
 .review-card {
   display: grid;
   min-height: 380px;
@@ -675,6 +710,12 @@ nav a:hover {
   position: absolute;
   top: 8px;
   right: 8px;
+}
+
+.rating .button-spinner {
+  position: absolute;
+  top: 8px;
+  left: 8px;
 }
 
 audio {
@@ -774,6 +815,14 @@ audio {
     align-items: stretch;
     flex-direction: column;
     margin-bottom: 24px;
+  }
+
+  .review-header {
+    grid-template-columns: 1fr;
+  }
+
+  .review-progress {
+    max-width: none;
   }
 
   .page-header > button,
