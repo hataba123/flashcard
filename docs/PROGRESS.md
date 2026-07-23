@@ -102,3 +102,11 @@
 - Kiểm tra đã chạy: web typecheck, workspace lint và Prettier; toàn workspace test/build được chạy trước khi commit.
 - Quyết định quan trọng: access token không được ghi persistent storage; reload luôn bắt đầu bằng `/auth/refresh`, sau đó lấy `/auth/me` để tái tạo session memory.
 - Tiếp theo: Milestone 11 — Review UI.
+
+## Milestone 11 — Review UI
+
+- Trạng thái: Đang triển khai.
+- Đã thực hiện: trang ôn tập lấy queue từ API, reveal bắt buộc trước grading, interval preview do server tính, phím tắt Space và 1–4, submit review có timestamp/session/device ID, undo lần chấm gần nhất và hiển thị lỗi conflict từ API.
+- Kiểm tra đã chạy: workspace lint, typecheck, unit test và build đều pass.
+- Còn lại: render/audio media, preload card tiếp theo, optimistic UI nâng cao, conflict UI chuyên biệt và test component/E2E.
+- Tiếp theo: hoàn thiện Milestone 11 trước khi triển khai PWA/offline sync ở Milestone 12.

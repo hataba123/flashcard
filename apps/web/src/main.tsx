@@ -58,6 +58,25 @@ interface Note {
   fieldsJson: string;
   tagsJson: string;
 }
+interface ReviewCard {
+  id: string;
+  noteId: string;
+  version: number;
+  state: string;
+}
+interface ReviewQueue {
+  cards: ReviewCard[];
+  totalEstimatedSeconds: number;
+  budgetSeconds: number;
+}
+interface ReviewPreview {
+  rating: 'Again' | 'Hard' | 'Good' | 'Easy';
+  dueAtUtc: string;
+  scheduledDays: number;
+}
+interface ReviewSubmission {
+  reviewLog: { id: string };
+}
 const loginSchema = z.object({
   email: z.email('Email không hợp lệ.'),
   password: z.string().min(1, 'Vui lòng nhập mật khẩu.')
@@ -196,6 +215,7 @@ function Shell({ children }: { children: ReactNode }) {
           </NavLink>
           <NavLink to="/decks">Bộ thẻ</NavLink>
           <NavLink to="/notes">Ghi chú</NavLink>
+          <NavLink to="/review">Ôn tập</NavLink>
         </nav>
         <div className="account">
           <span>{user?.email}</span>
@@ -517,6 +537,168 @@ function Notes() {
     </Shell>
   );
 }
+function Review() {
+  const client = useQueryClient();
+  const [index, setIndex] = useState(0);
+  const [shownAt, setShownAt] = useState(() => new Date());
+  const [revealedAt, setRevealedAt] = useState<Date | null>(null);
+  const [lastReviewId, setLastReviewId] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const sessionId = useState(() => crypto.randomUUID())[0];
+  const deviceId = useState(() => crypto.randomUUID())[0];
+  const queue = useQuery({
+    queryKey: ['review-queue'],
+    queryFn: () => api.get<ReviewQueue>('/reviews/queue')
+  });
+  const card = queue.data?.cards[index];
+  const note = useQuery({
+    queryKey: ['review-note', card?.noteId],
+    queryFn: () => api.get<Note>(`/notes/${card!.noteId}`),
+    enabled: card !== undefined
+  });
+  const previews = useQuery({
+    queryKey: ['review-preview', card?.id],
+    queryFn: () => api.get<ReviewPreview[]>(`/cards/${card!.id}/review-preview`),
+    enabled: card !== undefined && revealedAt !== null
+  });
+  const grade = useMutation({
+    mutationFn: (rating: ReviewPreview['rating']) => {
+      if (card === undefined || revealedAt === null)
+        throw new Error('Hãy xem đáp án trước khi chấm điểm.');
+      const now = new Date();
+      return api.post<ReviewSubmission>('/reviews', {
+        clientEventId: crypto.randomUUID(),
+        cardId: card.id,
+        sessionId,
+        deviceId,
+        rating,
+        shownAtUtc: shownAt.toISOString(),
+        revealedAtUtc: revealedAt.toISOString(),
+        gradedAtUtc: now.toISOString(),
+        reviewedAtUtc: now.toISOString(),
+        cardVersionBefore: card.version
+      });
+    },
+    onSuccess: (result) => {
+      setLastReviewId(result.reviewLog.id);
+      setIndex((value) => value + 1);
+      setRevealedAt(null);
+      setShownAt(new Date());
+    },
+    onError: (error) => setSubmitError(errorMessage(error))
+  });
+  const undo = useMutation({
+    mutationFn: (reviewLogId: string) => api.post(`/reviews/${reviewLogId}/undo`, {}),
+    onSuccess: () => {
+      setLastReviewId(null);
+      setIndex((value) => Math.max(0, value - 1));
+      void client.invalidateQueries({ queryKey: ['review-queue'] });
+    },
+    onError: (error) => setSubmitError(errorMessage(error))
+  });
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement)
+        return;
+      if (event.key === ' ' && revealedAt === null) {
+        event.preventDefault();
+        setRevealedAt(new Date());
+      }
+      const ratings: Record<string, ReviewPreview['rating']> = {
+        '1': 'Again',
+        '2': 'Hard',
+        '3': 'Good',
+        '4': 'Easy'
+      };
+      const rating = ratings[event.key];
+      if (rating !== undefined && revealedAt !== null && !grade.isPending) grade.mutate(rating);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [grade, revealedAt]);
+  if (queue.isLoading)
+    return (
+      <Shell>
+        <p>Đang chuẩn bị phiên ôn tập…</p>
+      </Shell>
+    );
+  if (card === undefined)
+    return (
+      <Shell>
+        <header>
+          <p className="eyebrow">Ôn tập</p>
+          <h1>Hoàn thành!</h1>
+          <p className="muted">Không còn thẻ đến hạn trong ngân sách hôm nay.</p>
+        </header>
+        {lastReviewId !== null && (
+          <button className="secondary" onClick={() => undo.mutate(lastReviewId)}>
+            Hoàn tác lần chấm cuối
+          </button>
+        )}
+      </Shell>
+    );
+  const fields =
+    note.data === undefined ? {} : (JSON.parse(note.data.fieldsJson) as Record<string, string>);
+  const front = fields.front ?? fields.text ?? 'Đang tải nội dung…';
+  const back = fields.back ?? '';
+  return (
+    <Shell>
+      <header className="review-header">
+        <div>
+          <p className="eyebrow">Ôn tập</p>
+          <h1>
+            Thẻ {index + 1}/{queue.data?.cards.length ?? 0}
+          </h1>
+        </div>
+        {lastReviewId !== null && (
+          <button className="secondary" onClick={() => undo.mutate(lastReviewId)}>
+            Hoàn tác
+          </button>
+        )}
+      </header>
+      <section className="review-card">
+        <p className="review-face">{front}</p>
+        {revealedAt === null ? (
+          <button className="reveal" onClick={() => setRevealedAt(new Date())}>
+            Hiện đáp án <kbd>Space</kbd>
+          </button>
+        ) : (
+          <>
+            <p className="answer">{back}</p>
+            <div className="grade-actions">
+              {(['Again', 'Hard', 'Good', 'Easy'] as const).map((rating, ratingIndex) => {
+                const preview = previews.data?.find((item) => item.rating === rating);
+                return (
+                  <button
+                    key={rating}
+                    className={`rating ${rating.toLowerCase()}`}
+                    disabled={grade.isPending}
+                    onClick={() => grade.mutate(rating)}
+                  >
+                    <span>{rating}</span>
+                    <small>
+                      {preview === undefined
+                        ? '…'
+                        : preview.scheduledDays === 0
+                          ? 'bây giờ'
+                          : `${preview.scheduledDays} ngày`}
+                    </small>
+                    <kbd>{ratingIndex + 1}</kbd>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </section>
+      {submitError !== null && (
+        <p className="form-error" role="alert">
+          {submitError}
+        </p>
+      )}
+    </Shell>
+  );
+}
 function App() {
   return (
     <Routes>
@@ -542,6 +724,14 @@ function App() {
         element={
           <Protected>
             <Notes />
+          </Protected>
+        }
+      />
+      <Route
+        path="/review"
+        element={
+          <Protected>
+            <Review />
           </Protected>
         }
       />
