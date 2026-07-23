@@ -6,6 +6,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from './auth/auth.module.js';
 import { AdmissionModule } from './admission/admission.module.js';
 import { CardsModule } from './cards/cards.module.js';
+import { DashboardModule } from './dashboard/dashboard.module.js';
 import { parseEnvironment, type Environment } from './config/environment.js';
 import { HealthController } from './health/health.controller.js';
 import { ReviewsModule } from './reviews/reviews.module.js';
@@ -45,6 +46,7 @@ import { SyncModule } from './sync/sync.module.js';
     AuthModule,
     AdmissionModule,
     CardsModule,
+    DashboardModule,
     MediaModule,
     ReviewsModule,
     SyncModule

@@ -121,3 +121,12 @@
 - Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `git diff --check`.
 - Quyết định quan trọng: API có thông tin phiên hoặc nội dung riêng tư không được service worker runtime-cache; FSRS phía client chỉ là dự đoán tạm thời, server vẫn là nguồn trạng thái cuối cùng.
 - Tiếp theo: Milestone 13 — dashboard và operational metrics.
+
+## Milestone 13 — Dashboard và operational metrics
+
+- Trạng thái: Hoàn thành.
+- Commit: Sẽ được bổ sung sau khi tạo commit milestone.
+- Đã thực hiện: thêm Dashboard API cho due/review-time/budget, retention/lapse, backlog ingest, leech và activity 14 ngày; UI tổng quan hiển thị số liệu học và trạng thái sync; thêm migration index cho aggregate query.
+- Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `git diff --check`.
+- Quyết định quan trọng: retention là retrievability server tính trước review; truy vấn dashboard aggregate tại SQL Server, không quét review log trong bộ nhớ.
+- Tiếp theo: Milestone 14 — hardening và release readiness.

@@ -73,6 +73,25 @@ interface ReviewSubmission {
   reviewLog: { id: string };
   offline?: boolean;
 }
+interface DashboardToday {
+  dueCount: number;
+  estimatedReviewSeconds: number;
+  remainingBudgetSeconds: number;
+  reviewTimeSeconds: number;
+}
+interface DashboardRetention {
+  reviewCount: number;
+  averageRetrievability: number;
+  lapseCount: number;
+}
+interface DashboardBacklog {
+  status: string;
+  count: number;
+}
+interface DashboardActivity {
+  day: string;
+  reviews: number;
+}
 const loginSchema = z.object({
   email: z.email('Email không hợp lệ.'),
   password: z.string().min(1, 'Vui lòng nhập mật khẩu.')
@@ -242,6 +261,23 @@ const Metric = ({ label, value }: { label: string; value: string | number }) => 
 function Dashboard() {
   const decks = useQuery({ queryKey: ['decks'], queryFn: () => api.get<Deck[]>('/decks') });
   const notes = useQuery({ queryKey: ['notes'], queryFn: () => api.get<Note[]>('/notes') });
+  const today = useQuery({
+    queryKey: ['dashboard', 'today'],
+    queryFn: () => api.get<DashboardToday>('/dashboard/today')
+  });
+  const retention = useQuery({
+    queryKey: ['dashboard', 'retention'],
+    queryFn: () => api.get<DashboardRetention>('/dashboard/retention')
+  });
+  const backlog = useQuery({
+    queryKey: ['dashboard', 'backlog'],
+    queryFn: () => api.get<DashboardBacklog[]>('/dashboard/backlog')
+  });
+  const activity = useQuery({
+    queryKey: ['dashboard', 'activity'],
+    queryFn: () => api.get<DashboardActivity[]>('/dashboard/activity')
+  });
+  const offline = useOffline();
   return (
     <Shell>
       <header>
@@ -257,6 +293,42 @@ function Dashboard() {
         <Metric label="Ghi chú" value={notes.data?.length ?? '—'} />
         <Metric label="Đồng bộ" value="Sẵn sàng" />
       </div>
+      <section className="panel dashboard-details">
+        <Metric label="Due today" value={today.data?.dueCount ?? '—'} />
+        <Metric
+          label="Average retention"
+          value={
+            retention.data === undefined
+              ? '—'
+              : `${Math.round(retention.data.averageRetrievability * 100)}%`
+          }
+        />
+        <Metric
+          label="Review time"
+          value={
+            today.data?.reviewTimeSeconds === undefined
+              ? '—'
+              : `${Math.ceil(today.data.reviewTimeSeconds / 60)} min`
+          }
+        />
+        <Metric
+          label="Sync"
+          value={offline.pendingCount === 0 ? 'Ready' : `${offline.pendingCount} pending`}
+        />
+        <div>
+          <h2>Ingest backlog</h2>
+          <p>
+            {backlog.data?.map((item) => `${item.status}: ${item.count}`).join(' · ') || 'Empty.'}
+          </p>
+        </div>
+        <div>
+          <h2>14-day activity</h2>
+          <p>
+            {activity.data?.map((item) => `${item.day}: ${item.reviews}`).join(' · ') ||
+              'No reviews yet.'}
+          </p>
+        </div>
+      </section>
       <section className="panel">
         <h2>Việc tiếp theo</h2>
         <p>

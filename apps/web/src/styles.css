@@ -212,6 +212,11 @@ nav a:hover {
   display: inline-block;
   margin-top: 0.5rem;
 }
+.dashboard-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
 .editor-form {
   max-width: 42rem;
 }
@@ -341,7 +346,8 @@ nav a:hover {
     display: none;
   }
   .metric-grid,
-  .form-grid {
+  .form-grid,
+  .dashboard-details {
     grid-template-columns: 1fr;
   }
   .page-content {
