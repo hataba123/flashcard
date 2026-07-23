@@ -201,3 +201,9 @@
 - Đã push: Có, lên `origin/main`.
 - Đã thực hiện: thêm SVG icon maskable cho manifest/favicon, chia vendor chunks cho React/offline/scheduling, thêm launcher `run-web.bat` cho local API/web và cập nhật Prettier ignore cho asset/batch script.
 - Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `pnpm audit --audit-level low`, Playwright E2E 4/4 pass, `git diff --check`.
+
+## Sửa lỗi CI SQL Server
+
+- Trạng thái: Đã sửa cấu hình service container.
+- Đã thực hiện: ghim workflow CI trên `ubuntu-22.04`; bỏ cú pháp escape dành riêng cho Docker Compose và dấu nháy đơn đang ngăn shell trong container mở rộng `MSSQL_SA_PASSWORD`; thêm 30 giây khởi động trước khi tính lỗi healthcheck.
+- Kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` và Prettier đều đạt; chưa thể chạy Docker cục bộ vì máy phát triển chưa cài Docker CLI; sẽ xác nhận service container bằng lượt GitHub Actions được kích hoạt sau khi push.
