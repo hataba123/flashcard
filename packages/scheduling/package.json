@@ -11,6 +11,13 @@
   },
   "scripts": {
     "build": "tsc --project tsconfig.json",
-    "typecheck": "tsc --noEmit --project tsconfig.json"
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "ts-fsrs": "5.4.1"
+  },
+  "devDependencies": {
+    "vitest": "4.1.0"
   }
 }

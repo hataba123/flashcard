@@ -37,10 +37,20 @@
 
 ## Milestone 4 — Deck, note và card domain
 
-- Trạng thái: Hoàn thành cục bộ; chờ commit.
-- Commit: Chưa tạo.
+- Trạng thái: Hoàn thành.
+- Commit: `684b77e` — `feat(cards): implement decks notes and card generation`.
 - Đã push: Chưa thể push vì repository chưa có remote `origin`.
 - Đã thực hiện: entity/migration Deck, Note, Card; CRUD soft delete cho deck/note; Basic, BasicAndReverse, Cloze note type; generate card idempotent.
 - Kiểm tra đã chạy: contracts build, API TypeScript typecheck, ESLint và Prettier.
 - Quyết định quan trọng: ownership lấy từ JWT, không bao giờ lấy `userId` từ body request.
 - Tiếp theo: Milestone 5 — shared FSRS scheduling.
+
+## Milestone 5 — Shared FSRS scheduling
+
+- Trạng thái: Hoàn thành cục bộ; chờ commit.
+- Commit: Chưa tạo.
+- Đã push: Chưa thể push vì repository chưa có remote `origin`.
+- Đã thực hiện: thêm wrapper duy nhất quanh `ts-fsrs` 5.4.1 tại `packages/scheduling`; mapping tập trung giữa card ứng dụng và FSRS; preview bốn mức đánh giá, tính review và retrievability; fuzz được bật nhưng có seed theo card để frontend/API cho cùng kết quả.
+- Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`; 3 unit test fixed-clock của scheduling đều pass.
+- Quyết định quan trọng: retention mặc định là 0.86, deck core mặc định 0.90, learning/relearning step là 10 phút, short-term scheduling bật và interval tối đa 3650 ngày.
+- Tiếp theo: Milestone 6 — review engine append-only và giao dịch review.
