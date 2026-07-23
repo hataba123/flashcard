@@ -32,7 +32,7 @@ async function bootstrap(): Promise<void> {
   app.useBodyParser('urlencoded', { limit: '1mb', extended: true });
   app.use(cookieParser());
   app.enableCors({
-    origin: process.env.WEB_ORIGIN ?? 'http://localhost:5173',
+    origin: process.env.WEB_ORIGIN ?? 'http://localhost:5556',
     credentials: true
   });
   app.useGlobalPipes(
