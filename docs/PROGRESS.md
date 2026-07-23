@@ -116,7 +116,8 @@
 ## Milestone 12 — PWA và offline sync
 
 - Trạng thái: Hoàn thành.
-- Commit: Sẽ được bổ sung sau khi tạo commit milestone.
+- Commit: `f220af3` — `feat(offline): add PWA support and offline review synchronization`.
+- Đã push: Có, lên `origin/main`.
 - Đã thực hiện: thêm PWA manifest/service worker, IndexedDB Dexie cho queue, note, event, cursor và conflict; device identity ổn định; đồng bộ review theo thứ tự khi online với Web Locks và fallback leader lease; Socket.IO kích hoạt pull cursor; UI trạng thái online/offline.
 - Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `git diff --check`.
 - Quyết định quan trọng: API có thông tin phiên hoặc nội dung riêng tư không được service worker runtime-cache; FSRS phía client chỉ là dự đoán tạm thời, server vẫn là nguồn trạng thái cuối cùng.
@@ -125,7 +126,8 @@
 ## Milestone 13 — Dashboard và operational metrics
 
 - Trạng thái: Hoàn thành.
-- Commit: Sẽ được bổ sung sau khi tạo commit milestone.
+- Commit: `72ea31d` — `feat(metrics): add learning and synchronization dashboards`.
+- Đã push: Có, lên `origin/main`.
 - Đã thực hiện: thêm Dashboard API cho due/review-time/budget, retention/lapse, backlog ingest, leech và activity 14 ngày; UI tổng quan hiển thị số liệu học và trạng thái sync; thêm migration index cho aggregate query.
 - Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `git diff --check`.
 - Quyết định quan trọng: retention là retrievability server tính trước review; truy vấn dashboard aggregate tại SQL Server, không quét review log trong bộ nhớ.
@@ -134,7 +136,8 @@
 ## Milestone 14 — Hardening và release readiness
 
 - Trạng thái: Hoàn thành.
-- Commit: Sẽ được bổ sung sau khi tạo commit milestone.
+- Commit: `81c3b10` — `chore: harden application for initial release`.
+- Đã push: Có, lên `origin/main`.
 - Đã thực hiện: global rate limit, CSP/Helmet, giới hạn body request, ngưỡng leech 8 lần lapse, cập nhật dependency vá lỗ hổng high/critical, CI audit, README và tài liệu security/release.
 - Kiểm tra đã chạy: `pnpm audit --audit-level high`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `git diff --check`; Docker Compose không kiểm tra được vì máy hiện tại chưa cài Docker CLI.
 - Quyết định quan trọng: CI chặn vulnerability high/critical; low transitive dependency được ghi nhận trong `docs/security.md` để theo dõi cập nhật tiếp theo.
