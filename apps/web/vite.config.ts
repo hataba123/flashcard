@@ -10,8 +10,8 @@ export default defineConfig({
         name: 'Flashcard Platform',
         short_name: 'Flashcard',
         display: 'standalone',
-        theme_color: '#4F46E5',
-        background_color: '#F8FAFC',
+        theme_color: '#F9F4DF',
+        background_color: '#F9F4DF',
         start_url: '/',
         icons: []
       },

@@ -175,3 +175,10 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: sửa luồng tạo thẻ để luôn cấp UUID cho note/card trên SQL Server; thêm import `.xlsx` vào bộ thẻ đã chọn với kiểm tra dữ liệu, giới hạn 1.000 dòng và phản hồi các dòng bị bỏ qua; đổi nhãn giao diện từ “Ghi chú” thành “Thẻ”.
 - Kiểm tra đã chạy: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm format:check`, `git diff --check` và kiểm tra parser Excel trong bộ nhớ.
+
+## Milestone 17 — Hoàn thiện hệ thống giao diện học tập
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: khóa design system Hum/Workbench bằng token OKLCH và typography Plus Jakarta Sans; làm mới login, app shell, dashboard, màn hình nội dung và phiên ôn tập tập trung; đồng bộ màu PWA; bổ sung trạng thái focus, hover, pressed, loading, error, reduced-motion và responsive từ 320px.
+- Quyết định quan trọng: giữ nguyên React/Vite, route, API, authentication, FSRS và offline-sync; không thêm UI framework, dữ liệu giả hoặc thay đổi nghiệp vụ.
+- Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, Playwright E2E; kiểm tra trực quan và không tràn ngang tại 320/375/414/768px; `pnpm format:check` và `git diff --check`.

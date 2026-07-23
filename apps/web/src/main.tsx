@@ -27,6 +27,7 @@ import { ReviewControls } from './review-controls.js';
 import { nextReviewIndex, ratingForShortcut, type ReviewRating } from './review-utils.js';
 import { useSession, type User } from './session.js';
 import './styles.css';
+import './hallmark.css';
 
 interface Deck {
   id: string;
@@ -143,12 +144,15 @@ function ButtonContent({ loading, children }: { loading: boolean; children: Reac
   );
 }
 
-const FormError = ({ message }: { message?: string | undefined }) =>
-  message === undefined ? null : (
-    <span className="form-error" role="alert">
-      {message}
-    </span>
-  );
+const FormError = ({ message }: { message?: string | undefined }) => (
+  <span
+    className="form-error"
+    role={message === undefined ? undefined : 'alert'}
+    aria-hidden={message === undefined}
+  >
+    {message ?? '\u00a0'}
+  </span>
+);
 
 function ListSkeleton() {
   return (
@@ -259,9 +263,16 @@ function Login() {
   return (
     <main className="auth">
       <form onSubmit={form.handleSubmit((values) => login.mutate(values))} noValidate>
-        <p className="eyebrow">Flashcard Platform</p>
+        <div className="auth-brand" aria-label="Flashcard">
+          <span className="brand-mark" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+          <span>Flashcard</span>
+        </div>
         <h1>Đăng nhập</h1>
-        <p className="muted">Tiếp tục nhịp học của bạn.</p>
+        <p className="muted">Quay lại đúng chỗ bạn đã dừng và tiếp tục nhịp học hôm nay.</p>
         <label>
           Email
           <input type="email" autoComplete="email" {...form.register('email')} />
@@ -287,7 +298,7 @@ function Login() {
   );
 }
 
-function Shell({ children }: { children: ReactNode }) {
+function Shell({ children, focus = false }: { children: ReactNode; focus?: boolean }) {
   const user = useSession((state) => state.user);
   const setSession = useSession((state) => state.setSession);
   const offline = useOffline();
@@ -303,7 +314,7 @@ function Shell({ children }: { children: ReactNode }) {
     }
   };
   return (
-    <div className="app-shell">
+    <div className={focus ? 'app-shell focus-shell' : 'app-shell'}>
       <button
         className="mobile-menu"
         aria-label={navigationOpen ? 'Đóng điều hướng' : 'Mở điều hướng'}
@@ -320,8 +331,16 @@ function Shell({ children }: { children: ReactNode }) {
         />
       )}
       <aside className={navigationOpen ? 'navigation-open' : undefined}>
-        <Link className="brand" to="/">
-          Flashcard
+        <Link className="brand" to="/" aria-label="Flashcard — về trang tổng quan">
+          <span className="brand-mark" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+          <span className="brand-copy">
+            <strong>Flashcard</strong>
+            <small>Học đều, nhớ lâu</small>
+          </span>
         </Link>
         <nav>
           <NavLink to="/" end onClick={() => setNavigationOpen(false)}>
@@ -392,8 +411,8 @@ function Dashboard() {
           <h1>Học có chủ đích.</h1>
           <p className="muted">Theo dõi tiến độ và tiếp tục nhịp học của bạn.</p>
         </div>
-        <Link className="button" to="/decks">
-          Tạo bộ thẻ
+        <Link className="button" to="/review">
+          Ôn tập ngay
         </Link>
       </header>
       {isLoading ? (
@@ -446,9 +465,11 @@ function Dashboard() {
               </p>
             </div>
           </section>
-          <section className="panel">
-            <h2>Tiếp tục học</h2>
-            <p>Hàng đợi ôn tập của bạn được sắp xếp theo lịch học hiện tại.</p>
+          <section className="panel study-callout">
+            <div>
+              <h2>Tiếp tục học</h2>
+              <p>Hàng đợi ôn tập của bạn được sắp xếp theo lịch học hiện tại.</p>
+            </div>
             <Link className="button" to="/review">
               Bắt đầu ôn tập
             </Link>
@@ -1111,7 +1132,7 @@ function Review() {
   }, [grade, revealedAt]);
   if (queue.isLoading)
     return (
-      <Shell>
+      <Shell focus>
         <section className="review-card" aria-busy="true" aria-label="Đang chuẩn bị phiên ôn tập">
           <span className="skeleton" style={{ width: '56%', height: 40, justifySelf: 'center' }} />
           <span className="skeleton" style={{ width: '82%', height: 24, justifySelf: 'center' }} />
@@ -1121,13 +1142,13 @@ function Review() {
     );
   if (queue.isError)
     return (
-      <Shell>
+      <Shell focus>
         <QueryError title="Không thể chuẩn bị phiên ôn tập." onRetry={() => void queue.refetch()} />
       </Shell>
     );
   if (card === undefined)
     return (
-      <Shell>
+      <Shell focus>
         <header className="review-header">
           <Link className="button-link" to="/">
             Kết thúc phiên
@@ -1152,7 +1173,7 @@ function Review() {
   const completedCards = Math.min(index, totalCards);
   const progress = totalCards === 0 ? 0 : Math.round((completedCards / totalCards) * 100);
   return (
-    <Shell>
+    <Shell focus>
       <header className="review-header">
         <Link className="button-link" to="/">
           Kết thúc phiên

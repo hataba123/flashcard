@@ -1,0 +1,9 @@
+{
+  "date": "2026-07-23",
+  "fontStack": "Inter with system fallbacks",
+  "palette": "Inline indigo and slate hex values",
+  "motion": "CSS transitions only; no motion library",
+  "spacing": "Ad hoc pixel spacing without named tokens",
+  "framework": "React 19 with Vite 7",
+  "routes": ["/login", "/", "/decks", "/notes", "/review"]
+}

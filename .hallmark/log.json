@@ -1,0 +1,12 @@
+[
+  {
+    "date": "2026-07-23",
+    "scope": "app",
+    "macrostructure": "Workbench",
+    "theme": "Hum",
+    "enrichment": "none",
+    "nav": "N3 functional side-rail",
+    "footer": "none (authenticated app shell)",
+    "brief": "Redesign the complete flashcard learning app for a friendly professional study experience"
+  }
+]
