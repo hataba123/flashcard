@@ -24,7 +24,7 @@ export class CardEntity {
   @Column('uuid') noteId!: string;
   @Column('uuid') deckId!: string;
   @Column({ type: 'int' }) templateOrdinal!: number;
-  @Column({ length: 20, default: CardState.New }) state!: CardState;
+  @Column('nvarchar', { length: 20, default: CardState.New }) state!: CardState;
   @Column({ type: 'datetime2' }) dueAtUtc!: Date;
   @Column({ type: 'datetime2', nullable: true }) lastReviewAtUtc!: Date | null;
   @Column({ type: 'float', default: 0 }) stability!: number;
@@ -37,7 +37,7 @@ export class CardEntity {
   @Column({ type: 'decimal', precision: 8, scale: 2, default: 1 }) priorityWeight!: number;
   @Column({ type: 'decimal', precision: 8, scale: 2, default: 1 }) importanceWeight!: number;
   @Column({ type: 'int', default: 12 }) estimatedReviewSeconds!: number;
-  @Column({ default: false }) isLeech!: boolean;
+  @Column('bit', { default: false }) isLeech!: boolean;
   @Column({ type: 'datetime2', nullable: true }) suspendedAtUtc!: Date | null;
   @Column({ type: 'int', default: 1 }) version!: number;
   @CreateDateColumn({ type: 'datetime2' }) createdAtUtc!: Date;

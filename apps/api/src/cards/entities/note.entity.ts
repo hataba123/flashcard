@@ -16,11 +16,11 @@ export class NoteEntity {
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Column('uuid') userId!: string;
   @Column('uuid') deckId!: string;
-  @Column({ length: 30 }) noteType!: NoteType;
+  @Column('nvarchar', { length: 30 }) noteType!: NoteType;
   @Column({ type: 'nvarchar', length: 'MAX' }) fieldsJson!: string;
   @Column({ type: 'nvarchar', length: 'MAX', default: '[]' }) tagsJson!: string;
   @Column({ type: 'nvarchar', length: 100, nullable: true }) sourceId!: string | null;
-  @Column({ length: 64 }) normalizedHash!: string;
+  @Column('nvarchar', { length: 64 }) normalizedHash!: string;
   @Column({ type: 'int', default: 1 }) version!: number;
   @CreateDateColumn({ type: 'datetime2' }) createdAtUtc!: Date;
   @UpdateDateColumn({ type: 'datetime2' }) updatedAtUtc!: Date;

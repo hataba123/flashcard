@@ -1,8 +1,19 @@
 import 'reflect-metadata';
 
+import { config } from 'dotenv';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { DataSource } from 'typeorm';
 
 import { parseEnvironment } from '../config/environment.js';
+
+const localEnvironmentPath = resolve(process.cwd(), '.env');
+config({
+  path: existsSync(localEnvironmentPath)
+    ? localEnvironmentPath
+    : resolve(process.cwd(), '../../.env'),
+  quiet: true
+});
 
 const environment = parseEnvironment(process.env);
 

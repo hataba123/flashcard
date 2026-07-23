@@ -24,10 +24,10 @@ export class RawInputEntity {
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Column('uuid') userId!: string;
   @Column({ type: 'nvarchar', length: 'MAX' }) contentRaw!: string;
-  @Column({ length: 50 }) sourceType!: string;
+  @Column('nvarchar', { length: 50 }) sourceType!: string;
   @Column({ type: 'nvarchar', length: 'MAX', nullable: true }) sourceMetadataJson!: string | null;
-  @Column({ length: 64 }) normalizedHash!: string;
-  @Column({ length: 20, default: RawInputStatus.Pending }) status!: RawInputStatus;
+  @Column('nvarchar', { length: 64 }) normalizedHash!: string;
+  @Column('nvarchar', { length: 20, default: RawInputStatus.Pending }) status!: RawInputStatus;
   @CreateDateColumn({ type: 'datetime2' }) ingestedAtUtc!: Date;
   @Column({ type: 'datetime2', nullable: true }) processedAtUtc!: Date | null;
   @Column({ type: 'int', default: 1 }) version!: number;

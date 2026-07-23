@@ -13,10 +13,10 @@ export class DeviceEntity {
   @ManyToOne(() => UserEntity, { onDelete: 'NO ACTION' })
   user!: UserEntity;
 
-  @Column({ length: 100 })
+  @Column('nvarchar', { length: 100 })
   name!: string;
 
-  @Column({ length: 100 })
+  @Column('nvarchar', { length: 100 })
   platform!: string;
 
   @Column({ type: 'datetime2' })

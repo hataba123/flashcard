@@ -13,7 +13,7 @@ export class ReviewLogEntity {
   @Column('uuid') cardId!: string;
   @Column('uuid') sessionId!: string;
   @Column('uuid') deviceId!: string;
-  @Column({ length: 16 }) eventType!: ReviewEventType;
+  @Column('nvarchar', { length: 16 }) eventType!: ReviewEventType;
   @Column({ type: 'nvarchar', length: 8, nullable: true }) rating!: ReviewRating | null;
   @Column({ type: 'datetime2' }) shownAtUtc!: Date;
   @Column({ type: 'datetime2', nullable: true }) revealedAtUtc!: Date | null;
@@ -35,8 +35,8 @@ export class ReviewLogEntity {
   @Column({ type: 'int' }) reviewCountAfter!: number;
   @Column({ type: 'int' }) lapseCountBefore!: number;
   @Column({ type: 'int' }) lapseCountAfter!: number;
-  @Column({ length: 20 }) stateBefore!: CardState;
-  @Column({ length: 20 }) stateAfter!: CardState;
+  @Column('nvarchar', { length: 20 }) stateBefore!: CardState;
+  @Column('nvarchar', { length: 20 }) stateAfter!: CardState;
   @Column({ type: 'datetime2' }) dueBeforeUtc!: Date;
   @Column({ type: 'datetime2' }) dueAfterUtc!: Date;
   @Column({ type: 'datetime2', nullable: true }) lastReviewBeforeUtc!: Date | null;

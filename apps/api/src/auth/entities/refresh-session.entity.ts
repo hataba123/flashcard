@@ -24,7 +24,7 @@ export class RefreshSessionEntity {
   @Column('uuid')
   deviceId!: string;
 
-  @Column({ length: 128 })
+  @Column('nvarchar', { length: 128 })
   tokenHash!: string;
 
   @Column('uuid')

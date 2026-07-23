@@ -13,16 +13,16 @@ export class UserEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ length: 254 })
+  @Column('nvarchar', { length: 254 })
   email!: string;
 
-  @Column({ length: 254 })
+  @Column('nvarchar', { length: 254 })
   normalizedEmail!: string;
 
-  @Column({ length: 255 })
+  @Column('nvarchar', { length: 255 })
   passwordHash!: string;
 
-  @Column({ length: 64, default: 'UTC' })
+  @Column('nvarchar', { length: 64, default: 'UTC' })
   timezone!: string;
 
   @Column({ type: 'int', default: 7200 })

@@ -8,6 +8,7 @@
     "start": "node dist/main.js",
     "start:dev": "tsx watch src/main.ts",
     "migration:run": "tsx src/database/run-migrations.ts",
+    "seed:demo": "tsx src/database/seed-demo.ts",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "test": "vitest run"
   },
@@ -29,7 +30,8 @@
     "class-transformer": "0.5.1",
     "class-validator": "0.14.2",
     "cookie-parser": "1.4.7",
-    "exceljs": "^4.4.0",
+    "dotenv": "17.3.1",
+    "exceljs": "4.4.0",
     "helmet": "8.1.0",
     "mssql": "12.7.0",
     "multer": "2.2.0",

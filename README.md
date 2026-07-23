@@ -47,3 +47,12 @@ pnpm --filter @flashcard/web dev
 - Web/PWA: `http://localhost:5173`
 
 Web app có thể cài như PWA từ trình duyệt hỗ trợ. Chiến lược offline, sync và chỉ số vận hành lần lượt nằm ở `docs/offline-strategy.md` và `docs/metrics.md`; hướng dẫn bảo mật nằm ở `docs/security.md`.
+
+Migration tự đọc `.env`; không cần truyền bí mật trên command line.
+
+```bash
+pnpm --filter @flashcard/api migration:run
+pnpm --filter @flashcard/api seed:demo
+```
+
+Seed chỉ chạy ngoài production. Tài khoản local mặc định là `demo@flashcard.local`; thay đổi `SEED_DEMO_EMAIL` và `SEED_DEMO_PASSWORD` trong `.env` trước khi seed nếu cần. Tài liệu kiến trúc, domain, API và sync lần lượt nằm tại `docs/architecture.md`, `docs/domain-model.md`, `docs/api.md` và `docs/sync-protocol.md`.

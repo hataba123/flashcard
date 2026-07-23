@@ -19,6 +19,7 @@ import { SyncModule } from './sync/sync.module.js';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: ['.env', '../../.env'],
       validate: parseEnvironment
     }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
