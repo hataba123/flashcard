@@ -9,6 +9,34 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      API_PORT: 3000
+      WEB_ORIGIN: http://localhost:5173
+      DB_HOST: localhost
+      DB_PORT: 1433
+      DB_NAME: flashcard
+      DB_USER: sa
+      DB_PASSWORD: FlashcardCiDb!2026
+      JWT_ACCESS_SECRET: ci-only-secret-with-at-least-thirty-two-characters
+      JWT_ACCESS_TTL: 15m
+      REFRESH_TOKEN_TTL_DAYS: 30
+      MEDIA_DRIVER: local
+      MEDIA_LOCAL_PATH: ./storage/media
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: FlashcardCiDb!2026
+          MSSQL_PID: Developer
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '$$MSSQL_SA_PASSWORD' -C -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -20,6 +48,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm audit --audit-level high
+      - run: pnpm --filter @flashcard/api migration:run
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
