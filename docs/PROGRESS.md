@@ -64,3 +64,13 @@
 - Kiểm tra đã chạy: API typecheck, lint, Prettier và unit test review service (idempotency).
 - Quyết định quan trọng: review log lưu đủ snapshot scheduling trước/sau để undo khôi phục đúng card state mà không cập nhật/xóa lịch sử cũ.
 - Tiếp theo: Milestone 7 — admission control và backlog.
+
+## Milestone 7 — Admission control và backlog
+
+- Trạng thái: Hoàn thành.
+- Commit: Sẽ được bổ sung sau khi tạo commit milestone.
+- Đã push: Không thể push vì repository chưa có remote `origin`.
+- Đã thực hiện: thêm RawInput, CandidateScore và migration chỉ-thêm-mới; ingest idempotent theo hash nội dung; đánh giá rule-based minh bạch; backlog; endpoint summary và chạy admission theo ngân sách review còn lại.
+- Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm format:check`, `git diff --check`.
+- Quyết định quan trọng: admission không tự tạo Note/Card từ raw input để tránh đưa dữ liệu ingest thô vào SRS; trạng thái `Admitted` là quyết định đủ ngân sách, bước chuyển đổi nội dung thành note được giữ tách biệt.
+- Tiếp theo: Milestone 8 — đồng bộ cursor và realtime.
