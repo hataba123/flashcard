@@ -87,7 +87,8 @@
 
 ## Milestone 9 — Media
 
-- Trạng thái: Đang triển khai.
-- Commit: Sẽ được bổ sung sau khi tạo commit phần local storage.
-- Đã thực hiện: MediaFile và migration; upload multipart memory-only, giới hạn 20 MiB, allowlist MIME kèm kiểm tra magic bytes, SHA-256 deduplicate theo user, local storage sử dụng UUID và kiểm tra ownership khi đọc/xóa mềm.
-- Còn lại: S3-compatible storage và chính sách cleanup orphan có độ trễ.
+- Trạng thái: Hoàn thành.
+- Commit: Sẽ được bổ sung sau khi tạo commit milestone.
+- Đã thực hiện: MediaFile và migration; upload multipart memory-only, giới hạn 20 MiB, allowlist MIME kèm kiểm tra magic bytes, SHA-256 deduplicate theo user, local và S3-compatible storage sử dụng UUID, kiểm tra ownership khi đọc/xóa mềm.
+- Quyết định quan trọng: xóa API chỉ soft-delete metadata; `cleanupDeleted(beforeUtc)` là hook cho scheduled cleanup, nhờ đó media vẫn tồn tại trong thời gian grace period để tránh xóa nhầm reference trễ.
+- Tiếp theo: Milestone 10 — frontend foundation.

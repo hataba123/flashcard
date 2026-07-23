@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.970.0",
     "@flashcard/contracts": "workspace:*",
     "@flashcard/scheduling": "workspace:*",
     "@nestjs/common": "11.1.28",

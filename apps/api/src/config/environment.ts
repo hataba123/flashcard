@@ -13,7 +13,13 @@ const environmentSchema = z.object({
   JWT_ACCESS_TTL: z.string().trim().min(1).default('15m'),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
   MEDIA_DRIVER: z.enum(['local', 's3']).default('local'),
-  MEDIA_LOCAL_PATH: z.string().trim().min(1).default('./storage/media')
+  MEDIA_LOCAL_PATH: z.string().trim().min(1).default('./storage/media'),
+  S3_ENDPOINT: z.url().optional(),
+  S3_REGION: z.string().trim().min(1).default('us-east-1'),
+  S3_BUCKET: z.string().trim().min(1).optional(),
+  S3_ACCESS_KEY: z.string().min(1).optional(),
+  S3_SECRET_KEY: z.string().min(1).optional(),
+  S3_FORCE_PATH_STYLE: z.coerce.boolean().default(true)
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

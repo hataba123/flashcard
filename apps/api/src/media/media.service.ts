@@ -1,4 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+  type S3ClientConfig
+} from '@aws-sdk/client-s3';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -40,13 +46,24 @@ export class MediaService {
     if (existing !== null) return existing;
     const extension = this.extension(file.mimetype);
     const storageKey = `${randomUUID()}.${extension}`;
-    const root = resolve(process.env.MEDIA_LOCAL_PATH ?? './storage/media');
-    await mkdir(root, { recursive: true });
-    await writeFile(join(root, storageKey), file.buffer, { flag: 'wx' });
+    if (this.driver === 'local') {
+      const root = resolve(process.env.MEDIA_LOCAL_PATH ?? './storage/media');
+      await mkdir(root, { recursive: true });
+      await writeFile(join(root, storageKey), file.buffer, { flag: 'wx' });
+    } else {
+      await this.s3.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: storageKey,
+          Body: file.buffer,
+          ContentType: file.mimetype
+        })
+      );
+    }
     return this.files.save(
       this.files.create({
         userId,
-        storageProvider: 'local',
+        storageProvider: this.driver,
         storageKey,
         originalFileName: file.originalname,
         contentType: file.mimetype,
@@ -57,7 +74,13 @@ export class MediaService {
   }
   async read(userId: string, id: string): Promise<{ file: MediaFileEntity; data: Buffer }> {
     const file = await this.require(userId, id);
-    return { file, data: await readFile(this.path(file.storageKey)) };
+    if (file.storageProvider === 'local')
+      return { file, data: await readFile(this.path(file.storageKey)) };
+    const response = await this.s3.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: file.storageKey })
+    );
+    if (response.Body === undefined) throw new NotFoundException('Media data not found.');
+    return { file, data: Buffer.from(await response.Body.transformToByteArray()) };
   }
   async remove(userId: string, id: string): Promise<void> {
     const file = await this.require(userId, id);
@@ -71,6 +94,27 @@ export class MediaService {
   }
   private path(storageKey: string): string {
     return join(resolve(process.env.MEDIA_LOCAL_PATH ?? './storage/media'), storageKey);
+  }
+  private get driver(): 'local' | 's3' {
+    return process.env.MEDIA_DRIVER === 's3' ? 's3' : 'local';
+  }
+  private get bucket(): string {
+    if (process.env.S3_BUCKET === undefined)
+      throw new BadRequestException('S3_BUCKET is required for S3 storage.');
+    return process.env.S3_BUCKET;
+  }
+  private get s3(): S3Client {
+    const config: S3ClientConfig = {
+      region: process.env.S3_REGION ?? 'us-east-1',
+      forcePathStyle: process.env.S3_FORCE_PATH_STYLE !== 'false'
+    };
+    if (process.env.S3_ENDPOINT !== undefined) config.endpoint = process.env.S3_ENDPOINT;
+    if (process.env.S3_ACCESS_KEY !== undefined && process.env.S3_SECRET_KEY !== undefined)
+      config.credentials = {
+        accessKeyId: process.env.S3_ACCESS_KEY,
+        secretAccessKey: process.env.S3_SECRET_KEY
+      };
+    return new S3Client(config);
   }
   private extension(type: string): string {
     return (
