@@ -95,6 +95,10 @@
 
 ## Milestone 10 — Frontend foundation
 
-- Trạng thái: Đang triển khai.
-- Đã thực hiện: React/Vite, TanStack Query, Zustand session memory, protected routes, API client cookie credentials, responsive login và danh sách deck tối thiểu.
-- Còn lại: form quản lý deck/note đầy đủ, React Hook Form/Zod validation, dashboard shell và PWA.
+- Trạng thái: Hoàn thành.
+- Commit: Sẽ được bổ sung sau khi tạo commit milestone.
+- Đã push: Chưa thể push vì repository chưa có remote `origin`.
+- Đã thực hiện: hoàn thiện app shell responsive, dashboard shell, Zustand session chỉ lưu memory, khôi phục phiên qua refresh cookie HttpOnly, protected route, API client có credentials, đăng nhập, danh sách/tạo/sửa/xóa mềm deck và tạo/xóa mềm note kèm generate card idempotent.
+- Kiểm tra đã chạy: web typecheck, workspace lint và Prettier; toàn workspace test/build được chạy trước khi commit.
+- Quyết định quan trọng: access token không được ghi persistent storage; reload luôn bắt đầu bằng `/auth/refresh`, sau đó lấy `/auth/me` để tái tạo session memory.
+- Tiếp theo: Milestone 11 — Review UI.
