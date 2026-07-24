@@ -14,6 +14,7 @@ import type { LoginDto, RegisterDto } from './dto/auth.dto.js';
 
 export interface AuthResult {
   accessToken: string;
+  deviceId: string;
   refreshToken: string;
   user: Pick<
     UserEntity,
@@ -93,7 +94,7 @@ export class AuthService {
     session.replacedBySessionId = replacement.id;
     await this.sessions.save(session);
 
-    return this.toAuthResult(session.user, replacement.token);
+    return this.toAuthResult(session.user, replacement.token, session.deviceId);
   }
 
   async logout(refreshToken: string | undefined): Promise<void> {
@@ -123,7 +124,7 @@ export class AuthService {
       ['id']
     );
     const session = await this.createRefreshSession(user, input.deviceId, randomUUID());
-    return this.toAuthResult(user, session.token);
+    return this.toAuthResult(user, session.token, input.deviceId);
   }
 
   private async createRefreshSession(
@@ -153,9 +154,14 @@ export class AuthService {
     return { id, token: `${id}.${secret}` };
   }
 
-  private async toAuthResult(user: UserEntity, refreshToken: string): Promise<AuthResult> {
+  private async toAuthResult(
+    user: UserEntity,
+    refreshToken: string,
+    deviceId: string
+  ): Promise<AuthResult> {
     return {
       accessToken: await this.jwtService.signAsync({ sub: user.id, email: user.email }),
+      deviceId,
       refreshToken,
       user: {
         id: user.id,

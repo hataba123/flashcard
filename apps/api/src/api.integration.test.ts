@@ -9,6 +9,7 @@ import { AppModule } from './app.module.js';
 
 interface AuthResponse {
   accessToken: string;
+  deviceId: string;
 }
 
 describe('API integration', () => {
@@ -33,6 +34,16 @@ describe('API integration', () => {
     const password = 'IntegrationPassword123!';
     const firstAuth = await register(`${suffix}-first@integration.local`, password);
     const secondAuth = await register(`${suffix}-second@integration.local`, password);
+    await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({
+        email: `${suffix}-first@integration.local`,
+        password,
+        deviceId: randomUUID(),
+        deviceName: 'Login test',
+        platform: 'vitest'
+      })
+      .expect(200);
     const createdDeck = await request(app.getHttpServer())
       .post('/api/decks')
       .set('Authorization', `Bearer ${firstAuth.accessToken}`)
@@ -57,6 +68,7 @@ describe('API integration', () => {
         platform: 'vitest'
       })
       .expect(201);
+    expect(response.body.deviceId).toEqual(expect.any(String));
     return response.body as AuthResponse;
   }
 });

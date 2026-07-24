@@ -24,4 +24,25 @@ export class RegisterDto {
   platform!: string;
 }
 
-export class LoginDto extends RegisterDto {}
+export class LoginDto {
+  @IsEmail()
+  @MaxLength(254)
+  email!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(128)
+  password!: string;
+
+  @IsUUID()
+  deviceId!: string;
+
+  @IsString()
+  @Length(1, 100)
+  deviceName!: string;
+
+  @Type(() => String)
+  @IsString()
+  @Length(1, 100)
+  platform!: string;
+}

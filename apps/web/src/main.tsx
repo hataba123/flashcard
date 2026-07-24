@@ -21,7 +21,12 @@ import { z } from 'zod';
 import { schedulingService } from '@flashcard/scheduling';
 
 import { ApiError, api } from './api.js';
-import { offlineDb, getDeviceId, type CachedReviewCard } from './offline-db.js';
+import {
+  offlineDb,
+  getDeviceId,
+  setDeviceId as persistDeviceId,
+  type CachedReviewCard
+} from './offline-db.js';
 import { OfflineProvider, useOffline } from './offline-provider.js';
 import { ReviewControls } from './review-controls.js';
 import { nextReviewIndex, ratingForShortcut, type ReviewRating } from './review-utils.js';
@@ -107,6 +112,10 @@ const loginSchema = z.object({
   email: z.email('Email không hợp lệ.'),
   password: z.string().min(1, 'Vui lòng nhập mật khẩu.')
 });
+const registerSchema = z.object({
+  email: z.email('Email không hợp lệ.'),
+  password: z.string().min(12, 'Mật khẩu cần có ít nhất 12 ký tự.')
+});
 const deckSchema = z.object({
   name: z.string().trim().min(1, 'Tên bộ thẻ là bắt buộc.').max(200),
   description: z.string().max(2_000),
@@ -122,6 +131,7 @@ const noteSchema = z.object({
   tags: z.string()
 });
 type LoginForm = z.infer<typeof loginSchema>;
+type RegisterForm = z.infer<typeof registerSchema>;
 type DeckForm = z.infer<typeof deckSchema>;
 type NoteForm = z.infer<typeof noteSchema>;
 const errorMessage = (error: unknown) =>
@@ -218,6 +228,7 @@ function SessionBootstrap({ children }: { children: ReactNode }) {
       try {
         const auth = await api.refresh();
         api.setAccessToken(auth.accessToken);
+        if (auth.deviceId !== undefined) await persistDeviceId(auth.deviceId);
         setSession(auth.accessToken, await api.get<User>('/auth/me'));
       } catch {
         api.setAccessToken(null);
@@ -241,20 +252,24 @@ function Protected({ children }: { children: ReactNode }) {
   );
 }
 
-function Login() {
+function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const navigate = useNavigate();
   const setSession = useSession((state) => state.setSession);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const form = useForm<LoginForm>({ defaultValues: { email: '', password: '' } });
+  const isRegister = mode === 'register';
+  const form = useForm<LoginForm | RegisterForm>({ defaultValues: { email: '', password: '' } });
   const login = useMutation({
-    mutationFn: async (values: LoginForm) => {
-      const input = loginSchema.parse(values);
-      const result = await api.post<{ accessToken: string }>('/auth/login', {
-        ...input,
-        deviceId: await getDeviceId(),
-        deviceName: 'Web browser',
-        platform: navigator.userAgent.slice(0, 100)
-      });
+    mutationFn: async (values: LoginForm | RegisterForm) => {
+      const input = (isRegister ? registerSchema : loginSchema).parse(values);
+      const result = await api.post<{ accessToken: string }>(
+        isRegister ? '/auth/register' : '/auth/login',
+        {
+          ...input,
+          deviceId: await getDeviceId(),
+          deviceName: 'Web browser',
+          platform: navigator.userAgent.slice(0, 100)
+        }
+      );
       api.setAccessToken(result.accessToken);
       return { ...result, user: await api.get<User>('/auth/me') };
     },
@@ -275,8 +290,12 @@ function Login() {
           </span>
           <span>Flashcard</span>
         </div>
-        <h1>Đăng nhập</h1>
-        <p className="muted">Quay lại đúng chỗ bạn đã dừng và tiếp tục nhịp học hôm nay.</p>
+        <h1>{isRegister ? 'Tạo tài khoản' : 'Đăng nhập'}</h1>
+        <p className="muted">
+          {isRegister
+            ? 'Tạo tài khoản để lưu bộ thẻ và tiến độ học trên database.'
+            : 'Quay lại đúng chỗ bạn đã dừng và tiếp tục nhịp học hôm nay.'}
+        </p>
         <label>
           Email
           <input type="email" autoComplete="email" {...form.register('email')} />
@@ -284,7 +303,11 @@ function Login() {
         <FormError message={form.formState.errors.email?.message} />
         <label>
           Mật khẩu
-          <input type="password" autoComplete="current-password" {...form.register('password')} />
+          <input
+            type="password"
+            autoComplete={isRegister ? 'new-password' : 'current-password'}
+            {...form.register('password')}
+          />
         </label>
         <FormError message={form.formState.errors.password?.message} />
         {submitError !== null && (
@@ -294,9 +317,21 @@ function Login() {
         )}
         <button disabled={login.isPending} aria-busy={login.isPending}>
           <ButtonContent loading={login.isPending}>
-            {login.isPending ? 'Đang đăng nhập…' : 'Đăng nhập'}
+            {login.isPending
+              ? isRegister
+                ? 'Đang tạo tài khoản…'
+                : 'Đang đăng nhập…'
+              : isRegister
+                ? 'Đăng ký'
+                : 'Đăng nhập'}
           </ButtonContent>
         </button>
+        <p className="auth-switch">
+          {isRegister ? 'Đã có tài khoản?' : 'Chưa có tài khoản?'}{' '}
+          <Link to={isRegister ? '/login' : '/register'}>
+            {isRegister ? 'Đăng nhập' : 'Đăng ký'}
+          </Link>
+        </p>
       </form>
     </main>
   );
@@ -977,7 +1012,7 @@ function Review() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [hasConflict, setHasConflict] = useState(false);
   const sessionId = useState(() => crypto.randomUUID())[0];
-  const [deviceId, setDeviceId] = useState<string>(() => crypto.randomUUID());
+  const [deviceId, setDeviceId] = useState<string | null>(null);
   const offline = useOffline();
   useEffect(() => {
     void getDeviceId().then(setDeviceId);
@@ -1043,6 +1078,7 @@ function Review() {
     mutationFn: async (rating: ReviewRating) => {
       if (card === undefined || revealedAt === null)
         throw new Error('Hãy xem đáp án trước khi chấm điểm.');
+      if (deviceId === null) throw new Error('Thiết bị đang được chuẩn bị. Vui lòng thử lại.');
       const now = new Date();
       const event = {
         clientEventId: crypto.randomUUID(),
@@ -1291,7 +1327,7 @@ function Review() {
                 <ReviewControls
                   revealed={false}
                   previews={undefined}
-                  isSubmitting={grade.isPending}
+                  isSubmitting={grade.isPending || deviceId === null}
                   onReveal={() => setRevealedAt(new Date())}
                   onGrade={() => undefined}
                 />
@@ -1299,7 +1335,7 @@ function Review() {
                 <ReviewControls
                   revealed
                   previews={previews.data}
-                  isSubmitting={grade.isPending}
+                  isSubmitting={grade.isPending || deviceId === null}
                   onReveal={() => undefined}
                   onGrade={(rating) => grade.mutate(rating)}
                 />
@@ -1353,7 +1389,8 @@ function AudioControl({ mediaId }: { mediaId: string | undefined }) {
 function App() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
+      <Route path="/login" element={<AuthPage mode="login" />} />
+      <Route path="/register" element={<AuthPage mode="register" />} />
       <Route
         path="/"
         element={

@@ -88,3 +88,12 @@ export async function getDeviceId(): Promise<string> {
   await offlineDb.syncState.put({ id: 'state', cursor: 0, deviceId });
   return deviceId;
 }
+
+export async function setDeviceId(deviceId: string): Promise<void> {
+  const state = await offlineDb.syncState.get('state');
+  await offlineDb.syncState.put({
+    id: 'state',
+    cursor: state?.cursor ?? 0,
+    deviceId
+  });
+}

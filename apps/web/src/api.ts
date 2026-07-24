@@ -33,7 +33,7 @@ class ApiClient {
   getBlob(path: string): Promise<Blob> {
     return this.requestBlob(path);
   }
-  refresh(): Promise<{ accessToken: string }> {
+  refresh(): Promise<{ accessToken: string; deviceId?: string }> {
     return this.request('/auth/refresh', { method: 'POST' });
   }
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {

@@ -232,3 +232,9 @@
 - Đã thực hiện: thiết kế lại màn ôn tập theo cấu trúc Study Stage; thẻ lật 3D giữa câu hỏi và đáp án, mặt sau giữ lại câu hỏi làm ngữ cảnh, nút chấm điểm kiểu Anki hiển thị cảm giác nhớ và lịch ôn tiếp theo.
 - Quyết định quan trọng: giữ nguyên API, lịch FSRS, phím tắt và luồng offline; chuyển động chỉ dùng `transform`/`opacity`, có chế độ crossfade khi người dùng bật giảm chuyển động.
 - Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, Playwright e2e và kiểm tra trực quan tại 320/375/414/768px.
+
+## Sửa lỗi chấm điểm thẻ sau khi khôi phục phiên
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: API trả về ID thiết bị của refresh session; web đồng bộ ID này vào IndexedDB trước khi phiên sẵn sàng và khóa nút chấm điểm cho đến khi ID thiết bị được nạp.
+- Mục tiêu: tránh gửi ID thiết bị tạm thời/không tồn tại, gây vi phạm khóa ngoại khi ghi `review_logs`.
