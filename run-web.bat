@@ -36,8 +36,16 @@ powershell -NoProfile -Command "if (Test-NetConnection localhost -Port 3000 -War
 if %ERRORLEVEL% EQU 0 (
     echo API dang chay tai cong 3000, se su dung lai tien trinh hien tai.
 ) else (
+    echo Dang build API...
+    call "%PNPM_CMD%" --filter @flashcard/api build
+    if errorlevel 1 (
+        echo Build API that bai.
+        pause
+        exit /b 1
+    )
+
     echo Dang khoi dong API...
-    start "Flashcard API" cmd /k call "%PNPM_CMD%" --filter @flashcard/api start:dev
+    start "Flashcard API" cmd /k call "%PNPM_CMD%" --filter @flashcard/api start
 )
 
 echo Dang cho API san sang...

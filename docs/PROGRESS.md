@@ -220,6 +220,11 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: tự động đọc mặt trước khi mở thẻ và đọc toàn bộ trường nội dung mặt sau khi lật; hủy câu đang đọc trước khi phát câu mới; thêm lựa chọn Anh-Mỹ, Anh-Anh và các ngôn ngữ phổ biến, giọng đọc có trên thiết bị, tốc độ 0,5×–2×, bật/tắt tự đọc và nút đọc lại.
 - Quyết định quan trọng: cài đặt được lưu cục bộ bằng `localStorage`, không thêm API key, dịch vụ ngoài, request máy chủ hoặc thay đổi dữ liệu thẻ; danh sách giọng vẫn phụ thuộc trình duyệt/hệ điều hành.
+## Sửa launcher local API
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: launcher `run-web.bat` build API bằng TypeScript rồi chạy `dist/main.js`, thay cho `tsx watch` không tạo decorator metadata cần cho NestJS dependency injection.
+- Kiểm tra đã chạy: `pnpm --filter @flashcard/api build`, `git diff --check`.
 
 ## Nâng cấp trải nghiệm ôn tập
 
