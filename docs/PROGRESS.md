@@ -238,3 +238,9 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: API trả về ID thiết bị của refresh session; web đồng bộ ID này vào IndexedDB trước khi phiên sẵn sàng và khóa nút chấm điểm cho đến khi ID thiết bị được nạp.
 - Mục tiêu: tránh gửi ID thiết bị tạm thời/không tồn tại, gây vi phạm khóa ngoại khi ghi `review_logs`.
+
+## Cập nhật bản vá bảo mật React Router
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: nâng `react-router-dom` và `react-router` từ `7.15.1` lên `7.18.0` để xử lý lỗ hổng DoS khi so khớp route chưa xác thực.
+- Kiểm tra đã chạy: `pnpm audit --audit-level high`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
