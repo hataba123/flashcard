@@ -9,6 +9,7 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
     env:
       NODE_ENV: test
       API_PORT: 3000
@@ -63,5 +64,5 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-      - run: pnpm --filter @flashcard/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @flashcard/web exec playwright install chromium
       - run: pnpm --filter @flashcard/web test:e2e

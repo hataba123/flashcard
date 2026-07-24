@@ -207,3 +207,10 @@
 - Trạng thái: Đã sửa cấu hình service container và khởi tạo database CI.
 - Đã thực hiện: ghim workflow CI trên `ubuntu-22.04`; bỏ cú pháp escape dành riêng cho Docker Compose đang làm sai giá trị `MSSQL_SA_PASSWORD`; thêm 30 giây khởi động trước khi tính lỗi healthcheck; tạo database `DB_NAME` theo cách idempotent trước khi chạy migration.
 - Kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` và Prettier đều đạt; GitHub Actions #25 đã khởi động SQL Server thành công và giúp phát hiện database đích chưa tồn tại; chưa thể chạy Docker cục bộ vì máy phát triển chưa cài Docker CLI.
+
+## Milestone 18 — Hoàn tất độ tin cậy CI
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: giới hạn job CI trong 20 phút để không chiếm runner vô hạn; trên GitHub-hosted runner chỉ tải Chromium cho Playwright, không cài lại system dependency bằng `--with-deps` vốn đã treo ở workflow #26.
+- Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, kiểm tra Prettier cho workflow và tài liệu, `git diff --check`; workflow GitHub Actions được theo dõi sau khi push.
+- Quyết định quan trọng: vẫn giữ kiểm thử Playwright E2E trong CI; chỉ loại bỏ bước APT phụ không cần thiết trên image `ubuntu-22.04` đã được GitHub quản lý.
