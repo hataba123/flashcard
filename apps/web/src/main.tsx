@@ -26,6 +26,7 @@ import { OfflineProvider, useOffline } from './offline-provider.js';
 import { ReviewControls } from './review-controls.js';
 import { nextReviewIndex, ratingForShortcut, type ReviewRating } from './review-utils.js';
 import { useSession, type User } from './session.js';
+import { getCardSpeechText, SpeechControl } from './speech-control.js';
 import './styles.css';
 import './hallmark.css';
 
@@ -1169,6 +1170,8 @@ function Review() {
     note.data === undefined ? {} : parseJson<Record<string, string>>(note.data.fieldsJson, {});
   const front = fields.front ?? fields.text ?? 'Đang tải nội dung…';
   const back = fields.back ?? '';
+  const revealed = revealedAt !== null;
+  const speechText = getCardSpeechText(fields, revealed);
   const totalCards = queue.data?.cards.length ?? 0;
   const completedCards = Math.min(index, totalCards);
   const progress = totalCards === 0 ? 0 : Math.round((completedCards / totalCards) * 100);
@@ -1227,7 +1230,12 @@ function Review() {
             <>
               <p className="review-face">{front}</p>
               <AudioControl mediaId={fields.audioMediaId} />
-              {revealedAt === null ? (
+              {revealed && <p className="answer">{back}</p>}
+              <SpeechControl
+                contentKey={`${card.id}:${revealed ? 'back' : 'front'}`}
+                text={speechText}
+              />
+              {!revealed ? (
                 <ReviewControls
                   revealed={false}
                   previews={undefined}
@@ -1236,16 +1244,13 @@ function Review() {
                   onGrade={() => undefined}
                 />
               ) : (
-                <>
-                  <p className="answer">{back}</p>
-                  <ReviewControls
-                    revealed
-                    previews={previews.data}
-                    isSubmitting={grade.isPending}
-                    onReveal={() => undefined}
-                    onGrade={(rating) => grade.mutate(rating)}
-                  />
-                </>
+                <ReviewControls
+                  revealed
+                  previews={previews.data}
+                  isSubmitting={grade.isPending}
+                  onReveal={() => undefined}
+                  onGrade={(rating) => grade.mutate(rating)}
+                />
               )}
             </>
           )}

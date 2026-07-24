@@ -214,3 +214,9 @@
 - Đã thực hiện: giới hạn job CI trong 20 phút để không chiếm runner vô hạn; trên GitHub-hosted runner chỉ tải Chromium cho Playwright, không cài lại system dependency bằng `--with-deps` vốn đã treo ở workflow #26.
 - Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, kiểm tra Prettier cho workflow và tài liệu, `git diff --check`; workflow GitHub Actions được theo dõi sau khi push.
 - Quyết định quan trọng: vẫn giữ kiểm thử Playwright E2E trong CI; chỉ loại bỏ bước APT phụ không cần thiết trên image `ubuntu-22.04` đã được GitHub quản lý.
+
+## Milestone 19 — Tự động đọc thẻ bằng Web Speech API
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: tự động đọc mặt trước khi mở thẻ và đọc toàn bộ trường nội dung mặt sau khi lật; hủy câu đang đọc trước khi phát câu mới; thêm lựa chọn Anh-Mỹ, Anh-Anh và các ngôn ngữ phổ biến, giọng đọc có trên thiết bị, tốc độ 0,5×–2×, bật/tắt tự đọc và nút đọc lại.
+- Quyết định quan trọng: cài đặt được lưu cục bộ bằng `localStorage`, không thêm API key, dịch vụ ngoài, request máy chủ hoặc thay đổi dữ liệu thẻ; danh sách giọng vẫn phụ thuộc trình duyệt/hệ điều hành.
