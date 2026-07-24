@@ -51,6 +51,9 @@ interface ExcelImportResult {
   createdCards: number;
   skippedRows: number;
   errors: string[];
+  scannedRows: number;
+  recognizedHeaders: number;
+  recognizedBlocks: number;
 }
 interface ReviewCard {
   id: string;
@@ -866,13 +869,16 @@ function Notes() {
         </div>
       </header>
       <p className="muted import-help">
-        Excel cần có cột Front và Back; có thể thêm Tags (ngăn cách bằng dấu phẩy) và Type (Basic,
-        BasicAndReverse hoặc Cloze). Cũng hỗ trợ tiêu đề Mặt trước, Mặt sau, Nhãn và Loại.
+        Hỗ trợ Front | Back | Tags | Type; danh sách từ vựng, từ vựng theo chủ đề, collocation,
+        synonym/paraphrase, word family, mẫu câu và morphology. Một worksheet có thể có nhiều bảng:
+        ứng dụng tự phát hiện header từng bảng và chỉ đọc worksheet đầu tiên. Type không bắt buộc
+        (mặc định Basic); STT, trạng thái, ghi chú và dữ liệu tần suất sẽ bị bỏ qua.
       </p>
       {importResult !== null && (
         <div className="import-result" role="status">
           <p>
             Đã tạo {importResult.importedNotes} thẻ và {importResult.createdCards} thẻ ôn tập.
+            {` Đã nhận diện ${importResult.recognizedBlocks} bảng và duyệt ${importResult.scannedRows} dòng.`}
             {importResult.skippedRows > 0
               ? ` Bỏ qua ${importResult.skippedRows} dòng không hợp lệ.`
               : ''}
