@@ -141,7 +141,22 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
   await page.getByRole('link', { name: 'Ôn tập', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Phiên ôn tập', exact: true })).toBeVisible();
+  await expect(page.locator('.review-card')).not.toHaveClass(/is-revealed/);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth
+    )
+  ).toBe(true);
   await page.getByRole('button', { name: /Hiện đáp án/ }).click();
+  await expect(page.locator('.review-card')).toHaveClass(/is-revealed/);
   await expect(page.locator('.grade-actions button')).toHaveCount(4);
-  await expect(page.getByText('Câu trả lời')).toBeVisible();
+  await expect(page.getByText('Câu trả lời', { exact: true })).toBeVisible();
+  for (const width of [320, 375, 414, 768]) {
+    await page.setViewportSize({ width, height: width === 768 ? 1024 : 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth
+      )
+    ).toBe(true);
+  }
 });

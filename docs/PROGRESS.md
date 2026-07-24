@@ -220,3 +220,10 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: tự động đọc mặt trước khi mở thẻ và đọc toàn bộ trường nội dung mặt sau khi lật; hủy câu đang đọc trước khi phát câu mới; thêm lựa chọn Anh-Mỹ, Anh-Anh và các ngôn ngữ phổ biến, giọng đọc có trên thiết bị, tốc độ 0,5×–2×, bật/tắt tự đọc và nút đọc lại.
 - Quyết định quan trọng: cài đặt được lưu cục bộ bằng `localStorage`, không thêm API key, dịch vụ ngoài, request máy chủ hoặc thay đổi dữ liệu thẻ; danh sách giọng vẫn phụ thuộc trình duyệt/hệ điều hành.
+
+## Nâng cấp trải nghiệm ôn tập
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: thiết kế lại màn ôn tập theo cấu trúc Study Stage; thẻ lật 3D giữa câu hỏi và đáp án, mặt sau giữ lại câu hỏi làm ngữ cảnh, nút chấm điểm kiểu Anki hiển thị cảm giác nhớ và lịch ôn tiếp theo.
+- Quyết định quan trọng: giữ nguyên API, lịch FSRS, phím tắt và luồng offline; chuyển động chỉ dùng `transform`/`opacity`, có chế độ crossfade khi người dùng bật giảm chuyển động.
+- Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, Playwright e2e và kiểm tra trực quan tại 320/375/414/768px.

@@ -34,6 +34,7 @@ describe('ReviewControls', () => {
     );
 
     expect(screen.getByRole('button', { name: /Good.*3 ngày/i })).toBeTruthy();
+    expect(screen.getByText('Nhớ tốt')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Good/i }));
     expect(onGrade).toHaveBeenCalledWith('Good');
   });

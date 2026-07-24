@@ -1134,9 +1134,19 @@ function Review() {
   if (queue.isLoading)
     return (
       <Shell focus>
-        <section className="review-card" aria-busy="true" aria-label="Đang chuẩn bị phiên ôn tập">
-          <span className="skeleton" style={{ width: '56%', height: 40, justifySelf: 'center' }} />
-          <span className="skeleton" style={{ width: '82%', height: 24, justifySelf: 'center' }} />
+        <section className="review-study" aria-busy="true" aria-label="Đang chuẩn bị phiên ôn tập">
+          <div className="review-stage">
+            <div className="review-card review-card-loading">
+              <span
+                className="skeleton"
+                style={{ width: '56%', height: 40, justifySelf: 'center' }}
+              />
+              <span
+                className="skeleton"
+                style={{ width: '82%', height: 24, justifySelf: 'center' }}
+              />
+            </div>
+          </div>
           <span className="skeleton" style={{ width: 224, height: 48, justifySelf: 'center' }} />
         </section>
       </Shell>
@@ -1186,9 +1196,12 @@ function Review() {
           <h1>Phiên ôn tập</h1>
         </div>
         <div className="review-progress" aria-label="Tiến độ phiên ôn tập">
-          <span>
-            Thẻ {index + 1} / {totalCards}
-          </span>
+          <div className="review-progress-copy">
+            <span>
+              Thẻ {index + 1} / {totalCards}
+            </span>
+            <span>{progress}% hoàn thành</span>
+          </div>
           <div
             className="progress-track"
             role="progressbar"
@@ -1197,7 +1210,7 @@ function Review() {
             aria-valuenow={completedCards}
             aria-valuetext={`Đã hoàn thành ${completedCards} trên ${totalCards} thẻ`}
           >
-            <span className="progress-value" style={{ width: `${progress}%` }} />
+            <span className="progress-value" style={{ transform: `scaleX(${progress / 100})` }} />
           </div>
         </div>
         {lastReviewId !== null && (
@@ -1214,27 +1227,60 @@ function Review() {
       {note.isError ? (
         <QueryError title="Không thể tải nội dung thẻ." onRetry={() => void note.refetch()} />
       ) : (
-        <section className="review-card" aria-busy={note.isLoading || grade.isPending}>
+        <section className="review-study" aria-busy={note.isLoading || grade.isPending}>
           {note.isLoading ? (
-            <>
-              <span
-                className="skeleton"
-                style={{ width: '72%', height: 40, justifySelf: 'center' }}
-              />
-              <span
-                className="skeleton"
-                style={{ width: 224, height: 48, justifySelf: 'center' }}
-              />
-            </>
+            <div className="review-stage">
+              <div className="review-card review-card-loading">
+                <span
+                  className="skeleton"
+                  style={{ width: '72%', height: 40, justifySelf: 'center' }}
+                />
+                <span
+                  className="skeleton"
+                  style={{ width: '48%', height: 24, justifySelf: 'center' }}
+                />
+              </div>
+            </div>
           ) : (
             <>
-              <p className="review-face">{front}</p>
-              <AudioControl mediaId={fields.audioMediaId} />
-              {revealed && <p className="answer">{back}</p>}
-              <SpeechControl
-                contentKey={`${card.id}:${revealed ? 'back' : 'front'}`}
-                text={speechText}
-              />
+              <div
+                className="review-stage"
+                role="group"
+                aria-label={revealed ? 'Mặt sau của thẻ' : 'Mặt trước của thẻ'}
+              >
+                <div key={card.id} className={`review-card${revealed ? ' is-revealed' : ''}`}>
+                  <article className="review-card-face review-card-front" aria-hidden={revealed}>
+                    <div className="review-card-meta">
+                      <span className="review-side-label">Câu hỏi</span>
+                      <span className="review-card-count">
+                        {index + 1} / {totalCards}
+                      </span>
+                    </div>
+                    <p className="review-face">{front}</p>
+                    <p className="review-hint">Nhớ câu trả lời trước khi lật thẻ.</p>
+                  </article>
+                  <article className="review-card-face review-card-back" aria-hidden={!revealed}>
+                    <div className="review-card-meta">
+                      <span className="review-side-label">Đáp án</span>
+                      <span className="review-answer-mark" aria-hidden="true">
+                        ✓
+                      </span>
+                    </div>
+                    <div className="review-recall">
+                      <span>Câu hỏi</span>
+                      <p>{front}</p>
+                    </div>
+                    <p className="answer">{back}</p>
+                  </article>
+                </div>
+              </div>
+              <div className="review-support">
+                <AudioControl mediaId={fields.audioMediaId} />
+                <SpeechControl
+                  contentKey={`${card.id}:${revealed ? 'back' : 'front'}`}
+                  text={speechText}
+                />
+              </div>
               {!revealed ? (
                 <ReviewControls
                   revealed={false}

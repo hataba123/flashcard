@@ -1,5 +1,15 @@
 [
   {
+    "date": "2026-07-24",
+    "scope": "screen",
+    "macrostructure": "Study Stage",
+    "theme": "Hum",
+    "enrichment": "none",
+    "nav": "none (focused review shell)",
+    "footer": "none (focused review shell)",
+    "brief": "Refine the review experience with a tactile card flip and Anki-style grading"
+  },
+  {
     "date": "2026-07-23",
     "scope": "app",
     "macrostructure": "Workbench",
