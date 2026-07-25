@@ -183,6 +183,11 @@
 - Quyết định quan trọng: giữ nguyên React/Vite, route, API, authentication, FSRS và offline-sync; không thêm UI framework, dữ liệu giả hoặc thay đổi nghiệp vụ.
 - Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, Playwright E2E; kiểm tra trực quan và không tràn ngang tại 320/375/414/768px; `pnpm format:check` và `git diff --check`.
 
+## Milestone 18 — Tăng giới hạn import Excel
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: tăng số dòng Excel có thể import trong một lần từ 1.000 lên 10.000 dòng và cập nhật tài liệu hướng dẫn.
+
 ## Post-release verification — Docker, migration và dependency audit
 
 - Trạng thái: Hoàn thành.

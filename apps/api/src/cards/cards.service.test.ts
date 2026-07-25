@@ -4,7 +4,12 @@ import { describe, expect, it } from 'vitest';
 import { CardsService } from './cards.service.js';
 
 type ImportedRow = { front: string; back: string; tags: string[]; noteType: string };
-type ReadResult = { rows: ImportedRow[]; errors: string[]; recognizedHeaders: number };
+type ReadResult = {
+  rows: ImportedRow[];
+  errors: string[];
+  recognizedHeaders: number;
+  scannedRows: number;
+};
 
 async function readWorksheet(rows: unknown[][]): Promise<ReadResult> {
   const workbook = new ExcelJS.Workbook();
@@ -225,5 +230,16 @@ describe('CardsService Excel importer', () => {
 
     expect(result.rows.map((row) => row.front)).toEqual(['valid', 'later']);
     expect(result.errors).toHaveLength(2);
+  });
+
+  it('imports up to 10000 data rows', async () => {
+    const result = await readWorksheet([
+      ['Front', 'Back'],
+      ...Array.from({ length: 10000 }, (_, index) => [`front-${index}`, `back-${index}`])
+    ]);
+
+    expect(result.rows).toHaveLength(10000);
+    expect(result.scannedRows).toBe(10000);
+    expect(result.errors).toEqual([]);
   });
 });

@@ -106,7 +106,7 @@ Ví dụ bảng Excel:
 
 ### 3. Quy tắc xử lý dữ liệu
 
-- Tối đa 1.000 dòng dữ liệu đầu tiên được import; dòng tiêu đề không tính vào giới hạn.
+- Tối đa 10.000 dòng dữ liệu đầu tiên được import; dòng tiêu đề không tính vào giới hạn.
 - Dòng hoàn toàn trống sẽ được bỏ qua.
 - Dòng thiếu `Front` hoặc `Back`, có nội dung dài hơn 10.000 ký tự hoặc có `Type` không hợp lệ sẽ bị bỏ qua.
 - Mỗi dòng hợp lệ tạo một thẻ nội dung và thẻ ôn tập tương ứng: `Basic` tạo 1 thẻ, `BasicAndReverse` tạo 2 thẻ (xuôi và đảo chiều), `Cloze` tạo 1 thẻ.

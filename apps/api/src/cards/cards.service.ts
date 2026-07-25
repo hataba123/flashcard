@@ -298,7 +298,7 @@ export class CardsService {
 
     const rows: ExcelImportRow[] = [];
     const errors: string[] = [];
-    const maxRows = 1000;
+    const maxRows = 10000;
     let currentMapping: ExcelColumnMapping | undefined;
     let scannedRows = 0;
     let recognizedHeaders = 0;
