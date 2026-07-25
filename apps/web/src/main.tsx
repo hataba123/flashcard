@@ -8,15 +8,7 @@ import {
 import { createRoot } from 'react-dom/client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
-import {
-  BrowserRouter,
-  Link,
-  Navigate,
-  NavLink,
-  Route,
-  Routes,
-  useNavigate
-} from 'react-router-dom';
+import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useNavigate } from 'react-router';
 import { z } from 'zod';
 import { schedulingService } from '@flashcard/scheduling';
 
