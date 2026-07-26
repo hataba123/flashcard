@@ -9,6 +9,178 @@ body {
   background: var(--color-paper);
 }
 
+/* Hallmark · redesign: top navigation bar for a more focused study workspace. */
+.app-shell {
+  display: block;
+  min-height: 100svh;
+}
+
+.app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-lg);
+  width: 100%;
+  min-height: 5.25rem;
+  border-block-end: var(--rule-hair) solid var(--color-ink-2);
+  padding: var(--space-sm) max(var(--space-lg), 4vw);
+  background: var(--color-ink);
+  box-shadow: 0 10px 24px -20px var(--color-shadow);
+}
+
+.app-topbar::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--space-3xs);
+  background: var(--color-accent);
+  content: '';
+}
+
+.app-topbar .brand {
+  flex: 0 0 auto;
+  padding-inline: 0;
+}
+
+.app-topbar nav {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.app-topbar nav a {
+  position: relative;
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  padding-inline: var(--space-sm);
+  color: var(--color-rule-2);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-short) var(--ease-out),
+    color var(--dur-short) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out);
+}
+
+.app-topbar nav a::after {
+  position: absolute;
+  right: var(--space-sm);
+  bottom: var(--space-2xs);
+  left: var(--space-sm);
+  height: var(--space-3xs);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  content: '';
+  opacity: 0;
+  transform: scaleX(0.4);
+  transition:
+    opacity var(--dur-short) var(--ease-out),
+    transform var(--dur-short) var(--ease-out);
+}
+
+.app-topbar nav a.active {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+.app-topbar nav a.active::after {
+  display: none;
+}
+
+.app-topbar nav a:active {
+  transform: translateY(1px);
+}
+
+.app-topbar .account {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: 0;
+  border: 0;
+  padding: 0;
+  font-size: var(--text-xs);
+}
+
+.app-topbar .account > span:first-child {
+  display: none;
+}
+
+.app-topbar .account .button-link {
+  min-height: 2.75rem;
+  padding-inline: var(--space-xs);
+  color: var(--color-rule-2);
+}
+
+.app-topbar .mobile-menu,
+.app-topbar + .navigation-scrim {
+  display: none;
+}
+
+.focus-shell > .app-topbar,
+.focus-shell > .mobile-menu,
+.focus-shell > .navigation-scrim {
+  display: none;
+}
+
+@media (max-width: 63.9375rem) {
+  .app-topbar {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--space-sm);
+    min-height: 4.75rem;
+    padding-inline: max(var(--space-sm), env(safe-area-inset-left));
+    padding-inline-end: max(var(--space-sm), env(safe-area-inset-right));
+  }
+
+  .app-topbar nav {
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .app-topbar nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-topbar .account {
+    display: none;
+  }
+
+  .app-topbar .brand-copy small {
+    display: none;
+  }
+
+  .app-topbar nav a {
+    flex: 0 0 auto;
+    padding-inline: var(--space-xs);
+  }
+
+  .page-content {
+    padding-block-start: var(--space-lg);
+  }
+}
+
+@media (max-width: 25.875rem) {
+  .app-topbar {
+    gap: var(--space-xs);
+  }
+
+  .app-topbar .brand-mark {
+    width: 2.1rem;
+    height: 2.1rem;
+  }
+
+  .app-topbar nav a {
+    font-size: var(--text-xs);
+  }
+}
+
 body {
   min-width: 320px;
   color: var(--color-ink);
@@ -1285,5 +1457,45 @@ audio {
   .review-card.is-revealed .review-card-back {
     visibility: visible;
     opacity: 1;
+  }
+}
+
+/* Final topbar overrides keep the shared legacy shell styles from leaking into the redesign. */
+.app-shell > .mobile-menu,
+.app-shell > .navigation-scrim {
+  display: none;
+}
+
+.app-topbar nav a {
+  min-height: 2.75rem;
+  border-radius: var(--radius-pill);
+  padding-inline: var(--space-sm);
+  background: transparent;
+  color: var(--color-rule-2);
+}
+
+.app-topbar nav a.active {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+.app-topbar nav a:hover {
+  background: var(--color-ink-2);
+  color: var(--color-paper);
+}
+
+.app-topbar nav a.active:hover {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+@media (max-width: 63.9375rem) {
+  .app-shell > .mobile-menu,
+  .app-shell > .navigation-scrim {
+    display: none;
+  }
+
+  .page-content {
+    padding-block-start: var(--space-lg);
   }
 }

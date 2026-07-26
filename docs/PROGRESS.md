@@ -249,3 +249,9 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: nâng `react-router-dom` và `react-router` từ `7.15.1` lên `7.18.0` để xử lý lỗ hổng DoS khi so khớp route chưa xác thực.
 - Kiểm tra đã chạy: `pnpm audit --audit-level high`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
+## Milestone 20 — Đưa navigation lên topbar
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: chuyển navigation từ side-rail sang topbar sticky; thêm active state, hover state, dải accent pear và responsive navigation trên mobile; giữ nguyên route, logout, sync state và flow review.
+- Kiểm tra đã chạy: `pnpm --filter @flashcard/web typecheck`, `pnpm --filter @flashcard/web test`, `pnpm --filter @flashcard/web build`.

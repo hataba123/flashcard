@@ -361,7 +361,7 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
           onClick={() => setNavigationOpen(false)}
         />
       )}
-      <aside className={navigationOpen ? 'navigation-open' : undefined}>
+      <header className="app-topbar">
         <Link className="brand" to="/" aria-label="Flashcard — về trang tổng quan">
           <span className="brand-mark" aria-hidden="true">
             <span />
@@ -373,7 +373,7 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
             <small>Học đều, nhớ lâu</small>
           </span>
         </Link>
-        <nav>
+        <nav aria-label="Điều hướng chính">
           <NavLink to="/" end onClick={() => setNavigationOpen(false)}>
             Tổng quan
           </NavLink>
@@ -397,7 +397,7 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
             Đăng xuất
           </button>
         </div>
-      </aside>
+      </header>
       <section className="page-content">{children}</section>
     </div>
   );
