@@ -255,3 +255,11 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: chuyển navigation từ side-rail sang topbar sticky; thêm active state, hover state, dải accent pear và responsive navigation trên mobile; giữ nguyên route, logout, sync state và flow review.
 - Kiểm tra đã chạy: `pnpm --filter @flashcard/web typecheck`, `pnpm --filter @flashcard/web test`, `pnpm --filter @flashcard/web build`.
+
+
+## Milestone 21 — Tách route thẻ và sửa thẻ
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: tách route `/notes` cùng form tạo/sửa thẻ sang `notes-page.tsx`; chuyển các kiểu dữ liệu thẻ dùng chung sang `card-types.ts`; bổ sung nút Sửa, nạp giá trị thẻ hiện có và cập nhật qua `PATCH /notes/:id`.
+- Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `git diff --check`.
+- Quyết định quan trọng: giữ nguyên API và hành vi tạo thẻ—chỉ thao tác tạo mới mới gọi generate-cards; thao tác sửa cập nhật note hiện có, nên không phát sinh card trùng.

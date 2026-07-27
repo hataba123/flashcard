@@ -6,7 +6,7 @@ import {
   useQueryClient
 } from '@tanstack/react-query';
 import { createRoot } from 'react-dom/client';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useNavigate } from 'react-router';
 import { z } from 'zod';
@@ -24,6 +24,7 @@ import { ReviewControls } from './review-controls.js';
 import { nextReviewIndex, ratingForShortcut, type ReviewRating } from './review-utils.js';
 import { useSession, type User } from './session.js';
 import { getCardSpeechText, SpeechControl } from './speech-control.js';
+import { NotesPage } from './notes-page.js';
 import './styles.css';
 import './hallmark.css';
 
@@ -42,15 +43,6 @@ interface Note {
   noteType: 'Basic' | 'BasicAndReverse' | 'Cloze';
   fieldsJson: string;
   tagsJson: string;
-}
-interface ExcelImportResult {
-  importedNotes: number;
-  createdCards: number;
-  skippedRows: number;
-  errors: string[];
-  scannedRows: number;
-  recognizedHeaders: number;
-  recognizedBlocks: number;
 }
 interface ReviewCard {
   id: string;
@@ -115,17 +107,9 @@ const deckSchema = z.object({
   dailyNewCardLimit: z.coerce.number().int().min(0).max(1_000),
   isCore: z.boolean()
 });
-const noteSchema = z.object({
-  deckId: z.uuid('Vui lòng chọn bộ thẻ.'),
-  noteType: z.enum(['Basic', 'BasicAndReverse', 'Cloze']),
-  front: z.string().trim().min(1, 'Mặt trước là bắt buộc.'),
-  back: z.string().trim().min(1, 'Mặt sau là bắt buộc.'),
-  tags: z.string()
-});
 type LoginForm = z.infer<typeof loginSchema>;
 type RegisterForm = z.infer<typeof registerSchema>;
 type DeckForm = z.infer<typeof deckSchema>;
-type NoteForm = z.infer<typeof noteSchema>;
 const errorMessage = (error: unknown) =>
   error instanceof ApiError
     ? error.status === 401
@@ -709,292 +693,6 @@ function Decks() {
   );
 }
 
-function NoteEditor({ decks, done }: { decks: Deck[]; done(): void }) {
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const form = useForm<NoteForm>({
-    defaultValues: { deckId: decks[0]?.id ?? '', noteType: 'Basic', front: '', back: '', tags: '' }
-  });
-  const save = useMutation({
-    mutationFn: async (values: NoteForm) => {
-      const input = noteSchema.parse(values);
-      const note = await api.post<Note>('/notes', {
-        deckId: input.deckId,
-        noteType: input.noteType,
-        fields:
-          input.noteType === 'Cloze'
-            ? { text: input.front, back: input.back }
-            : { front: input.front, back: input.back },
-        tags: input.tags
-          .split(',')
-          .map((tag) => tag.trim())
-          .filter(Boolean)
-      });
-      await api.post(`/notes/${note.id}/generate-cards`, {});
-    },
-    onSuccess: done,
-    onError: (error) => setSubmitError(errorMessage(error))
-  });
-  return (
-    <section className="panel">
-      <h2>Tạo thẻ</h2>
-      <form
-        className="editor-form"
-        onSubmit={form.handleSubmit((values) => save.mutate(values))}
-        noValidate
-      >
-        <label>
-          Bộ thẻ
-          <select {...form.register('deckId')}>
-            {decks.map((deck) => (
-              <option key={deck.id} value={deck.id}>
-                {deck.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Loại thẻ
-          <select {...form.register('noteType')}>
-            <option value="Basic">Basic</option>
-            <option value="BasicAndReverse">Basic và đảo chiều</option>
-            <option value="Cloze">Cloze</option>
-          </select>
-        </label>
-        <label>
-          <span className="field-label">
-            Mặt trước / nội dung{' '}
-            <span className="required" aria-hidden="true">
-              *
-            </span>
-          </span>
-          <textarea aria-required="true" {...form.register('front')} />
-        </label>
-        <FormError message={form.formState.errors.front?.message} />
-        <label>
-          <span className="field-label">
-            Mặt sau{' '}
-            <span className="required" aria-hidden="true">
-              *
-            </span>
-          </span>
-          <textarea aria-required="true" {...form.register('back')} />
-        </label>
-        <FormError message={form.formState.errors.back?.message} />
-        <label>
-          Nhãn, cách nhau bằng dấu phẩy
-          <input {...form.register('tags')} />
-        </label>
-        {submitError !== null && (
-          <p className="form-error" role="alert">
-            {submitError}
-          </p>
-        )}
-        <div className="actions">
-          <button disabled={save.isPending} aria-busy={save.isPending}>
-            <ButtonContent loading={save.isPending}>
-              {save.isPending ? 'Đang lưu…' : 'Lưu và tạo thẻ'}
-            </ButtonContent>
-          </button>
-          <button type="button" className="secondary" onClick={done}>
-            Hủy
-          </button>
-        </div>
-      </form>
-    </section>
-  );
-}
-function Notes() {
-  const client = useQueryClient();
-  const [creating, setCreating] = useState(false);
-  const [removeError, setRemoveError] = useState<string | null>(null);
-  const [importError, setImportError] = useState<string | null>(null);
-  const [importResult, setImportResult] = useState<ExcelImportResult | null>(null);
-  const [importDeckId, setImportDeckId] = useState('');
-  const fileInput = useRef<HTMLInputElement>(null);
-  const notes = useQuery({ queryKey: ['notes'], queryFn: () => api.get<Note[]>('/notes') });
-  const decks = useQuery({ queryKey: ['decks'], queryFn: () => api.get<Deck[]>('/decks') });
-  const remove = useMutation({
-    mutationFn: (id: string) => api.delete(`/notes/${id}`),
-    onSuccess: () => {
-      setRemoveError(null);
-      void client.invalidateQueries({ queryKey: ['notes'] });
-    },
-    onError: (error) => setRemoveError(errorMessage(error))
-  });
-  const importExcel = useMutation({
-    mutationFn: ({ deckId, file }: { deckId: string; file: File }) => {
-      const data = new FormData();
-      data.append('file', file);
-      return api.postForm<ExcelImportResult>(`/decks/${deckId}/import-excel`, data);
-    },
-    onSuccess: (result) => {
-      setImportError(null);
-      setImportResult(result);
-      void client.invalidateQueries({ queryKey: ['notes'] });
-    },
-    onError: (error) => setImportError(errorMessage(error))
-  });
-  const done = () => {
-    setCreating(false);
-    void client.invalidateQueries({ queryKey: ['notes'] });
-  };
-  const selectedImportDeckId = importDeckId || decks.data?.[0]?.id || '';
-  return (
-    <Shell>
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">Nội dung học</p>
-          <h1>Thẻ</h1>
-          <p className="muted">
-            {notes.data === undefined ? 'Đang tải số lượng…' : `${notes.data.length} thẻ`}
-          </p>
-        </div>
-        <div className="page-actions">
-          <label className="import-deck">
-            <span className="sr-only">Bộ thẻ nhận dữ liệu import</span>
-            <select
-              aria-label="Bộ thẻ nhận dữ liệu import"
-              disabled={decks.isLoading || !decks.data?.length || importExcel.isPending}
-              value={selectedImportDeckId}
-              onChange={(event) => setImportDeckId(event.target.value)}
-            >
-              {decks.data?.map((deck) => (
-                <option key={deck.id} value={deck.id}>
-                  {deck.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <input
-            ref={fileInput}
-            className="sr-only"
-            type="file"
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              event.target.value = '';
-              if (file !== undefined && selectedImportDeckId)
-                importExcel.mutate({ deckId: selectedImportDeckId, file });
-            }}
-          />
-          <button
-            type="button"
-            className="secondary"
-            disabled={decks.isLoading || !decks.data?.length || importExcel.isPending}
-            onClick={() => fileInput.current?.click()}
-          >
-            <ButtonContent loading={importExcel.isPending}>
-              {importExcel.isPending ? 'Đang import…' : 'Import Excel'}
-            </ButtonContent>
-          </button>
-          <button
-            disabled={decks.isLoading || !decks.data?.length}
-            onClick={() => setCreating(true)}
-          >
-            Tạo thẻ
-          </button>
-        </div>
-      </header>
-      <p className="muted import-help">
-        Hỗ trợ Front | Back | Tags | Type; danh sách từ vựng, từ vựng theo chủ đề, collocation,
-        synonym/paraphrase, word family, mẫu câu và morphology. Một worksheet có thể có nhiều bảng:
-        ứng dụng tự phát hiện header từng bảng và chỉ đọc worksheet đầu tiên. Type không bắt buộc
-        (mặc định Basic); STT, trạng thái, ghi chú và dữ liệu tần suất sẽ bị bỏ qua.
-      </p>
-      {importResult !== null && (
-        <div className="import-result" role="status">
-          <p>
-            Đã tạo {importResult.importedNotes} thẻ và {importResult.createdCards} thẻ ôn tập.
-            {` Đã nhận diện ${importResult.recognizedBlocks} bảng và duyệt ${importResult.scannedRows} dòng.`}
-            {importResult.skippedRows > 0
-              ? ` Bỏ qua ${importResult.skippedRows} dòng không hợp lệ.`
-              : ''}
-          </p>
-          {importResult.errors.length > 0 && (
-            <ul>
-              {importResult.errors.slice(0, 3).map((error) => (
-                <li key={error}>{error}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-      {importError !== null && (
-        <p className="form-error" role="alert">
-          {importError}
-        </p>
-      )}
-      {!decks.isLoading && decks.data?.length === 0 && (
-        <EmptyState
-          title="Bạn cần một bộ thẻ trước"
-          description="Tạo bộ thẻ để bắt đầu thêm thẻ học."
-          action={
-            <Link className="button" to="/decks">
-              Tạo bộ thẻ
-            </Link>
-          }
-        />
-      )}
-      {creating && <NoteEditor decks={decks.data ?? []} done={done} />}
-      {removeError !== null && (
-        <p className="form-error" role="alert">
-          {removeError}
-        </p>
-      )}
-      {notes.isLoading ? (
-        <ListSkeleton />
-      ) : notes.isError ? (
-        <QueryError title="Không thể tải danh sách thẻ." onRetry={() => void notes.refetch()} />
-      ) : notes.data?.length === 0 ? (
-        <EmptyState
-          title="Bạn chưa có thẻ nào"
-          description="Thêm thẻ để bắt đầu ôn tập với bộ thẻ của bạn."
-          action={
-            decks.data?.length ? (
-              <button onClick={() => setCreating(true)}>Tạo thẻ</button>
-            ) : undefined
-          }
-        />
-      ) : (
-        <div className="card-list">
-          {notes.data?.map((note) => {
-            const fields = parseJson<Record<string, string>>(note.fieldsJson, {});
-            const tags = parseJson<string[]>(note.tagsJson, []);
-            return (
-              <article className="card" key={note.id}>
-                <div>
-                  <h2>{fields.front ?? fields.text ?? 'Thẻ'}</h2>
-                  <p>{fields.back ?? ''}</p>
-                  <small>{note.noteType}</small>
-                  {tags.length > 0 && (
-                    <div className="tag-list" aria-label="Nhãn">
-                      {tags.map((tag) => (
-                        <span className="tag" key={tag}>
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="actions">
-                  <button
-                    className="danger"
-                    disabled={remove.isPending}
-                    onClick={() => {
-                      if (confirm('Xóa mềm thẻ này?')) remove.mutate(note.id);
-                    }}
-                  >
-                    Xóa
-                  </button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
-    </Shell>
-  );
-}
 function Review() {
   const client = useQueryClient();
   const [index, setIndex] = useState(0);
@@ -1403,7 +1101,9 @@ function App() {
         path="/notes"
         element={
           <Protected>
-            <Notes />
+            <Shell>
+              <NotesPage />
+            </Shell>
           </Protected>
         }
       />
