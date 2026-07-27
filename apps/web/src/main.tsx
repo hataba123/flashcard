@@ -6,7 +6,7 @@ import {
   useQueryClient
 } from '@tanstack/react-query';
 import { createRoot } from 'react-dom/client';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type TouchEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useNavigate } from 'react-router';
 import { z } from 'zod';
@@ -701,6 +701,7 @@ function Review() {
   const [lastReviewId, setLastReviewId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [hasConflict, setHasConflict] = useState(false);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
   const sessionId = useState(() => crypto.randomUUID())[0];
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const offline = useOffline();
@@ -913,6 +914,20 @@ function Review() {
   const front = fields.front ?? fields.text ?? 'Đang tải nội dung…';
   const back = fields.back ?? '';
   const revealed = revealedAt !== null;
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (start === null || grade.isPending) return;
+    const touch = event.changedTouches[0];
+    if (touch === undefined) return;
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 36) { if (!revealed) setRevealedAt(new Date()); return; }
+    if (!revealed) return;
+    if (dy < -60 && Math.abs(dy) > Math.abs(dx)) grade.mutate('Easy');
+    else if (dx < -60 && Math.abs(dx) > Math.abs(dy)) grade.mutate('Again');
+    else if (dx > 60 && Math.abs(dx) > Math.abs(dy)) grade.mutate('Good');
+  };
   const speechText = getCardSpeechText(fields, revealed);
   const totalCards = queue.data?.cards.length ?? 0;
   const completedCards = Math.min(index, totalCards);
@@ -979,6 +994,8 @@ function Review() {
                 className="review-stage"
                 role="group"
                 aria-label={revealed ? 'Mặt sau của thẻ' : 'Mặt trước của thẻ'}
+                onTouchStart={(event) => { const touch = event.touches[0]; if (touch !== undefined) touchStart.current = { x: touch.clientX, y: touch.clientY }; }}
+                onTouchEnd={handleTouchEnd}
               >
                 <div key={card.id} className={`review-card${revealed ? ' is-revealed' : ''}`}>
                   <article className="review-card-face review-card-front" aria-hidden={revealed}>

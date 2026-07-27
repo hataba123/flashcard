@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 22 — Import an toàn và cử chỉ mobile
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: thêm xem trước Excel trước khi xác nhận import, phát hiện/cập nhật thẻ trùng theo nội dung Front/Back đã chuẩn hoá, lưu batch để hoàn tác lần import gần nhất; thêm chạm để lật thẻ, vuốt trái Again, vuốt phải Good và vuốt lên Easy trên mobile.
+- Kiểm tra đã chạy: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `git diff --check`.
+
 ## Milestone 0 — Repository audit và kế hoạch
 
 - Trạng thái: Hoàn thành.
