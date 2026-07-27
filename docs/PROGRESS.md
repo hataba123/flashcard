@@ -1,5 +1,10 @@
 # Tiến độ triển khai
 
+## Milestone 29 — Đặt điều khiển đọc phía trên thẻ
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: chuyển thanh âm thanh đọc thẻ lên phía trên card học, giữ trình phát audio đính kèm ở phía dưới card.
+
 ## Milestone 28 — Tối ưu bố cục thẻ ôn tập
 
 - Trạng thái: Hoàn thành.

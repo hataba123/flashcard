@@ -1031,6 +1031,12 @@ function Review() {
             </div>
           ) : (
             <>
+              <div className="review-support">
+                <SpeechControl
+                  contentKey={`${card.id}:${revealed ? 'back' : 'front'}`}
+                  text={speechText}
+                />
+              </div>
               <div
                 className="review-stage"
                 role="group"
@@ -1065,10 +1071,6 @@ function Review() {
                 </div>
               </div>
               <div className="review-support">
-                <SpeechControl
-                  contentKey={`${card.id}:${revealed ? 'back' : 'front'}`}
-                  text={speechText}
-                />
                 <AudioControl mediaId={fields.audioMediaId} />
               </div>
               {!revealed ? (
