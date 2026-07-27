@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Cập nhật tài liệu — Import Excel và đọc tiếng Anh
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: README liệt kê đầy đủ alias cột mặt trước/mặt sau, các bố cục Excel chuyên biệt và trường được tự ghép vào mặt sau; bổ sung mô tả luồng Web Speech API chỉ đọc phần tiếng Anh, bỏ qua từ tiếng Việt, hủy âm thanh cũ và các giới hạn nhận diện.
+- Kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, Prettier cho tài liệu và `git diff --check` đều đạt.
+
 ## Cập nhật import Excel — Mở rộng alias mặt thẻ
 
 - Trạng thái: Hoàn thành.

@@ -169,14 +169,20 @@ Web sử dụng `VITE_API_URL` nếu API không nằm tại `http://localhost:30
 
 ## Import Excel
 
-### Định dạng chuẩn
+### Bảng chuẩn: trường mặt trước và mặt sau tự nhận diện
 
-Tệp phải có định dạng `.xlsx` và dung lượng không quá 5 MiB. Bảng đơn giản cần hai cột bắt buộc:
+Tệp phải có định dạng `.xlsx`, dung lượng không quá 5 MiB và có một cặp cột cho mặt trước/mặt sau. Tên cột không phân biệt chữ hoa/thường, khoảng trắng thừa, dấu tiếng Việt, dấu gạch nối hoặc gạch dưới.
 
-| Cột       | Alias được hỗ trợ                                                                                           | Nội dung                         |
-| --------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| Mặt trước | `Front`, `Mặt trước`, `Câu hỏi`, `Question`, `Prompt`, `Term`, `Word`, `Thuật ngữ`, `Khái niệm`             | Câu hỏi hoặc nội dung cần nhớ    |
-| Mặt sau   | `Back`, `Mặt sau`, `Đáp án`, `Answer`, `Definition`, `Explanation`, `Translation`, `Giải thích`, `Lời giải` | Câu trả lời hoặc phần giải thích |
+| Mặt thẻ   | Các tên cột được nhận diện                                                                                                                                            | Cách dùng                                                      |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Mặt trước | `Front`, `Mặt trước`, `Câu hỏi`, `Nội dung`, `Question`, `Prompt`, `Question Text`, `Front Text`, `Flashcard Front`, `Term`, `Word`, `Thuật ngữ`, `Khái niệm`         | Nội dung sẽ trở thành câu hỏi hoặc thuật ngữ cần nhớ.          |
+| Mặt sau   | `Back`, `Mặt sau`, `Đáp án`, `Answer`, `Definition`, `Explanation`, `Translation`, `Response`, `Answer Text`, `Back Text`, `Flashcard Back`, `Lời giải`, `Giải thích` | Nội dung sẽ trở thành đáp án, định nghĩa hoặc phần giải thích. |
+
+Ví dụ, cả ba cặp `Question`/`Definition`, `Thuật ngữ`/`Giải thích` và `Prompt`/`Translation` đều là bảng import hợp lệ.
+
+Để tránh bỏ sót dữ liệu, khi ứng dụng đang đọc một bảng chuẩn thì dòng chứa các giá trị như `question` và `answer` vẫn được xem là dữ liệu, không tự động coi là tiêu đề lặp, trừ khi dòng đó được ngăn cách bằng dòng trống hoặc chứa tiêu đề metadata.
+
+### Các trường tùy chọn của bảng chuẩn
 
 Hai cột tùy chọn:
 
@@ -195,10 +201,29 @@ Ví dụ:
 | 2 + 2 bằng bao nhiêu?             | 4      | toán             | BasicAndReverse |
 | Nước có công thức hóa học là H2O? | Nước   | hóa học          | Cloze           |
 
-### Khả năng nhận diện dữ liệu
+### Bố cục chuyên biệt được tự nhận diện
+
+Ngoài bảng chuẩn, importer nhận diện các bảng học từ vựng qua tổ hợp cột đặc trưng. Với các bảng này, hệ thống lấy một cột làm mặt trước, tự ghép các trường có nội dung thành mặt sau và thêm nhãn phù hợp.
+
+| Loại bảng             | Cột tạo mặt trước                                     | Các trường được ghép vào mặt sau                                               |
+| --------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Từ vựng               | `Từ vựng`, `Vocabulary`, `Word`, `Expression`, `Term` | `Nghĩa`, `Phiên âm`, `Loại từ`, `Ví dụ`                                        |
+| Từ vựng theo chủ đề   | `Từ/cụm từ`                                           | `Nghĩa`, `Phiên âm`, `Loại từ`, `Ví dụ`; chủ đề và trình độ được thêm làm nhãn |
+| Phrasal verb          | `Phrasal verb`                                        | `Nghĩa`, `Paraphrase`, `Ví dụ`                                                 |
+| Linking expression    | `Linking expression`                                  | `Nghĩa`, `Cách dùng`, `Ví dụ`                                                  |
+| Academic/general verb | `Academic verb`, `General verb`                       | `Nghĩa`, `Collocations`, `Ví dụ`                                               |
+| Collocation           | `Collocation`                                         | `Nghĩa`, `Cấu trúc`, `Ví dụ`                                                   |
+| Synonym/paraphrase    | `Từ/cụm gốc`                                          | `Synonym/Paraphrase`, `Nghĩa`, `Ví dụ`                                         |
+| Word family           | `Headword`                                            | `Nghĩa`, `Word family`, `Ví dụ`                                                |
+| Mẫu câu               | `Mẫu câu`                                             | `Nghĩa`, `Mục đích`, `Ví dụ`, `Cách dùng`, `Lỗi cần tránh`                     |
+| Morphology            | `Gốc/Tiền tố/Hậu tố/Từ`                               | `Nghĩa`, danh từ, động từ, tính từ, trạng từ và ví dụ/cấu tạo từ               |
+
+Các nhãn như `Nghĩa chính (VI)`, `Vietnamese Meaning`, `Phonetic`, `Pronunciation`, `IPA`, `Part of Speech`, `Example`, `Context`, `Topic`, `Level`, `CEFR`, `Priority` và `Tags` cũng được nhận diện khi có trong bố cục phù hợp. Không phải tất cả các cột đều bắt buộc: importer chỉ cần tổ hợp cột tối thiểu của từng loại bảng để nhận diện.
+
+### Quy tắc nhận diện và xử lý dữ liệu
 
 - Đọc tất cả worksheet và tự nhận diện nhiều bảng trong cùng một worksheet thông qua dòng tiêu đề.
-- Hỗ trợ bảng `Front`/`Back` và các bố cục từ vựng, từ vựng theo chủ đề, phrasal verb, linking expression, collocation, synonym/paraphrase, word family, sentence pattern và morphology.
+- Ưu tiên bảng chuẩn khi có một cặp mặt trước/mặt sau hợp lệ. Với `Word` hoặc `Term` kết hợp cùng `Meaning`, hệ thống giữ luồng từ vựng chuyên biệt để ghép phiên âm, loại từ, ví dụ và nhãn.
 - Bỏ qua cột phụ như số thứ tự, trạng thái, ghi chú hoặc dữ liệu tần suất không dùng để tạo thẻ.
 - Tối đa 10.000 dòng dữ liệu cho toàn bộ workbook; dòng tiêu đề và dòng trống không tính vào giới hạn.
 - Bỏ qua dòng thiếu mặt trước/mặt sau, có nội dung dài hơn 10.000 ký tự hoặc loại thẻ không hợp lệ; giao diện hiển thị tối đa 100 thông báo lỗi.
@@ -212,6 +237,17 @@ Ví dụ:
 3. Kiểm tra bản xem trước và các dòng bị bỏ qua.
 4. Xác nhận import, sau đó kiểm tra số note được tạo/cập nhật và số card phát sinh.
 5. Nếu cần, chọn **Hoàn tác import gần nhất** cho bộ thẻ đó.
+
+## Tự động đọc tiếng Anh khi ôn tập
+
+Điều khiển **Âm thanh đọc thẻ** dùng Web Speech API của trình duyệt. Tự động đọc được bật mặc định, cài đặt được lưu trên thiết bị bằng `localStorage`; người học có thể tắt tự động đọc, chọn giọng, ngôn ngữ và tốc độ từ 0,5× đến 2×.
+
+- Trước khi lật thẻ, ứng dụng chỉ xét nội dung mặt trước (`front` hoặc `text`).
+- Sau khi lật, ứng dụng bỏ mặt trước và metadata media, sau đó xét các trường nội dung còn lại ở mặt sau; trường trùng được đọc một lần.
+- Trước khi gọi trình đọc, hệ thống loại các từ được nhận diện là tiếng Việt. Việc nhận diện dựa trên ký tự tiếng Việt có dấu và danh sách từ tiếng Việt phổ biến; phần tiếng Anh còn lại trong ví dụ, paraphrase hoặc word family vẫn được đọc.
+- Nếu sau khi lọc không còn nội dung tiếng Anh, trình đọc không phát âm thanh. Khi chuyển thẻ hoặc lật thẻ, âm thanh trước đó được hủy để không đọc chồng lên nội dung mới.
+
+Ví dụ, với mặt sau `Nghĩa: đạt được. Ví dụ: achieve a goal`, ứng dụng chỉ đọc `achieve a goal`. Cơ chế này là bộ lọc thực dụng theo từ, không phải nhận diện ngôn ngữ hoàn hảo; từ tiếng Việt không dấu hoặc từ trùng giữa hai ngôn ngữ có thể phụ thuộc danh sách nhận diện của ứng dụng.
 
 ## API chính
 
