@@ -6,6 +6,7 @@ import type {
   StudyGoalStatus,
   StudyGoalType
 } from '@flashcard/contracts';
+import { randomUUID } from 'node:crypto';
 import { In, type EntityManager, type Repository } from 'typeorm';
 
 import { DeckEntity } from '../cards/entities/deck.entity.js';
@@ -43,6 +44,7 @@ export class StudyGoalsService {
       const repository = manager.getRepository(StudyGoalEntity);
       const goal = await repository.save(
         repository.create({
+          id: randomUUID(),
           userId,
           name: input.name.trim(),
           goalType: input.goalType as StudyGoalType,
@@ -92,7 +94,7 @@ export class StudyGoalsService {
     if (input.targetDate !== undefined || input.timeZone !== undefined) {
       const current = await this.requireGoal(this.goals, userId, id);
       this.validateSettings(
-        input.targetDate ?? current.targetDate,
+        input.targetDate ?? dateOnly(current.targetDate),
         input.timeZone ?? current.timeZone
       );
     }
@@ -275,7 +277,7 @@ export class StudyGoalsService {
       id: goal.id,
       name: goal.name,
       goalType: goal.goalType,
-      targetDate: goal.targetDate,
+      targetDate: dateOnly(goal.targetDate),
       dailyStudyMinutes: goal.dailyStudyMinutes,
       studyDaysOfWeek: JSON.parse(goal.studyDaysOfWeekJson) as number[],
       desiredRetention: Number(goal.desiredRetention),
@@ -295,10 +297,10 @@ export class StudyGoalsService {
       studyGoalId: snapshot.studyGoalId,
       calculatedAtUtc: snapshot.calculatedAtUtc.toISOString(),
       algorithmVersion: snapshot.algorithmVersion,
-      predictedNewCardsCompletedDate: snapshot.predictedNewCardsCompletedDate,
-      predictedCompletionP50Date: snapshot.predictedCompletionP50Date,
-      predictedCompletionP80Date: snapshot.predictedCompletionP80Date,
-      predictedCompletionP90Date: snapshot.predictedCompletionP90Date,
+      predictedNewCardsCompletedDate: nullableDateOnly(snapshot.predictedNewCardsCompletedDate),
+      predictedCompletionP50Date: nullableDateOnly(snapshot.predictedCompletionP50Date),
+      predictedCompletionP80Date: nullableDateOnly(snapshot.predictedCompletionP80Date),
+      predictedCompletionP90Date: nullableDateOnly(snapshot.predictedCompletionP90Date),
       probabilityBeforeTarget: snapshot.probabilityBeforeTarget,
       requiredDailyMinutes: snapshot.requiredDailyMinutes,
       averageNewCardsPerDay: snapshot.averageNewCardsPerDay,
@@ -341,4 +343,12 @@ export class StudyGoalsService {
       payload: { status: goal.status }
     });
   }
+}
+
+function dateOnly(value: string | Date): string {
+  return value instanceof Date ? value.toISOString().slice(0, 10) : value.slice(0, 10);
+}
+
+function nullableDateOnly(value: string | Date | null): string | null {
+  return value === null ? null : dateOnly(value);
 }

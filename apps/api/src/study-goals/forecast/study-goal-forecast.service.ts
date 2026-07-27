@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { ForecastSnapshotModel, ReviewRating } from '@flashcard/contracts';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { In, IsNull, type Repository } from 'typeorm';
 
 import { CardEntity } from '../../cards/entities/card.entity.js';
@@ -99,7 +99,7 @@ export class StudyGoalForecastService {
     const now = new Date();
     const result = runForecast({
       goal: {
-        targetDate: goal.targetDate,
+        targetDate: dateOnly(goal.targetDate),
         dailyStudyMinutes: goal.dailyStudyMinutes,
         studyDaysOfWeek: studyDays,
         desiredRetention: Number(goal.desiredRetention),
@@ -124,6 +124,7 @@ export class StudyGoalForecastService {
       const repository = manager.getRepository(ForecastSnapshotEntity);
       const snapshot = await repository.save(
         repository.create({
+          id: randomUUID(),
           studyGoalId: goalId,
           calculatedAtUtc: now,
           algorithmVersion: FORECAST_ALGORITHM_VERSION,
@@ -175,7 +176,7 @@ export class StudyGoalForecastService {
       algorithmVersion: FORECAST_ALGORITHM_VERSION,
       goal: {
         version: goal.version,
-        targetDate: goal.targetDate,
+        targetDate: dateOnly(goal.targetDate),
         dailyStudyMinutes: goal.dailyStudyMinutes,
         studyDaysOfWeekJson: goal.studyDaysOfWeekJson,
         desiredRetention: Number(goal.desiredRetention),
@@ -233,10 +234,10 @@ export function snapshotToModel(snapshot: ForecastSnapshotEntity): ForecastSnaps
     studyGoalId: snapshot.studyGoalId,
     calculatedAtUtc: snapshot.calculatedAtUtc.toISOString(),
     algorithmVersion: snapshot.algorithmVersion,
-    predictedNewCardsCompletedDate: snapshot.predictedNewCardsCompletedDate,
-    predictedCompletionP50Date: snapshot.predictedCompletionP50Date,
-    predictedCompletionP80Date: snapshot.predictedCompletionP80Date,
-    predictedCompletionP90Date: snapshot.predictedCompletionP90Date,
+    predictedNewCardsCompletedDate: nullableDateOnly(snapshot.predictedNewCardsCompletedDate),
+    predictedCompletionP50Date: nullableDateOnly(snapshot.predictedCompletionP50Date),
+    predictedCompletionP80Date: nullableDateOnly(snapshot.predictedCompletionP80Date),
+    predictedCompletionP90Date: nullableDateOnly(snapshot.predictedCompletionP90Date),
     probabilityBeforeTarget: snapshot.probabilityBeforeTarget,
     requiredDailyMinutes: snapshot.requiredDailyMinutes,
     averageNewCardsPerDay: snapshot.averageNewCardsPerDay,
@@ -264,4 +265,12 @@ function dateInTimeZone(date: Date, timeZone: string): Date {
   }).formatToParts(date);
   const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return new Date(`${value.year}-${value.month}-${value.day}T00:00:00.000Z`);
+}
+
+function dateOnly(value: string | Date): string {
+  return value instanceof Date ? value.toISOString().slice(0, 10) : value.slice(0, 10);
+}
+
+function nullableDateOnly(value: string | Date | null): string | null {
+  return value === null ? null : dateOnly(value);
 }

@@ -149,7 +149,7 @@ export function calculateHistoryMetrics(
   const totalNew = relevant.filter((log) => log.stateBefore === 'New').length;
   return {
     adherenceRate:
-      scheduledDays === 0
+      scheduledDays === 0 || activeDays === 0
         ? FORECAST_DEFAULTS.adherenceRate
         : clamp(activeDays / scheduledDays, 0.1, 1),
     medianDailyStudyMinutes: median(dailyMinutes) || 0,

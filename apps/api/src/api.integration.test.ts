@@ -73,7 +73,10 @@ describe('API integration', () => {
   });
 
   it('lists only the notes from the selected deck', async () => {
-    const auth = await register(`${suffix}-note-filter@integration.local`, 'IntegrationPassword123!');
+    const auth = await register(
+      `${suffix}-note-filter@integration.local`,
+      'IntegrationPassword123!'
+    );
     const firstDeck = await request(app.getHttpServer())
       .post('/api/decks')
       .set('Authorization', `Bearer ${auth.accessToken}`)
@@ -89,12 +92,22 @@ describe('API integration', () => {
       request(app.getHttpServer())
         .post('/api/notes')
         .set('Authorization', `Bearer ${auth.accessToken}`)
-        .send({ deckId: firstDeck.body.id, noteType: 'Basic', fields: { front: 'First', back: 'Answer' }, tags: [] })
+        .send({
+          deckId: firstDeck.body.id,
+          noteType: 'Basic',
+          fields: { front: 'First', back: 'Answer' },
+          tags: []
+        })
         .expect(201),
       request(app.getHttpServer())
         .post('/api/notes')
         .set('Authorization', `Bearer ${auth.accessToken}`)
-        .send({ deckId: secondDeck.body.id, noteType: 'Basic', fields: { front: 'Second', back: 'Answer' }, tags: [] })
+        .send({
+          deckId: secondDeck.body.id,
+          noteType: 'Basic',
+          fields: { front: 'Second', back: 'Answer' },
+          tags: []
+        })
         .expect(201)
     ]);
 
@@ -146,17 +159,22 @@ describe('API integration', () => {
   });
 
   it('imports a large Excel batch within SQL Server parameter limits', async () => {
-    const auth = await register(`${suffix}-large-excel@integration.local`, 'IntegrationPassword123!');
+    const auth = await register(
+      `${suffix}-large-excel@integration.local`,
+      'IntegrationPassword123!'
+    );
     const deck = await request(app.getHttpServer())
       .post('/api/decks')
       .set('Authorization', `Bearer ${auth.accessToken}`)
       .send({ name: `Large Excel deck ${suffix}` })
       .expect(201);
     const workbook = new ExcelJS.Workbook();
-    workbook.addWorksheet('Cards').addRows([
-      ['Front', 'Back'],
-      ...Array.from({ length: 500 }, (_, index) => [`Question ${index}`, `Answer ${index}`])
-    ]);
+    workbook
+      .addWorksheet('Cards')
+      .addRows([
+        ['Front', 'Back'],
+        ...Array.from({ length: 500 }, (_, index) => [`Question ${index}`, `Answer ${index}`])
+      ]);
     const file = Buffer.from(await workbook.xlsx.writeBuffer());
 
     await request(app.getHttpServer())
@@ -168,6 +186,75 @@ describe('API integration', () => {
         expect(body.importedNotes).toBe(500);
         expect(body.createdCards).toBe(500);
       });
+  });
+
+  it('creates a study goal, attaches a deck, caches its forecast, and enforces ownership', async () => {
+    const first = await register(
+      `${suffix}-goal-owner@integration.local`,
+      'IntegrationPassword123!'
+    );
+    const second = await register(
+      `${suffix}-goal-other@integration.local`,
+      'IntegrationPassword123!'
+    );
+    const deck = await request(app.getHttpServer())
+      .post('/api/decks')
+      .set('Authorization', `Bearer ${first.accessToken}`)
+      .send({ name: `Goal deck ${suffix}` })
+      .expect(201);
+    const targetDate = new Date(Date.now() + 90 * 86_400_000).toISOString().slice(0, 10);
+    const goal = await request(app.getHttpServer())
+      .post('/api/study-goals')
+      .set('Authorization', `Bearer ${first.accessToken}`)
+      .send({
+        name: 'IELTS 6.5',
+        goalType: 'IELTS',
+        targetDate,
+        dailyStudyMinutes: 45,
+        studyDaysOfWeek: [1, 2, 3, 4, 5, 6],
+        desiredRetention: 0.9,
+        finalReviewDays: 10,
+        maxNewCardsPerDay: 50,
+        timeZone: 'Asia/Bangkok',
+        decks: []
+      })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post(`/api/study-goals/${goal.body.id}/decks`)
+      .set('Authorization', `Bearer ${first.accessToken}`)
+      .send({ deckId: deck.body.id, priorityWeight: 2 })
+      .expect(201);
+    const firstForecast = await request(app.getHttpServer())
+      .post(`/api/study-goals/${goal.body.id}/forecast`)
+      .set('Authorization', `Bearer ${first.accessToken}`)
+      .send({ seed: 123 })
+      .expect(201);
+    const cachedForecast = await request(app.getHttpServer())
+      .post(`/api/study-goals/${goal.body.id}/forecast`)
+      .set('Authorization', `Bearer ${first.accessToken}`)
+      .send({ seed: 123 })
+      .expect(201);
+    expect(cachedForecast.body.id).toBe(firstForecast.body.id);
+    expect(firstForecast.body).toMatchObject({
+      studyGoalId: goal.body.id,
+      predictedCompletionP50Date: expect.any(String),
+      predictedCompletionP80Date: expect.any(String),
+      predictedCompletionP90Date: expect.any(String)
+    });
+    await request(app.getHttpServer())
+      .get(`/api/study-goals/${goal.body.id}/forecast/latest`)
+      .set('Authorization', `Bearer ${first.accessToken}`)
+      .expect(200);
+    await request(app.getHttpServer())
+      .get(`/api/study-goals/${goal.body.id}`)
+      .set('Authorization', `Bearer ${second.accessToken}`)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/study-goals/${goal.body.id}/forecast/latest`)
+      .set('Authorization', `Bearer ${second.accessToken}`)
+      .expect(404);
+    expect(goal.body.targetDate).toBe(targetDate);
   });
 
   async function register(email: string, password: string): Promise<AuthResponse> {
