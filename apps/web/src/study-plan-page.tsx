@@ -128,6 +128,7 @@ export function StudyPlanPage() {
     setSelectedGoalId(goal.id);
     await client.invalidateQueries({ queryKey: ['study-goals'] });
   };
+  const selectedGoal = goals.data?.items.find((goal) => goal.id === selectedGoalId);
 
   return (
     <main className="study-plan-page">
@@ -188,12 +189,309 @@ export function StudyPlanPage() {
             </div>
           )}
         </div>
-        <aside className="study-plan-placeholder">
-          <h2>Chọn một mục tiêu</h2>
-          <p>Chọn mục tiêu trong danh sách để xem dự báo, tải học và lịch từng ngày.</p>
-        </aside>
+        {selectedGoal === undefined ? (
+          <aside className="study-plan-placeholder">
+            <h2>Chọn một mục tiêu</h2>
+            <p>Chọn mục tiêu trong danh sách để xem dự báo, tải học và lịch từng ngày.</p>
+          </aside>
+        ) : (
+          <ForecastDashboard goal={selectedGoal} />
+        )}
       </section>
     </main>
+  );
+}
+
+function ForecastDashboard({ goal }: { goal: StudyGoal }) {
+  const client = useQueryClient();
+  const [range, setRange] = useState<'7' | '30' | 'all'>('30');
+  const [page, setPage] = useState(1);
+  const forecast = useQuery({
+    queryKey: ['study-goal-forecast', goal.id],
+    queryFn: () => api.get<ForecastSnapshot>(`/study-goals/${goal.id}/forecast/latest`),
+    retry: false
+  });
+  const calculate = useMutation({
+    mutationFn: () => api.post<ForecastSnapshot>(`/study-goals/${goal.id}/forecast`, {}),
+    onSuccess: async (snapshot) => {
+      client.setQueryData(['study-goal-forecast', goal.id], snapshot);
+      await client.invalidateQueries({ queryKey: ['study-goals'] });
+    }
+  });
+  const missing = forecast.error instanceof ApiError && forecast.error.status === 404;
+
+  if (forecast.isLoading) return <ForecastSkeleton />;
+  if (forecast.isError && !missing) {
+    return (
+      <aside className="study-forecast-panel">
+        <QueryFailure onRetry={() => void forecast.refetch()} />
+      </aside>
+    );
+  }
+  if (forecast.data === undefined) {
+    return (
+      <aside className="study-forecast-panel study-forecast-empty">
+        <h2>Chưa có dự báo</h2>
+        <p>Chạy dự báo để mô phỏng lịch học từ trạng thái FSRS và lịch sử ôn tập hiện tại.</p>
+        <button
+          type="button"
+          disabled={calculate.isPending}
+          aria-busy={calculate.isPending}
+          onClick={() => calculate.mutate()}
+        >
+          {calculate.isPending ? 'Đang mô phỏng…' : 'Chạy dự báo'}
+        </button>
+        {calculate.isError && (
+          <p className="study-form-error" role="alert">
+            {messageFor(calculate.error)}
+          </p>
+        )}
+      </aside>
+    );
+  }
+
+  const data = forecast.data;
+  const rangedDays =
+    range === 'all' ? data.dailyProjection : data.dailyProjection.slice(0, Number(range));
+  const chartDays = aggregateProjection(rangedDays, 60);
+  const pageSize = 14;
+  const pageCount = Math.max(1, Math.ceil(data.dailyProjection.length / pageSize));
+  const visibleDays = data.dailyProjection.slice((page - 1) * pageSize, page * pageSize);
+  return (
+    <aside className="study-forecast-panel">
+      <div className="study-forecast-title">
+        <div>
+          <h2>{goal.name}</h2>
+          <p>Cập nhật {formatDateTime(data.calculatedAtUtc)}</p>
+        </div>
+        <button
+          type="button"
+          className="secondary"
+          disabled={calculate.isPending}
+          aria-busy={calculate.isPending}
+          onClick={() => calculate.mutate()}
+        >
+          {calculate.isPending ? 'Đang tính…' : 'Tính lại'}
+        </button>
+      </div>
+
+      <div className={`study-track-banner ${data.feasibility}`}>
+        <strong>{feasibilityLabel(data.feasibility)}</strong>
+        <span>
+          {Math.round(data.probabilityBeforeTarget * 100)}% khả năng hoàn thành đúng hạn · độ tin
+          cậy {confidenceLabel(data.confidenceLevel)}
+        </span>
+      </div>
+      {data.confidenceLevel === 'Low' && (
+        <p className="study-confidence-note">Độ tin cậy thấp – chưa đủ dữ liệu học thực tế.</p>
+      )}
+
+      <section className="study-summary-grid" aria-label="Tổng quan dự báo">
+        <ForecastMetric
+          label="Ngày học hết thẻ mới"
+          value={formatDate(data.predictedNewCardsCompletedDate)}
+        />
+        <ForecastMetric
+          label="Ngày hoàn thành dự kiến (P50)"
+          value={formatDate(data.predictedCompletionP50Date)}
+        />
+        <ForecastMetric
+          label="Ngày hoàn thành an toàn (P80)"
+          value={formatDate(data.predictedCompletionP80Date)}
+        />
+        <ForecastMetric
+          label="Xác suất đúng hạn"
+          value={`${Math.round(data.probabilityBeforeTarget * 100)}%`}
+        />
+        <ForecastMetric
+          label="Thời gian cần học/ngày"
+          value={`${Math.round(data.requiredDailyMinutes)} phút`}
+        />
+        <ForecastMetric
+          label="Tải ôn trung bình"
+          value={`${Math.round(data.averageReviewsPerDay)} lượt/ngày`}
+        />
+      </section>
+
+      <section className="study-card-counts" aria-label="Trạng thái thẻ">
+        <span>
+          <b>{data.totalCards}</b>Tổng thẻ
+        </span>
+        <span>
+          <b>{data.newCards}</b>Chưa học
+        </span>
+        <span>
+          <b>{data.learningCards}</b>Đang học
+        </span>
+        <span>
+          <b>{data.stableCards}</b>Ổn định
+        </span>
+      </section>
+
+      {data.recommendations.length > 0 && (
+        <section className="study-warnings">
+          <h3>Cảnh báo và điều chỉnh</h3>
+          <p>Kế hoạch có {data.overloadDays} ngày dự kiến quá tải.</p>
+          <ul>
+            {data.recommendations.map((recommendation) => (
+              <li key={recommendation}>{recommendation}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section className="study-scenarios">
+        <h3>Ba phương án</h3>
+        <div>
+          {data.scenarios.map((scenario) => (
+            <article key={scenario.kind}>
+              <strong>{scenario.label}</strong>
+              <span>{scenario.dailyMinutes} phút/ngày</span>
+              <small>
+                {formatDate(scenario.completionDate)} · {Math.round(scenario.probability * 100)}%
+              </small>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="study-chart-section">
+        <div className="study-section-heading">
+          <h3>Biểu đồ tải học</h3>
+          <div className="study-range-tabs" role="group" aria-label="Khoảng thời gian biểu đồ">
+            {(['7', '30', 'all'] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={range === value ? 'active' : 'secondary'}
+                onClick={() => setRange(value)}
+              >
+                {value === 'all' ? 'Toàn bộ' : `${value} ngày`}
+              </button>
+            ))}
+          </div>
+        </div>
+        <ProjectionChart days={chartDays} />
+      </section>
+
+      <section className="study-daily-section">
+        <div className="study-section-heading">
+          <h3>Kế hoạch từng ngày</h3>
+          <span>
+            Trang {page}/{pageCount}
+          </span>
+        </div>
+        <div className="study-daily-table-wrap">
+          <table className="study-daily-table">
+            <thead>
+              <tr>
+                <th>Ngày</th>
+                <th>Đến hạn</th>
+                <th>Thẻ mới</th>
+                <th>Tổng lượt</th>
+                <th>Phút</th>
+                <th>Backlog</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleDays.map((day) => (
+                <tr key={day.date}>
+                  <td data-label="Ngày">{formatDate(day.date)}</td>
+                  <td data-label="Đến hạn">{day.dueCards}</td>
+                  <td data-label="Thẻ mới">{day.newCards}</td>
+                  <td data-label="Tổng lượt">{day.totalReviews}</td>
+                  <td data-label="Phút">{day.estimatedMinutes}</td>
+                  <td data-label="Backlog">{day.backlog}</td>
+                  <td data-label="Trạng thái">
+                    <span className={`study-day-status ${day.status}`}>
+                      {dayStatusLabel(day.status)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="study-pagination">
+          <button
+            type="button"
+            className="secondary"
+            disabled={page === 1}
+            onClick={() => setPage((current) => current - 1)}
+          >
+            Trang trước
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={page === pageCount}
+            onClick={() => setPage((current) => current + 1)}
+          >
+            Trang sau
+          </button>
+        </div>
+      </section>
+    </aside>
+  );
+}
+
+function ForecastMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <article>
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </article>
+  );
+}
+
+function ProjectionChart({ days }: { days: DailyStudyProjection[] }) {
+  const maximum = Math.max(
+    1,
+    ...days.map((day) => Math.max(day.dueCards, day.newCards, day.estimatedMinutes))
+  );
+  if (days.length === 0) return <p className="study-helper">Chưa có dữ liệu lịch học.</p>;
+  return (
+    <div
+      className="study-chart"
+      role="img"
+      aria-label="Biểu đồ thẻ mới, thẻ ôn và phút học dự kiến"
+    >
+      {days.map((day) => (
+        <div
+          className="study-chart-column"
+          key={day.date}
+          title={`${formatDate(day.date)}: ${day.newCards} mới, ${day.dueCards} ôn, ${day.estimatedMinutes} phút`}
+        >
+          <span
+            className="review"
+            style={{ height: `${Math.max(2, (day.dueCards / maximum) * 100)}%` }}
+          />
+          <span
+            className="new"
+            style={{ height: `${Math.max(2, (day.newCards / maximum) * 100)}%` }}
+          />
+          <span
+            className="minutes"
+            style={{ height: `${Math.max(2, (day.estimatedMinutes / maximum) * 100)}%` }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ForecastSkeleton() {
+  return (
+    <aside
+      className="study-forecast-panel study-forecast-skeleton"
+      aria-label="Đang tải dự báo"
+      aria-busy="true"
+    >
+      <span />
+      <span />
+      <span />
+    </aside>
   );
 }
 
@@ -496,4 +794,41 @@ export function feasibilityLabel(value: ForecastSnapshot['feasibility']) {
     Unrealistic: 'Chưa khả thi',
     Completed: 'Đã hoàn thành'
   }[value];
+}
+
+function confidenceLabel(value: ForecastSnapshot['confidenceLevel']) {
+  return { Low: 'thấp', Medium: 'trung bình', High: 'cao' }[value];
+}
+
+function dayStatusLabel(value: DailyStudyProjection['status']) {
+  return { Rest: 'Nghỉ', Planned: 'Đã lên lịch', Overloaded: 'Quá tải', Completed: 'Hoàn thành' }[
+    value
+  ];
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(
+    new Date(value)
+  );
+}
+
+function aggregateProjection(days: DailyStudyProjection[], limit: number): DailyStudyProjection[] {
+  if (days.length <= limit) return days;
+  const size = Math.ceil(days.length / limit);
+  const result: DailyStudyProjection[] = [];
+  for (let index = 0; index < days.length; index += size) {
+    const group = days.slice(index, index + size);
+    const first = group[0];
+    if (first === undefined) continue;
+    result.push({
+      date: first.date,
+      dueCards: group.reduce((sum, day) => sum + day.dueCards, 0),
+      newCards: group.reduce((sum, day) => sum + day.newCards, 0),
+      totalReviews: group.reduce((sum, day) => sum + day.totalReviews, 0),
+      estimatedMinutes: group.reduce((sum, day) => sum + day.estimatedMinutes, 0),
+      backlog: Math.max(...group.map((day) => day.backlog)),
+      status: group.some((day) => day.status === 'Overloaded') ? 'Overloaded' : first.status
+    });
+  }
+  return result;
 }
