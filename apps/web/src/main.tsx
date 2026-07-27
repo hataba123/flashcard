@@ -319,6 +319,14 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
   const offline = useOffline();
   const navigate = useNavigate();
   const [navigationOpen, setNavigationOpen] = useState(false);
+  const accountInitial = user?.email.charAt(0).toUpperCase() ?? '?';
+  const syncLabel = !offline.online
+    ? 'Ngoại tuyến'
+    : offline.syncing
+      ? 'Đang đồng bộ'
+      : offline.pendingCount > 0
+        ? `Chờ đồng bộ ${offline.pendingCount} mục`
+        : 'Đã đồng bộ';
   const logout = async () => {
     try {
       await api.post('/auth/logout', {});
@@ -372,11 +380,16 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
           </NavLink>
         </nav>
         <div className="account">
-          <span>{user?.email}</span>
-          <span className={offline.online ? 'sync-state' : 'sync-state offline'}>
-            {offline.online ? 'Online' : 'Offline'}
-            {offline.pendingCount > 0 ? ` · ${offline.pendingCount} pending` : ''}
+          <span className="account-avatar" aria-hidden="true">
+            {accountInitial}
           </span>
+          <div className="account-details">
+            <span className="account-label">Tài khoản</span>
+            <span className="account-email" title={user?.email}>
+              {user?.email}
+            </span>
+            <span className={offline.online ? 'sync-state' : 'sync-state offline'}>{syncLabel}</span>
+          </div>
           <button className="button-link" onClick={() => void logout()}>
             Đăng xuất
           </button>

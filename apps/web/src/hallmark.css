@@ -109,8 +109,53 @@ body {
   font-size: var(--text-xs);
 }
 
-.app-topbar .account > span:first-child {
-  display: none;
+.app-topbar .account-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  font-weight: 800;
+}
+
+.app-topbar .account-details {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3xs);
+}
+
+.app-topbar .account-label {
+  color: var(--color-rule-2);
+  font-family: var(--font-outlier);
+  font-size: var(--text-xs);
+}
+
+.app-topbar .account-email {
+  overflow: hidden;
+  color: var(--color-paper);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-topbar .sync-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  padding: 0;
+  background: transparent;
+}
+
+.app-topbar .sync-state::before {
+  width: var(--space-2xs);
+  height: var(--space-2xs);
+  border-radius: var(--radius-pill);
+  background: currentcolor;
+  content: '';
 }
 
 .app-topbar .account .button-link {
