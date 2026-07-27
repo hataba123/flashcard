@@ -319,6 +319,7 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
   const offline = useOffline();
   const navigate = useNavigate();
   const [navigationOpen, setNavigationOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountInitial = user?.email.charAt(0).toUpperCase() ?? '?';
   const syncLabel = !offline.online
     ? 'Ngoại tuyến'
@@ -390,9 +391,36 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
             </span>
             <span className={offline.online ? 'sync-state' : 'sync-state offline'}>{syncLabel}</span>
           </div>
-          <button className="button-link" onClick={() => void logout()}>
-            Đăng xuất
-          </button>
+          <div className="account-menu">
+            <button
+              className="account-menu-trigger"
+              type="button"
+              aria-expanded={accountMenuOpen}
+              aria-controls="account-menu"
+              onClick={() => setAccountMenuOpen((isOpen) => !isOpen)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setAccountMenuOpen(false);
+              }}
+            >
+              Tùy chọn
+              <span aria-hidden="true">⌄</span>
+            </button>
+            {accountMenuOpen && (
+              <div id="account-menu" className="account-menu-content" role="menu">
+                <button
+                  className="account-menu-item"
+                  role="menuitem"
+                  type="button"
+                  onClick={() => {
+                    setAccountMenuOpen(false);
+                    void logout();
+                  }}
+                >
+                  Đăng xuất
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
       <section className="page-content">{children}</section>

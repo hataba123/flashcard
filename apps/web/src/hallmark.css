@@ -158,6 +158,85 @@ body {
   content: '';
 }
 
+.app-topbar .account-menu {
+  position: relative;
+}
+
+.app-topbar .account-menu-trigger {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: var(--space-2xs);
+  border: var(--rule-hair) solid var(--color-ink-2);
+  border-radius: var(--radius-pill);
+  padding-inline: var(--space-xs);
+  background: transparent;
+  color: var(--color-paper);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  transition:
+    background-color var(--dur-short) var(--ease-out),
+    border-color var(--dur-short) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out);
+}
+
+.app-topbar .account-menu-trigger:hover {
+  border-color: var(--color-rule-2);
+  background: var(--color-ink-2);
+}
+
+.app-topbar .account-menu-trigger:focus-visible {
+  outline: var(--rule-fine) solid var(--color-focus);
+  outline-offset: var(--space-3xs);
+}
+
+.app-topbar .account-menu-trigger:active {
+  transform: translateY(1px);
+}
+
+.app-topbar .account-menu-content {
+  position: absolute;
+  top: calc(100% + var(--space-2xs));
+  right: 0;
+  display: grid;
+  min-width: 10rem;
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-input);
+  padding: var(--space-2xs);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+}
+
+.app-topbar .account-menu-item {
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: var(--radius-input);
+  padding-inline: var(--space-xs);
+  background: transparent;
+  color: var(--color-error);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  transition:
+    background-color var(--dur-short) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out);
+}
+
+.app-topbar .account-menu-item:hover {
+  background: var(--color-error-soft);
+}
+
+.app-topbar .account-menu-item:focus-visible {
+  outline: var(--rule-fine) solid var(--color-focus);
+  outline-offset: calc(-1 * var(--rule-fine));
+}
+
+.app-topbar .account-menu-item:active {
+  transform: translateY(1px);
+}
+
 .app-topbar .account .button-link {
   min-height: 2.75rem;
   padding-inline: var(--space-xs);
