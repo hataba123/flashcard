@@ -25,8 +25,10 @@ import { nextReviewIndex, ratingForShortcut, type ReviewRating } from './review-
 import { useSession, type User } from './session.js';
 import { getCardSpeechText, SpeechControl } from './speech-control.js';
 import { NotesPage } from './notes-page.js';
+import { StudyPlanPage } from './study-plan-page.js';
 import './styles.css';
 import './hallmark.css';
+import './study-plan.css';
 
 interface Deck {
   id: string;
@@ -368,6 +370,9 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
           <NavLink to="/" end onClick={() => setNavigationOpen(false)}>
             Tổng quan
           </NavLink>
+          <NavLink to="/study-plan" onClick={() => setNavigationOpen(false)}>
+            Kế hoạch học tập
+          </NavLink>
           <NavLink to="/decks" onClick={() => setNavigationOpen(false)}>
             Bộ thẻ
           </NavLink>
@@ -402,7 +407,9 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
                   <span className="account-email" title={user?.email}>
                     {user?.email}
                   </span>
-                  <span className={offline.online ? 'sync-state' : 'sync-state offline'}>{syncLabel}</span>
+                  <span className={offline.online ? 'sync-state' : 'sync-state offline'}>
+                    {syncLabel}
+                  </span>
                 </div>
                 <button
                   className="account-menu-item"
@@ -709,6 +716,9 @@ function Decks() {
                 </small>
               </div>
               <div className="actions">
+                <Link className="button secondary" to={`/study-plan?deckId=${deck.id}`}>
+                  Thêm vào kế hoạch
+                </Link>
                 <button className="secondary" onClick={() => setEditing(deck)}>
                   Sửa
                 </button>
@@ -959,7 +969,10 @@ function Review() {
     if (touch === undefined) return;
     const dx = touch.clientX - start.x;
     const dy = touch.clientY - start.y;
-    if (Math.max(Math.abs(dx), Math.abs(dy)) < 36) { if (!revealed) setRevealedAt(new Date()); return; }
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 36) {
+      if (!revealed) setRevealedAt(new Date());
+      return;
+    }
     if (!revealed) return;
     if (dy < -60 && Math.abs(dy) > Math.abs(dx)) grade.mutate('Easy');
     else if (dx < -60 && Math.abs(dx) > Math.abs(dy)) grade.mutate('Again');
@@ -1039,7 +1052,11 @@ function Review() {
                 className="review-stage"
                 role="group"
                 aria-label={revealed ? 'Mặt sau của thẻ' : 'Mặt trước của thẻ'}
-                onTouchStart={(event) => { const touch = event.touches[0]; if (touch !== undefined) touchStart.current = { x: touch.clientX, y: touch.clientY }; }}
+                onTouchStart={(event) => {
+                  const touch = event.touches[0];
+                  if (touch !== undefined)
+                    touchStart.current = { x: touch.clientX, y: touch.clientY };
+                }}
                 onTouchEnd={handleTouchEnd}
               >
                 <div key={card.id} className={`review-card${revealed ? ' is-revealed' : ''}`}>
@@ -1152,6 +1169,16 @@ function App() {
         element={
           <Protected>
             <Decks />
+          </Protected>
+        }
+      />
+      <Route
+        path="/study-plan"
+        element={
+          <Protected>
+            <Shell>
+              <StudyPlanPage />
+            </Shell>
           </Protected>
         }
       />
