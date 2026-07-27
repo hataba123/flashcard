@@ -91,7 +91,8 @@ body {
 }
 
 .app-topbar nav a.active::after {
-  display: none;
+  opacity: 1;
+  transform: scaleX(1);
 }
 
 .app-topbar nav a:active {
@@ -273,7 +274,7 @@ button,
   white-space: nowrap;
   transform: translateY(0);
   transition:
-    transform var(--dur-micro) var(--ease-out),
+    transform var(--dur-short) var(--ease-out),
     opacity var(--dur-short) var(--ease-out),
     background-color var(--dur-short) var(--ease-out),
     box-shadow var(--dur-micro) var(--ease-out);
@@ -910,7 +911,8 @@ label {
   box-shadow: none;
   text-align: start;
   transform-style: preserve-3d;
-  transition: transform var(--dur-long) var(--ease-in-out);
+  transition: transform calc(var(--dur-long) + var(--dur-micro)) var(--ease-in-out);
+  will-change: transform;
 }
 
 .review-card.is-revealed {
@@ -1102,6 +1104,11 @@ label {
   box-shadow: 0 2px 0 0 var(--color-rule);
   text-align: start;
   white-space: nowrap;
+  transition:
+    transform var(--dur-short) var(--ease-out),
+    background-color var(--dur-short) var(--ease-out),
+    color var(--dur-short) var(--ease-out),
+    box-shadow var(--dur-short) var(--ease-out);
 }
 
 .rating-mark {
