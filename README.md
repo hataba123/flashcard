@@ -173,10 +173,10 @@ Web sử dụng `VITE_API_URL` nếu API không nằm tại `http://localhost:30
 
 Tệp phải có định dạng `.xlsx` và dung lượng không quá 5 MiB. Bảng đơn giản cần hai cột bắt buộc:
 
-| Cột       | Alias được hỗ trợ                           | Nội dung                         |
-| --------- | ------------------------------------------- | -------------------------------- |
-| Mặt trước | `Front`, `Mặt trước`, `Câu hỏi`, `Nội dung` | Câu hỏi hoặc nội dung cần nhớ    |
-| Mặt sau   | `Back`, `Mặt sau`, `Đáp án`, `Answer`       | Câu trả lời hoặc phần giải thích |
+| Cột       | Alias được hỗ trợ                                                                                           | Nội dung                         |
+| --------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| Mặt trước | `Front`, `Mặt trước`, `Câu hỏi`, `Question`, `Prompt`, `Term`, `Word`, `Thuật ngữ`, `Khái niệm`             | Câu hỏi hoặc nội dung cần nhớ    |
+| Mặt sau   | `Back`, `Mặt sau`, `Đáp án`, `Answer`, `Definition`, `Explanation`, `Translation`, `Giải thích`, `Lời giải` | Câu trả lời hoặc phần giải thích |
 
 Hai cột tùy chọn:
 

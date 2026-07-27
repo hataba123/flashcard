@@ -39,6 +39,35 @@ describe('CardsService Excel importer', () => {
     ]);
   });
 
+  it('accepts additional front and back column aliases in Vietnamese and English', async () => {
+    const result = await readWorksheet([
+      ['Question', 'Definition'],
+      ['What is a verb?', 'A word that describes an action or state.'],
+      [],
+      ['Thuật ngữ', 'Giải thích'],
+      ['SQL Server', 'Hệ quản trị cơ sở dữ liệu quan hệ của Microsoft.'],
+      [],
+      ['Prompt', 'Translation'],
+      ['Good morning', 'Chào buổi sáng']
+    ]);
+
+    expect(result.rows).toEqual([
+      {
+        front: 'What is a verb?',
+        back: 'A word that describes an action or state.',
+        tags: [],
+        noteType: 'Basic'
+      },
+      {
+        front: 'SQL Server',
+        back: 'Hệ quản trị cơ sở dữ liệu quan hệ của Microsoft.',
+        tags: [],
+        noteType: 'Basic'
+      },
+      { front: 'Good morning', back: 'Chào buổi sáng', tags: [], noteType: 'Basic' }
+    ]);
+  });
+
   it('recognizes consecutive blocks and does not import repeated headers', async () => {
     const result = await readWorksheet([
       ['Front', 'Back'],

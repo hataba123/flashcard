@@ -47,8 +47,8 @@ interface ExcelReadResult {
 }
 
 const HEADER_ALIASES = {
-  front: ['front', 'mat truoc', 'cau hoi', 'noi dung'],
-  back: ['back', 'mat sau', 'dap an', 'answer'],
+  front: ['front', 'mat truoc', 'cau hoi', 'noi dung', 'question', 'prompt', 'question text', 'front text', 'flashcard front', 'term', 'word', 'thuat ngu', 'khai niem'],
+  back: ['back', 'mat sau', 'dap an', 'answer', 'definition', 'explanation', 'translation', 'response', 'answer text', 'back text', 'flashcard back', 'loi giai', 'giai thich'],
   tags: ['tags', 'tag', 'nhan'],
   type: ['type', 'card type', 'loai the'],
   meaning: [
@@ -414,19 +414,26 @@ export class CardsService {
     let exceededRowLimit = false;
     for (const [sheetIndex, sheet] of workbook.worksheets.entries()) {
       let currentMapping: ExcelColumnMapping | undefined;
+      let previousRowWasEmpty = true;
       for (let rowNumber = 1; rowNumber <= sheet.rowCount && scannedRows < maxRows; rowNumber += 1) {
         const row = sheet.getRow(rowNumber);
-        if (this.isEmptyExcelRow(row)) continue;
+        if (this.isEmptyExcelRow(row)) {
+          previousRowWasEmpty = true;
+          continue;
+        }
         const mapping = this.detectExcelLayout(row, rowNumber);
-        if (mapping !== undefined) {
+        const isRepeatedStandardHeaderWithoutSeparator = mapping?.layoutType === 'standard' && currentMapping?.layoutType === 'standard' && !previousRowWasEmpty && !this.hasStandardMetadataHeader(mapping);
+        if (mapping !== undefined && !isRepeatedStandardHeaderWithoutSeparator) {
           currentMapping = mapping;
           recognizedHeaders += 1;
+          previousRowWasEmpty = false;
           continue;
         }
         if (currentMapping === undefined) continue;
         scannedRows += 1;
         const imported = this.readExcelRow(row, currentMapping, rowNumber, errors);
         if (imported !== undefined) rows.push(imported);
+        previousRowWasEmpty = false;
         if (scannedRows === maxRows) {
           exceededRowLimit =
             rowNumber < sheet.rowCount ||
@@ -513,6 +520,9 @@ export class CardsService {
     if (has('academicVerb') && has('meaning')) return mapping('academic-general-verb');
     if (has('vocabulary') && has('meaning')) return mapping('vocabulary');
     return undefined;
+  }
+  private hasStandardMetadataHeader(mapping: ExcelColumnMapping): boolean {
+    return this.findColumn(mapping.columns, ['tags', 'tag', 'nhan', 'type', 'loai', 'card type', 'loai the']) !== undefined;
   }
   private readValue(
     row: ExcelJS.Row,

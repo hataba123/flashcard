@@ -1,5 +1,12 @@
 # Tiến độ triển khai
 
+## Cập nhật import Excel — Mở rộng alias mặt thẻ
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: nhận thêm các cột tiếng Anh `Question`, `Prompt`, `Term`, `Word`, `Definition`, `Explanation`, `Translation` và cột tiếng Việt `Thuật ngữ`, `Khái niệm`, `Giải thích`, `Lời giải` cho bảng import chuẩn.
+- Tương thích: giữ nguyên luồng import từ vựng chuyên biệt khi dùng cặp cột `Word`/`Term` và `Meaning`.
+- Kiểm tra: bổ sung unit test alias và trường hợp dữ liệu trùng tên header; `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` và `git diff --check` đều đạt.
+
 ## Cập nhật tài liệu — Mở rộng README
 
 - Trạng thái: Hoàn thành.
