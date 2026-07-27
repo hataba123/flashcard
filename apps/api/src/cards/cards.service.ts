@@ -8,6 +8,7 @@ import { CreateDeckDto, CreateNoteDto, UpdateDeckDto, UpdateNoteDto } from './dt
 import { CardEntity, CardState } from './entities/card.entity.js';
 import { DeckEntity } from './entities/deck.entity.js';
 import { NoteEntity } from './entities/note.entity.js';
+import { ImportBatchEntity } from './entities/import-batch.entity.js';
 
 type ExcelNoteType = 'Basic' | 'BasicAndReverse' | 'Cloze';
 type ExcelLayoutType =
@@ -105,7 +106,8 @@ export class CardsService {
   constructor(
     @InjectRepository(DeckEntity) private readonly decks: Repository<DeckEntity>,
     @InjectRepository(NoteEntity) private readonly notes: Repository<NoteEntity>,
-    @InjectRepository(CardEntity) private readonly cards: Repository<CardEntity>
+    @InjectRepository(CardEntity) private readonly cards: Repository<CardEntity>,
+    @InjectRepository(ImportBatchEntity) private readonly importBatches: Repository<ImportBatchEntity>
   ) {}
 
   listDecks(userId: string): Promise<DeckEntity[]> {
@@ -211,10 +213,22 @@ export class CardsService {
       throw new BadRequestException('Tệp Excel không có dòng hợp lệ để tạo thẻ.');
 
     let createdCards = 0;
+    let updatedNotes = 0;
+    let skippedDuplicates = 0;
+    const batchItems: Array<{ action: 'created'; noteId: string } | { action: 'updated'; note: Pick<NoteEntity, 'id' | 'noteType' | 'fieldsJson' | 'tagsJson' | 'normalizedHash' | 'version'> }> = [];
     await this.notes.manager.transaction(async (manager) => {
       const notes = manager.getRepository(NoteEntity);
       const cards = manager.getRepository(CardEntity);
       for (const row of rows) {
+        const duplicate = await notes.find({ where: { userId, deckId } }).then((candidates) => candidates.find((candidate) => this.sameCard(candidate, row.front, row.back)));
+        if (duplicate !== undefined) {
+          batchItems.push({ action: 'updated', note: { id: duplicate.id, noteType: duplicate.noteType, fieldsJson: duplicate.fieldsJson, tagsJson: duplicate.tagsJson, normalizedHash: duplicate.normalizedHash, version: duplicate.version } });
+          Object.assign(duplicate, this.noteValues(userId, { deckId, noteType: row.noteType, fields: row.noteType === 'Cloze' ? { text: row.front, back: row.back } : { front: row.front, back: row.back }, tags: row.tags }));
+          duplicate.version += 1;
+          await notes.save(duplicate);
+          updatedNotes += 1;
+          continue;
+        }
         const note = await notes.save(
           notes.create({
             id: randomUUID(),
@@ -229,6 +243,7 @@ export class CardsService {
             })
           })
         );
+        batchItems.push({ action: 'created', noteId: note.id });
         const ordinals = row.noteType === 'BasicAndReverse' ? [0, 1] : [0];
         for (const templateOrdinal of ordinals) {
           await cards.save(
@@ -250,6 +265,8 @@ export class CardsService {
       }
     });
 
+    await this.importBatches.save(this.importBatches.create({ id: randomUUID(), userId, deckId, status: 'Completed', itemsJson: JSON.stringify(batchItems), undoneAtUtc: null }));
+
     return {
       importedNotes: rows.length,
       createdCards,
@@ -260,6 +277,30 @@ export class CardsService {
       recognizedBlocks: result.recognizedBlocks
     };
   }
+  async previewExcel(userId: string, deckId: string, file: Buffer) {
+    await this.requireDeck(userId, deckId);
+    const result = await this.readExcelRows(file);
+    return { rows: result.rows.slice(0, 20), validRows: result.rows.length, skippedRows: result.errors.length, errors: result.errors, scannedRows: result.scannedRows, recognizedHeaders: result.recognizedHeaders };
+  }
+  async undoLatestImport(userId: string, deckId: string): Promise<{ undoneNotes: number }> {
+    const batch = await this.importBatches.findOne({ where: { userId, deckId, status: 'Completed' }, order: { createdAtUtc: 'DESC' } });
+    if (batch === null) throw new NotFoundException('Không có lần import nào để hoàn tác.');
+    const items = JSON.parse(batch.itemsJson) as Array<{ action: 'created'; noteId: string } | { action: 'updated'; note: Pick<NoteEntity, 'id' | 'noteType' | 'fieldsJson' | 'tagsJson' | 'normalizedHash' | 'version'> }>;
+    await this.notes.manager.transaction(async (manager) => {
+      const notes = manager.getRepository(NoteEntity); const cards = manager.getRepository(CardEntity);
+      for (const item of items) {
+        if (item.action === 'created') { await notes.softDelete({ id: item.noteId, userId }); await cards.softDelete({ noteId: item.noteId, userId }); }
+        else await notes.update({ id: item.note.id, userId }, item.note);
+      }
+      await manager.getRepository(ImportBatchEntity).update(batch.id, { status: 'Undone', undoneAtUtc: new Date() });
+    });
+    return { undoneNotes: items.length };
+  }
+  private sameCard(note: NoteEntity, front: string, back: string): boolean {
+    const fields = JSON.parse(note.fieldsJson) as Record<string, string>;
+    return this.normalizeCardText(fields.front ?? fields.text ?? '') === this.normalizeCardText(front) && this.normalizeCardText(fields.back ?? '') === this.normalizeCardText(back);
+  }
+  private normalizeCardText(value: string): string { return value.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('vi'); }
   private noteValues(userId: string, input: CreateNoteDto): Partial<NoteEntity> {
     const fieldsJson = JSON.stringify(input.fields);
     return {

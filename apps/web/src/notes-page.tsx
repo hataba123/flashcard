@@ -5,7 +5,7 @@ import { Link } from 'react-router';
 import { z } from 'zod';
 
 import { ApiError, api } from './api.js';
-import type { Deck, ExcelImportResult, Note } from './card-types.js';
+import type { Deck, ExcelImportPreview, ExcelImportResult, Note } from './card-types.js';
 
 const noteSchema = z.object({
   deckId: z.uuid('Vui lòng chọn bộ thẻ.'),
@@ -153,6 +153,8 @@ export function NotesPage() {
   const [importError, setImportError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<ExcelImportResult | null>(null);
   const [importDeckId, setImportDeckId] = useState('');
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<ExcelImportPreview | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const notes = useQuery({ queryKey: ['notes'], queryFn: () => api.get<Note[]>('/notes') });
   const decks = useQuery({ queryKey: ['decks'], queryFn: () => api.get<Deck[]>('/decks') });
@@ -162,17 +164,22 @@ export function NotesPage() {
     onSuccess: (result) => { setImportError(null); setImportResult(result); void client.invalidateQueries({ queryKey: ['notes'] }); },
     onError: (error) => setImportError(errorMessage(error))
   });
+  const previewExcel = useMutation({ mutationFn: ({ deckId, file }: { deckId: string; file: File }) => { const data = new FormData(); data.append('file', file); return api.postForm<ExcelImportPreview>(`/decks/${deckId}/import-excel/preview`, data); }, onSuccess: (preview) => { setImportError(null); setImportPreview(preview); } });
+  const undoImport = useMutation({ mutationFn: (deckId: string) => api.post<{ undoneNotes: number }>(`/decks/${deckId}/import-excel/undo`, {}), onSuccess: () => { setImportResult(null); setImportPreview(null); void client.invalidateQueries({ queryKey: ['notes'] }); }, onError: (error) => setImportError(errorMessage(error)) });
   const done = () => { setEditing(undefined); void client.invalidateQueries({ queryKey: ['notes'] }); };
   const selectedImportDeckId = importDeckId || decks.data?.[0]?.id || '';
   return <>
     <header className="page-header"><div><p className="eyebrow">Nội dung học</p><h1>Thẻ</h1><p className="muted">{notes.data === undefined ? 'Đang tải số lượng…' : `${notes.data.length} thẻ`}</p></div><div className="page-actions">
       <label className="import-deck"><span className="sr-only">Bộ thẻ nhận dữ liệu import</span><select aria-label="Bộ thẻ nhận dữ liệu import" disabled={decks.isLoading || !decks.data?.length || importExcel.isPending} value={selectedImportDeckId} onChange={(event) => setImportDeckId(event.target.value)}>{decks.data?.map((deck) => <option key={deck.id} value={deck.id}>{deck.name}</option>)}</select></label>
-      <input ref={fileInput} className="sr-only" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file !== undefined && selectedImportDeckId) importExcel.mutate({ deckId: selectedImportDeckId, file }); }} />
-      <button type="button" className="secondary" disabled={decks.isLoading || !decks.data?.length || importExcel.isPending} onClick={() => fileInput.current?.click()}><ButtonContent loading={importExcel.isPending}>{importExcel.isPending ? 'Đang import…' : 'Import Excel'}</ButtonContent></button>
+      <input ref={fileInput} className="sr-only" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file !== undefined && selectedImportDeckId) { setImportFile(file); previewExcel.mutate({ deckId: selectedImportDeckId, file }); } }} />
+      <button type="button" className="secondary" disabled={decks.isLoading || !decks.data?.length || previewExcel.isPending} onClick={() => fileInput.current?.click()}><ButtonContent loading={previewExcel.isPending}>{previewExcel.isPending ? 'Đang đọc tệp…' : 'Chọn Excel'}</ButtonContent></button>
+      {importPreview !== null && importFile !== null && <button type="button" disabled={importExcel.isPending} onClick={() => importExcel.mutate({ deckId: selectedImportDeckId, file: importFile })}>Xác nhận import</button>}
+      <button type="button" className="secondary" disabled={undoImport.isPending || !selectedImportDeckId} onClick={() => undoImport.mutate(selectedImportDeckId)}>Hoàn tác import gần nhất</button>
       <button disabled={decks.isLoading || !decks.data?.length} onClick={() => setEditing(null)}>Tạo thẻ</button>
     </div></header>
     <p className="muted import-help">Hỗ trợ Front | Back | Tags | Type; danh sách từ vựng, từ vựng theo chủ đề, collocation, synonym/paraphrase, word family, mẫu câu và morphology. Một worksheet có thể có nhiều bảng: ứng dụng tự phát hiện header từng bảng và chỉ đọc worksheet đầu tiên. Type không bắt buộc (mặc định Basic); STT, trạng thái, ghi chú và dữ liệu tần suất sẽ bị bỏ qua.</p>
     {importResult !== null && <div className="import-result" role="status"><p>Đã tạo {importResult.importedNotes} thẻ và {importResult.createdCards} thẻ ôn tập.{` Đã nhận diện ${importResult.recognizedBlocks} bảng và duyệt ${importResult.scannedRows} dòng.`}{importResult.skippedRows > 0 ? ` Bỏ qua ${importResult.skippedRows} dòng không hợp lệ.` : ''}</p>{importResult.errors.length > 0 && <ul>{importResult.errors.slice(0, 3).map((error) => <li key={error}>{error}</li>)}</ul>}</div>}
+    {importPreview !== null && <div className="import-result"><p>Xem trước: {importPreview.validRows} dòng hợp lệ, {importPreview.skippedRows} dòng lỗi.</p><ul>{importPreview.rows.slice(0, 5).map((row, index) => <li key={`${row.front}-${index}`}>{row.front} → {row.back}</li>)}</ul></div>}
     {importError !== null && <p className="form-error" role="alert">{importError}</p>}
     {!decks.isLoading && decks.data?.length === 0 && <EmptyState title="Bạn cần một bộ thẻ trước" description="Tạo bộ thẻ để bắt đầu thêm thẻ học." action={<Link className="button" to="/decks">Tạo bộ thẻ</Link>} />}
     {editing !== undefined && <NoteEditor decks={decks.data ?? []} note={editing} done={done} />}

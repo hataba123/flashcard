@@ -5,9 +5,10 @@ import { CardsController } from './cards.controller.js';
 import { CardsService } from './cards.service.js';
 import { CardEntity } from './entities/card.entity.js';
 import { DeckEntity } from './entities/deck.entity.js';
+import { ImportBatchEntity } from './entities/import-batch.entity.js';
 import { NoteEntity } from './entities/note.entity.js';
 @Module({
-  imports: [AuthModule, TypeOrmModule.forFeature([DeckEntity, NoteEntity, CardEntity])],
+  imports: [AuthModule, TypeOrmModule.forFeature([DeckEntity, NoteEntity, CardEntity, ImportBatchEntity])],
   controllers: [CardsController],
   providers: [CardsService]
 })

@@ -25,3 +25,11 @@ export interface ExcelImportResult {
   recognizedHeaders: number;
   recognizedBlocks: number;
 }
+export interface ExcelImportPreview {
+  rows: Array<{ front: string; back: string; tags: string[]; noteType: string }>;
+  validRows: number;
+  skippedRows: number;
+  errors: string[];
+  scannedRows: number;
+  recognizedHeaders: number;
+}

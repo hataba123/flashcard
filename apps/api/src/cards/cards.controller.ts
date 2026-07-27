@@ -93,4 +93,13 @@ export class CardsController {
     if (file === undefined) throw new BadRequestException('Vui lòng chọn tệp Excel.');
     return this.cardsService.importNotesFromExcel(user.id, id, file.buffer);
   }
+  @Post('decks/:id/import-excel/preview')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  previewExcel(@CurrentUser() user: UserEntity, @Param('id') id: string, @UploadedFile() file: UploadedSpreadsheet | undefined) {
+    if (file === undefined) throw new BadRequestException('Vui lòng chọn tệp Excel.');
+    return this.cardsService.previewExcel(user.id, id, file.buffer);
+  }
+  @Post('decks/:id/import-excel/undo')
+  undoExcel(@CurrentUser() user: UserEntity, @Param('id') id: string) { return this.cardsService.undoLatestImport(user.id, id); }
 }
