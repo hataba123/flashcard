@@ -39,6 +39,8 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       void queryClient.invalidateQueries({ queryKey: ['notes'] });
       void queryClient.invalidateQueries({ queryKey: ['decks'] });
       void queryClient.invalidateQueries({ queryKey: ['review-queue'] });
+      void queryClient.invalidateQueries({ queryKey: ['study-goals'] });
+      void queryClient.invalidateQueries({ queryKey: ['study-goal-forecast'] });
     };
     window.addEventListener('flashcard-sync-applied', onApplied);
     void refresh();

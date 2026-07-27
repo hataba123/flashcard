@@ -5,6 +5,8 @@ import { useSearchParams } from 'react-router';
 import { z } from 'zod';
 
 import { ApiError, api } from './api.js';
+import { offlineDb } from './offline-db.js';
+import { useOffline } from './offline-provider.js';
 
 interface Deck {
   id: string;
@@ -101,12 +103,28 @@ const WEEK_DAYS = [
 
 export function StudyPlanPage() {
   const client = useQueryClient();
+  const offline = useOffline();
+  const [goalsCachedAtUtc, setGoalsCachedAtUtc] = useState<string | null>(null);
   const [params, setParams] = useSearchParams();
   const [editing, setEditing] = useState<StudyGoal | null | undefined>();
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const goals = useQuery({
     queryKey: ['study-goals'],
-    queryFn: () => api.get<StudyGoalList>('/study-goals?page=1&pageSize=100')
+    queryFn: async () => {
+      try {
+        const data = await api.get<StudyGoalList>('/study-goals?page=1&pageSize=100');
+        const cachedAtUtc = new Date().toISOString();
+        await offlineDb.studyGoals.put({ id: 'current', data, cachedAtUtc });
+        setGoalsCachedAtUtc(null);
+        return data;
+      } catch (error) {
+        const cached = await offlineDb.studyGoals.get('current');
+        if (cached === undefined) throw error;
+        setGoalsCachedAtUtc(cached.cachedAtUtc);
+        return cached.data as StudyGoalList;
+      }
+    },
+    retry: false
   });
   const decks = useQuery({ queryKey: ['decks'], queryFn: () => api.get<Deck[]>('/decks') });
   const archive = useMutation({
@@ -137,10 +155,17 @@ export function StudyPlanPage() {
           <h1>Kế hoạch học tập</h1>
           <p>Dự báo dựa trên lịch sử học và dữ liệu hiện tại.</p>
         </div>
-        <button type="button" onClick={() => setEditing(null)}>
+        <button type="button" disabled={!offline.online} onClick={() => setEditing(null)}>
           Tạo mục tiêu
         </button>
       </header>
+
+      {goalsCachedAtUtc !== null && (
+        <p className="study-offline-notice" role="status">
+          Đang hiển thị danh sách đã lưu lúc {formatDateTime(goalsCachedAtUtc)}.
+          {!offline.online && ' Các thay đổi cần kết nối mạng.'}
+        </p>
+      )}
 
       {editing !== undefined && (
         <GoalEditor
@@ -169,7 +194,7 @@ export function StudyPlanPage() {
             <div className="study-empty-state">
               <h3>Bạn chưa có kế hoạch học tập.</h3>
               <p>Tạo mục tiêu để hệ thống dự đoán khối lượng học và ngày hoàn thành.</p>
-              <button type="button" onClick={() => setEditing(null)}>
+              <button type="button" disabled={!offline.online} onClick={() => setEditing(null)}>
                 Tạo mục tiêu
               </button>
             </div>
@@ -184,6 +209,7 @@ export function StudyPlanPage() {
                   onEdit={() => setEditing(goal)}
                   onArchive={() => archive.mutate(goal.id)}
                   archivePending={archive.isPending}
+                  mutationDisabled={!offline.online}
                 />
               ))}
             </div>
@@ -204,11 +230,43 @@ export function StudyPlanPage() {
 
 function ForecastDashboard({ goal }: { goal: StudyGoal }) {
   const client = useQueryClient();
+  const offline = useOffline();
+  const [cachedAtUtc, setCachedAtUtc] = useState<string | null>(null);
   const [range, setRange] = useState<'7' | '30' | 'all'>('30');
   const [page, setPage] = useState(1);
   const forecast = useQuery({
     queryKey: ['study-goal-forecast', goal.id],
-    queryFn: () => api.get<ForecastSnapshot>(`/study-goals/${goal.id}/forecast/latest`),
+    queryFn: async () => {
+      try {
+        const data = await api.get<ForecastSnapshot>(`/study-goals/${goal.id}/forecast/latest`);
+        const storedAtUtc = new Date().toISOString();
+        await offlineDb.transaction(
+          'rw',
+          offlineDb.studyGoalForecasts,
+          offlineDb.studyGoalDailyPlans,
+          async () => {
+            await offlineDb.studyGoalForecasts.put({
+              studyGoalId: goal.id,
+              data,
+              cachedAtUtc: storedAtUtc
+            });
+            await offlineDb.studyGoalDailyPlans.put({
+              studyGoalId: goal.id,
+              data: data.dailyProjection,
+              cachedAtUtc: storedAtUtc
+            });
+          }
+        );
+        setCachedAtUtc(null);
+        return data;
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) throw error;
+        const cached = await offlineDb.studyGoalForecasts.get(goal.id);
+        if (cached === undefined) throw error;
+        setCachedAtUtc(cached.cachedAtUtc);
+        return cached.data as ForecastSnapshot;
+      }
+    },
     retry: false
   });
   const calculate = useMutation({
@@ -235,7 +293,7 @@ function ForecastDashboard({ goal }: { goal: StudyGoal }) {
         <p>Chạy dự báo để mô phỏng lịch học từ trạng thái FSRS và lịch sử ôn tập hiện tại.</p>
         <button
           type="button"
-          disabled={calculate.isPending}
+          disabled={calculate.isPending || !offline.online}
           aria-busy={calculate.isPending}
           onClick={() => calculate.mutate()}
         >
@@ -267,13 +325,20 @@ function ForecastDashboard({ goal }: { goal: StudyGoal }) {
         <button
           type="button"
           className="secondary"
-          disabled={calculate.isPending}
+          disabled={calculate.isPending || !offline.online}
           aria-busy={calculate.isPending}
           onClick={() => calculate.mutate()}
         >
           {calculate.isPending ? 'Đang tính…' : 'Tính lại'}
         </button>
       </div>
+
+      {cachedAtUtc !== null && (
+        <p className="study-offline-notice" role="status">
+          Đang hiển thị dự báo đã lưu lúc {formatDateTime(cachedAtUtc)}.
+          {!offline.online && ' Kết nối mạng để tính lại.'}
+        </p>
+      )}
 
       <div className={`study-track-banner ${data.feasibility}`}>
         <strong>{feasibilityLabel(data.feasibility)}</strong>
@@ -508,6 +573,7 @@ function GoalEditor({
   onDone(goal: StudyGoal): Promise<void>;
   onCancel(): void;
 }) {
+  const offline = useOffline();
   const [studyDays, setStudyDays] = useState(goal?.studyDaysOfWeek ?? [1, 2, 3, 4, 5, 6]);
   const [priorities, setPriorities] = useState<Record<string, number>>(() => {
     const selected = Object.fromEntries(
@@ -665,7 +731,11 @@ function GoalEditor({
           </p>
         )}
         <div className="actions">
-          <button type="submit" disabled={save.isPending} aria-busy={save.isPending}>
+          <button
+            type="submit"
+            disabled={save.isPending || !offline.online}
+            aria-busy={save.isPending}
+          >
             {save.isPending ? 'Đang lưu…' : goal === null ? 'Tạo mục tiêu' : 'Lưu thay đổi'}
           </button>
           <button type="button" className="secondary" onClick={onCancel}>
@@ -692,7 +762,8 @@ function GoalListItem({
   onSelect,
   onEdit,
   onArchive,
-  archivePending
+  archivePending,
+  mutationDisabled
 }: {
   goal: StudyGoal;
   selected: boolean;
@@ -700,6 +771,7 @@ function GoalListItem({
   onEdit(): void;
   onArchive(): void;
   archivePending: boolean;
+  mutationDisabled: boolean;
 }) {
   const forecast = goal.latestForecast;
   return (
@@ -727,10 +799,15 @@ function GoalListItem({
         </span>
       </button>
       <div className="study-row-actions">
-        <button type="button" className="secondary" onClick={onEdit}>
+        <button type="button" className="secondary" disabled={mutationDisabled} onClick={onEdit}>
           Sửa
         </button>
-        <button type="button" className="danger" disabled={archivePending} onClick={onArchive}>
+        <button
+          type="button"
+          className="danger"
+          disabled={archivePending || mutationDisabled}
+          onClick={onArchive}
+        >
           Lưu trữ
         </button>
       </div>

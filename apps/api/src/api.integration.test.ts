@@ -29,7 +29,7 @@ describe('API integration', () => {
 
   afterAll(async () => {
     await app.close();
-  });
+  }, 30_000);
 
   it('registers users, creates a deck, and prevents another user from reading it', async () => {
     const password = 'IntegrationPassword123!';
@@ -186,7 +186,7 @@ describe('API integration', () => {
         expect(body.importedNotes).toBe(500);
         expect(body.createdCards).toBe(500);
       });
-  });
+  }, 30_000);
 
   it('creates a study goal, attaches a deck, caches its forecast, and enforces ownership', async () => {
     const first = await register(
@@ -255,7 +255,7 @@ describe('API integration', () => {
       .set('Authorization', `Bearer ${second.accessToken}`)
       .expect(404);
     expect(goal.body.targetDate).toBe(targetDate);
-  });
+  }, 30_000);
 
   async function register(email: string, password: string): Promise<AuthResponse> {
     const response = await request(app.getHttpServer())

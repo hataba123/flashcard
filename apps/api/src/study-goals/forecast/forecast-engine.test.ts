@@ -88,6 +88,26 @@ describe('study goal forecast engine', () => {
     expect(calculateConfidence(6, 500)).toBe('Low');
   });
 
+  it('measures full adherence when the user studies all seven scheduled days', () => {
+    const logs: ForecastHistoryLog[] = Array.from({ length: 7 }, (_, day) =>
+      Array.from({ length: 15 }, (_, review) => ({
+        reviewedAtUtc: new Date(`2026-01-${String(day + 1).padStart(2, '0')}T12:00:00.000Z`),
+        answerLatencyMs: 8_000 + review,
+        rating: 'Good' as const,
+        stateBefore: 'Review' as const
+      }))
+    ).flat();
+    const metrics = calculateHistoryMetrics(
+      logs,
+      [0, 1, 2, 3, 4, 5, 6],
+      new Date('2026-01-07T23:59:59.000Z'),
+      7
+    );
+    expect(metrics.adherenceRate).toBe(1);
+    expect(metrics.activeDays).toBe(7);
+    expect(calculateConfidence(metrics.activeDays, metrics.reviewLogCount)).toBe('Medium');
+  });
+
   it('honors a three-day weekly schedule', () => {
     const result = runForecast(
       input({ goal: { ...input().goal, studyDaysOfWeek: [1, 3, 5] }, maxDays: 7 })
@@ -174,5 +194,14 @@ describe('study goal forecast engine', () => {
       stateBefore: 'Review'
     }));
     expect(calculateHistoryMetrics(logs, [1, 2, 3, 4, 5, 6], NOW).medianDailyStudyMinutes).toBe(1);
+  });
+
+  it('samples a large card dataset without per-card database work', () => {
+    const cards = Array.from({ length: 5_000 }, (_, index) => card(`large-${index}`));
+    const result = runForecast(
+      input({ cards, iterations: 1, maxDays: 1, projectionCardLimit: 100 })
+    );
+    expect(result.totalCards).toBe(5_000);
+    expect(result.dailyProjection.length).toBeGreaterThan(0);
   });
 });

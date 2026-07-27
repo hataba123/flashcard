@@ -59,12 +59,33 @@ export interface SyncConflict {
   createdAtUtc: string;
 }
 
+export interface CachedStudyGoals {
+  id: 'current';
+  data: unknown;
+  cachedAtUtc: string;
+}
+
+export interface CachedStudyGoalForecast {
+  studyGoalId: string;
+  data: unknown;
+  cachedAtUtc: string;
+}
+
+export interface CachedStudyGoalDailyPlan {
+  studyGoalId: string;
+  data: unknown;
+  cachedAtUtc: string;
+}
+
 class FlashcardOfflineDatabase extends Dexie {
   reviewQueue!: EntityTable<CachedReviewQueue, 'id'>;
   notes!: EntityTable<CachedNote, 'id'>;
   pendingReviewEvents!: EntityTable<PendingReviewEvent, 'clientEventId'>;
   syncState!: EntityTable<SyncState, 'id'>;
   conflicts!: EntityTable<SyncConflict, 'id'>;
+  studyGoals!: EntityTable<CachedStudyGoals, 'id'>;
+  studyGoalForecasts!: EntityTable<CachedStudyGoalForecast, 'studyGoalId'>;
+  studyGoalDailyPlans!: EntityTable<CachedStudyGoalDailyPlan, 'studyGoalId'>;
 
   constructor() {
     super('flashcard-offline');
@@ -74,6 +95,16 @@ class FlashcardOfflineDatabase extends Dexie {
       pendingReviewEvents: 'clientEventId, createdAtUtc',
       syncState: 'id',
       conflicts: '++id, clientEventId, createdAtUtc'
+    });
+    this.version(2).stores({
+      reviewQueue: 'id, cachedAtUtc',
+      notes: 'id, deckId',
+      pendingReviewEvents: 'clientEventId, createdAtUtc',
+      syncState: 'id',
+      conflicts: '++id, clientEventId, createdAtUtc',
+      studyGoals: 'id, cachedAtUtc',
+      studyGoalForecasts: 'studyGoalId, cachedAtUtc',
+      studyGoalDailyPlans: 'studyGoalId, cachedAtUtc'
     });
   }
 }

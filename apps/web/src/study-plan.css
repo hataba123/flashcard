@@ -1,5 +1,7 @@
-/* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4 */
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4 */
 /* Hallmark · macrostructure: Workbench · tone: technical-utilitarian · anchor hue: pear · theme: Hum · design-system: design.md */
+/* Hallmark · contrast: pass (40–41) · nav: existing app shell · footer: none · slop: pass (42–45) */
+/* Hallmark · honest: pass (46) · chrome: pass (47) · tokens: pass (48) · responsive: pass (49) · icons: pass (30) · mobile: pass (34, 49, 50–57) */
 
 .study-plan-page {
   display: grid;
@@ -305,6 +307,13 @@
 .study-confidence-note {
   margin: 0;
   color: var(--color-warning);
+}
+.study-offline-notice {
+  margin: 0;
+  padding: var(--space-sm);
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+  border-radius: var(--radius-input);
 }
 .study-summary-grid {
   display: grid;

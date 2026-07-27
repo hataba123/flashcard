@@ -1,5 +1,12 @@
 # Tiến độ triển khai
 
+## Milestone 31 — Kế hoạch mục tiêu và dự báo hoàn thành
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: mục tiêu học tập nhiều deck, ownership, migration, dự báo Monte Carlo tái sử dụng FSRS, input-hash cache, P50/P80/P90, xác suất đúng hạn, lịch ngày, ba scenario, tab Kế hoạch học tập responsive và snapshot IndexedDB chỉ đọc khi offline.
+- Kiểm tra: unit/integration API, unit/E2E web ở các viewport 320/375/414/768, lint, typecheck và build toàn monorepo.
+- Tài liệu: `docs/study-goal-forecast.md` mô tả thuật toán, fallback, cấu hình, cache và giới hạn.
+
 ## Milestone 30 — Chỉ đọc tiếng Anh khi ôn tập
 
 - Trạng thái: Hoàn thành.
