@@ -213,8 +213,6 @@ export class CardsService {
       throw new BadRequestException('Tệp Excel không có dòng hợp lệ để tạo thẻ.');
 
     let createdCards = 0;
-    let updatedNotes = 0;
-    let skippedDuplicates = 0;
     const batchItems: Array<{ action: 'created'; noteId: string } | { action: 'updated'; note: Pick<NoteEntity, 'id' | 'noteType' | 'fieldsJson' | 'tagsJson' | 'normalizedHash' | 'version'> }> = [];
     await this.notes.manager.transaction(async (manager) => {
       const notes = manager.getRepository(NoteEntity);
@@ -226,7 +224,6 @@ export class CardsService {
           Object.assign(duplicate, this.noteValues(userId, { deckId, noteType: row.noteType, fields: row.noteType === 'Cloze' ? { text: row.front, back: row.back } : { front: row.front, back: row.back }, tags: row.tags }));
           duplicate.version += 1;
           await notes.save(duplicate);
-          updatedNotes += 1;
           continue;
         }
         const note = await notes.save(
