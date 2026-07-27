@@ -86,7 +86,9 @@ function createService(card: CardEntity): ReviewsService {
       callback(manager)
   } as unknown as DataSource;
 
-  return new ReviewsService(cardRepository, deckRepository, dataSource);
+  return new ReviewsService(cardRepository, deckRepository, dataSource, {
+    record: vi.fn(async () => undefined)
+  } as never);
 }
 
 describe('ReviewsService', () => {
@@ -114,5 +116,25 @@ describe('ReviewsService', () => {
     expect(first.card.version).toBe(2);
     expect(duplicate.idempotent).toBe(true);
     expect(duplicate.reviewLog.id).toBe(first.reviewLog.id);
+  });
+
+  it('rejects an offline review when another device has advanced the card version', async () => {
+    const card = createCard();
+    const service = createService(card);
+
+    await expect(
+      service.submit(card.userId, {
+        clientEventId: 'b5fd37f8-812c-4276-a141-9c1b37c76124',
+        cardId: card.id,
+        sessionId: 'b71acb80-649c-4bd4-bdfd-2467b0071c38',
+        deviceId: '0eb53205-7fe8-48c9-a38a-2d4316bd1db8',
+        rating: 'Good',
+        shownAtUtc: reviewedAt,
+        revealedAtUtc: reviewedAt,
+        gradedAtUtc: reviewedAt,
+        reviewedAtUtc: reviewedAt,
+        cardVersionBefore: card.version + 1
+      })
+    ).rejects.toMatchObject({ response: { code: 'CARD_VERSION_CONFLICT' } });
   });
 });

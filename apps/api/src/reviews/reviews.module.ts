@@ -7,9 +7,10 @@ import { DeckEntity } from '../cards/entities/deck.entity.js';
 import { ReviewLogEntity } from './entities/review-log.entity.js';
 import { ReviewsController } from './reviews.controller.js';
 import { ReviewsService } from './reviews.service.js';
+import { SyncModule } from '../sync/sync.module.js';
 
 @Module({
-  imports: [AuthModule, TypeOrmModule.forFeature([CardEntity, DeckEntity, ReviewLogEntity])],
+  imports: [AuthModule, SyncModule, TypeOrmModule.forFeature([CardEntity, DeckEntity, ReviewLogEntity])],
   controllers: [ReviewsController],
   providers: [ReviewsService]
 })

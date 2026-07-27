@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThan, Repository } from 'typeorm';
+import { EntityManager, MoreThan, Repository } from 'typeorm';
 import { PushSyncEventDto } from './dto/sync.dto.js';
 import { SyncEventEntity } from './entities/sync-event.entity.js';
 import { SyncGateway } from './sync.gateway.js';
@@ -11,6 +11,25 @@ export class SyncService {
     @InjectRepository(SyncEventEntity) private readonly events: Repository<SyncEventEntity>,
     private readonly gateway: SyncGateway
   ) {}
+  async record(
+    manager: EntityManager,
+    input: Omit<PushSyncEventDto, 'clientEventId' | 'deviceId'> & {
+      userId: string;
+      deviceId?: string | null;
+    }
+  ): Promise<SyncEventEntity> {
+    const event = await manager.getRepository(SyncEventEntity).save(
+      manager.getRepository(SyncEventEntity).create({
+        ...input,
+        deviceId: input.deviceId ?? null,
+        clientEventId: null,
+        payloadJson: JSON.stringify(input.payload)
+      })
+    );
+    // A notification is only a hint. The pull cursor remains the source of truth if a transaction rolls back.
+    this.gateway.publish(input.userId, Number(event.sequence));
+    return event;
+  }
   async push(userId: string, inputs: PushSyncEventDto[]): Promise<SyncEventEntity[]> {
     const results: SyncEventEntity[] = [];
     for (const input of inputs) {

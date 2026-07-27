@@ -9,6 +9,7 @@ import { CardEntity, CardState } from './entities/card.entity.js';
 import { DeckEntity } from './entities/deck.entity.js';
 import { NoteEntity } from './entities/note.entity.js';
 import { ImportBatchEntity } from './entities/import-batch.entity.js';
+import { SyncService } from '../sync/sync.service.js';
 
 type ExcelNoteType = 'Basic' | 'BasicAndReverse' | 'Cloze';
 type ExcelLayoutType =
@@ -107,7 +108,8 @@ export class CardsService {
     @InjectRepository(DeckEntity) private readonly decks: Repository<DeckEntity>,
     @InjectRepository(NoteEntity) private readonly notes: Repository<NoteEntity>,
     @InjectRepository(CardEntity) private readonly cards: Repository<CardEntity>,
-    @InjectRepository(ImportBatchEntity) private readonly importBatches: Repository<ImportBatchEntity>
+    @InjectRepository(ImportBatchEntity) private readonly importBatches: Repository<ImportBatchEntity>,
+    private readonly sync: SyncService
   ) {}
 
   listDecks(userId: string): Promise<DeckEntity[]> {
@@ -116,9 +118,9 @@ export class CardsService {
   async deck(userId: string, id: string): Promise<DeckEntity> {
     return this.requireDeck(userId, id);
   }
-  createDeck(userId: string, input: CreateDeckDto): Promise<DeckEntity> {
-    return this.decks.save(
-      this.decks.create({
+  async createDeck(userId: string, input: CreateDeckDto): Promise<DeckEntity> {
+    return this.decks.manager.transaction(async (manager) => {
+      const deck = await manager.getRepository(DeckEntity).save(manager.getRepository(DeckEntity).create({
         id: randomUUID(),
         userId,
         name: input.name.trim(),
@@ -128,21 +130,34 @@ export class CardsService {
         dailyNewCardLimit: input.dailyNewCardLimit ?? 20,
         isCore: input.isCore ?? false,
         isArchived: input.isArchived ?? false
-      })
-    );
+      }));
+      await this.record(manager, deck, 'deck', 'Created');
+      return deck;
+    });
   }
   async updateDeck(userId: string, id: string, input: UpdateDeckDto): Promise<DeckEntity> {
-    const deck = await this.requireDeck(userId, id);
-    Object.assign(deck, {
-      ...input,
-      name: input.name?.trim(),
-      description: input.description?.trim()
+    return this.decks.manager.transaction(async (manager) => {
+      const deck = await this.requireDeckWithRepository(manager.getRepository(DeckEntity), userId, id);
+      Object.assign(deck, {
+        ...input,
+        name: input.name?.trim(),
+        description: input.description?.trim()
+      });
+      deck.version += 1;
+      const saved = await manager.getRepository(DeckEntity).save(deck);
+      await this.record(manager, saved, 'deck', 'Updated');
+      return saved;
     });
-    deck.version += 1;
-    return this.decks.save(deck);
   }
   async deleteDeck(userId: string, id: string): Promise<void> {
-    await this.decks.softDelete({ id, userId });
+    await this.decks.manager.transaction(async (manager) => {
+      const decks = manager.getRepository(DeckEntity);
+      const deck = await this.requireDeckWithRepository(decks, userId, id);
+      deck.version += 1;
+      await decks.save(deck);
+      await decks.softDelete(deck.id);
+      await this.record(manager, deck, 'deck', 'Deleted');
+    });
   }
   listNotes(userId: string): Promise<NoteEntity[]> {
     return this.notes.find({ where: { userId }, order: { updatedAtUtc: 'DESC' } });
@@ -151,33 +166,50 @@ export class CardsService {
     return this.requireNote(userId, id);
   }
   async createNote(userId: string, input: CreateNoteDto): Promise<NoteEntity> {
-    await this.requireDeck(userId, input.deckId);
-    return this.notes.save(
-      this.notes.create({ id: randomUUID(), ...this.noteValues(userId, input) })
-    );
+    return this.notes.manager.transaction(async (manager) => {
+      await this.requireDeckWithRepository(manager.getRepository(DeckEntity), userId, input.deckId);
+      const note = await manager.getRepository(NoteEntity).save(
+        manager.getRepository(NoteEntity).create({ id: randomUUID(), ...this.noteValues(userId, input) })
+      );
+      await this.record(manager, note, 'note', 'Created');
+      return note;
+    });
   }
   async updateNote(userId: string, id: string, input: UpdateNoteDto): Promise<NoteEntity> {
-    await this.requireDeck(userId, input.deckId);
-    const note = await this.requireNote(userId, id);
-    Object.assign(note, this.noteValues(userId, input));
-    note.version += 1;
-    return this.notes.save(note);
+    return this.notes.manager.transaction(async (manager) => {
+      await this.requireDeckWithRepository(manager.getRepository(DeckEntity), userId, input.deckId);
+      const notes = manager.getRepository(NoteEntity);
+      const note = await this.requireNoteWithRepository(notes, userId, id);
+      Object.assign(note, this.noteValues(userId, input));
+      note.version += 1;
+      const saved = await notes.save(note);
+      await this.record(manager, saved, 'note', 'Updated');
+      return saved;
+    });
   }
   async deleteNote(userId: string, id: string): Promise<void> {
-    await this.notes.softDelete({ id, userId });
-    await this.cards.softDelete({ noteId: id, userId });
+    await this.notes.manager.transaction(async (manager) => {
+      const notes = manager.getRepository(NoteEntity);
+      const note = await this.requireNoteWithRepository(notes, userId, id);
+      note.version += 1;
+      await notes.save(note);
+      await notes.softDelete(note.id);
+      const cards = manager.getRepository(CardEntity);
+      const affectedCards = await cards.find({ where: { noteId: id, userId } });
+      await cards.softDelete({ noteId: id, userId });
+      await this.record(manager, note, 'note', 'Deleted');
+      for (const card of affectedCards) await this.record(manager, card, 'card', 'Deleted');
+    });
   }
   async generateCards(userId: string, noteId: string): Promise<CardEntity[]> {
-    const note = await this.requireNote(userId, noteId);
-    const ordinals = note.noteType === 'BasicAndReverse' ? [0, 1] : [0];
-    for (const templateOrdinal of ordinals) {
-      const existing = await this.cards.findOne({
-        where: { noteId, templateOrdinal },
-        withDeleted: true
-      });
-      if (existing === null)
-        await this.cards.save(
-          this.cards.create({
+    return this.cards.manager.transaction(async (manager) => {
+      const note = await this.requireNoteWithRepository(manager.getRepository(NoteEntity), userId, noteId);
+      const cards = manager.getRepository(CardEntity);
+      const ordinals = note.noteType === 'BasicAndReverse' ? [0, 1] : [0];
+      for (const templateOrdinal of ordinals) {
+        const existing = await cards.findOne({ where: { noteId, templateOrdinal }, withDeleted: true });
+        if (existing === null) {
+          const card = await cards.save(cards.create({
             id: randomUUID(),
             userId,
             noteId,
@@ -188,10 +220,12 @@ export class CardsService {
             lastReviewAtUtc: null,
             suspendedAtUtc: null,
             deletedAtUtc: null
-          })
-        );
-    }
-    return this.cards.find({ where: { noteId } });
+          }));
+          await this.record(manager, card, 'card', 'Created');
+        }
+      }
+      return cards.find({ where: { noteId } });
+    });
   }
   async importNotesFromExcel(
     userId: string,
@@ -217,17 +251,21 @@ export class CardsService {
     await this.notes.manager.transaction(async (manager) => {
       const notes = manager.getRepository(NoteEntity);
       const cards = manager.getRepository(CardEntity);
+      const candidates = await notes.find({ where: { userId, deckId } });
+      const existingByContent = new Map(candidates.map((note) => [this.cardContentKey(note), note]));
+      const notesToCreate: NoteEntity[] = [];
+      const cardsToCreate: CardEntity[] = [];
       for (const row of rows) {
-        const duplicate = await notes.find({ where: { userId, deckId } }).then((candidates) => candidates.find((candidate) => this.sameCard(candidate, row.front, row.back)));
+        const duplicate = existingByContent.get(this.cardContentKeyFromValues(row.front, row.back));
         if (duplicate !== undefined) {
           batchItems.push({ action: 'updated', note: { id: duplicate.id, noteType: duplicate.noteType, fieldsJson: duplicate.fieldsJson, tagsJson: duplicate.tagsJson, normalizedHash: duplicate.normalizedHash, version: duplicate.version } });
           Object.assign(duplicate, this.noteValues(userId, { deckId, noteType: row.noteType, fields: row.noteType === 'Cloze' ? { text: row.front, back: row.back } : { front: row.front, back: row.back }, tags: row.tags }));
           duplicate.version += 1;
           await notes.save(duplicate);
+          existingByContent.set(this.cardContentKey(duplicate), duplicate);
           continue;
         }
-        const note = await notes.save(
-          notes.create({
+        const note = notes.create({
             id: randomUUID(),
             ...this.noteValues(userId, {
               deckId,
@@ -238,13 +276,13 @@ export class CardsService {
                   : { front: row.front, back: row.back },
               tags: row.tags
             })
-          })
-        );
+          });
+        notesToCreate.push(note);
+        existingByContent.set(this.cardContentKey(note), note);
         batchItems.push({ action: 'created', noteId: note.id });
         const ordinals = row.noteType === 'BasicAndReverse' ? [0, 1] : [0];
         for (const templateOrdinal of ordinals) {
-          await cards.save(
-            cards.create({
+          cardsToCreate.push(cards.create({
               id: randomUUID(),
               userId,
               noteId: note.id,
@@ -255,11 +293,17 @@ export class CardsService {
               lastReviewAtUtc: null,
               suspendedAtUtc: null,
               deletedAtUtc: null
-            })
-          );
+            }));
           createdCards += 1;
         }
       }
+      await notes.save(notesToCreate, { chunk: 500 });
+      await cards.save(cardsToCreate, { chunk: 500 });
+      // A single deck event avoids producing tens of thousands of events for a bulk import.
+      const deck = await manager.getRepository(DeckEntity).findOneByOrFail({ id: deckId, userId });
+      deck.version += 1;
+      await manager.getRepository(DeckEntity).save(deck);
+      await this.record(manager, deck, 'deck', 'Updated');
     });
 
     await this.importBatches.save(this.importBatches.create({ id: randomUUID(), userId, deckId, status: 'Completed', itemsJson: JSON.stringify(batchItems), undoneAtUtc: null }));
@@ -274,7 +318,14 @@ export class CardsService {
       recognizedBlocks: result.recognizedBlocks
     };
   }
-  async previewExcel(userId: string, deckId: string, file: Buffer) {
+  async previewExcel(userId: string, deckId: string, file: Buffer): Promise<{
+    rows: Array<{ front: string; back: string; tags: string[]; noteType: ExcelNoteType }>;
+    validRows: number;
+    skippedRows: number;
+    errors: string[];
+    scannedRows: number;
+    recognizedHeaders: number;
+  }> {
     await this.requireDeck(userId, deckId);
     const result = await this.readExcelRows(file);
     return { rows: result.rows.slice(0, 20), validRows: result.rows.length, skippedRows: result.errors.length, errors: result.errors, scannedRows: result.scannedRows, recognizedHeaders: result.recognizedHeaders };
@@ -293,9 +344,12 @@ export class CardsService {
     });
     return { undoneNotes: items.length };
   }
-  private sameCard(note: NoteEntity, front: string, back: string): boolean {
+  private cardContentKey(note: NoteEntity): string {
     const fields = JSON.parse(note.fieldsJson) as Record<string, string>;
-    return this.normalizeCardText(fields.front ?? fields.text ?? '') === this.normalizeCardText(front) && this.normalizeCardText(fields.back ?? '') === this.normalizeCardText(back);
+    return this.cardContentKeyFromValues(fields.front ?? fields.text ?? '', fields.back ?? '');
+  }
+  private cardContentKeyFromValues(front: string, back: string): string {
+    return `${this.normalizeCardText(front)}\u0000${this.normalizeCardText(back)}`;
   }
   private normalizeCardText(value: string): string { return value.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('vi'); }
   private noteValues(userId: string, input: CreateNoteDto): Partial<NoteEntity> {
@@ -315,10 +369,23 @@ export class CardsService {
     if (deck === null) throw new NotFoundException('Deck not found.');
     return deck;
   }
+  private async requireDeckWithRepository(repository: Repository<DeckEntity>, userId: string, id: string): Promise<DeckEntity> {
+    const deck = await repository.findOneBy({ id, userId });
+    if (deck === null) throw new NotFoundException('Deck not found.');
+    return deck;
+  }
   private async requireNote(userId: string, id: string): Promise<NoteEntity> {
     const note = await this.notes.findOneBy({ id, userId });
     if (note === null) throw new NotFoundException('Note not found.');
     return note;
+  }
+  private async requireNoteWithRepository(repository: Repository<NoteEntity>, userId: string, id: string): Promise<NoteEntity> {
+    const note = await repository.findOneBy({ id, userId });
+    if (note === null) throw new NotFoundException('Note not found.');
+    return note;
+  }
+  private async record(manager: import('typeorm').EntityManager, entity: { id: string; userId: string; version: number }, entityType: 'deck' | 'note' | 'card', operation: 'Created' | 'Updated' | 'Deleted'): Promise<void> {
+    await this.sync.record(manager, { userId: entity.userId, entityType, entityId: entity.id, operation, entityVersion: entity.version, payload: {} });
   }
   private async readExcelRows(file: Buffer): Promise<ExcelReadResult> {
     if (file.length < 4 || file.subarray(0, 2).toString() !== 'PK')

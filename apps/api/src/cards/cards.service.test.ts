@@ -15,7 +15,7 @@ async function readWorksheet(rows: unknown[][]): Promise<ReadResult> {
   const workbook = new ExcelJS.Workbook();
   workbook.addWorksheet('Import').addRows(rows);
   const file = Buffer.from(await workbook.xlsx.writeBuffer());
-  const service = new CardsService({} as never, {} as never, {} as never);
+  const service = new CardsService({} as never, {} as never, {} as never, {} as never, {} as never);
   return (service as unknown as { readExcelRows(file: Buffer): Promise<ReadResult> }).readExcelRows(
     file
   );

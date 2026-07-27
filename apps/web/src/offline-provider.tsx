@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { useSession } from './session.js';
 import {
@@ -9,6 +10,7 @@ import {
 } from './offline-sync.js';
 
 export function OfflineProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const accessToken = useSession((state) => state.accessToken);
   const [snapshot, setSnapshot] = useState<SyncSnapshot>({
     online: navigator.onLine,
@@ -33,6 +35,12 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     const onOffline = () => void refresh();
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
+    const onApplied = () => {
+      void queryClient.invalidateQueries({ queryKey: ['notes'] });
+      void queryClient.invalidateQueries({ queryKey: ['decks'] });
+      void queryClient.invalidateQueries({ queryKey: ['review-queue'] });
+    };
+    window.addEventListener('flashcard-sync-applied', onApplied);
     void refresh();
 
     const socket =
@@ -40,9 +48,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     return () => {
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);
+      window.removeEventListener('flashcard-sync-applied', onApplied);
       socket?.disconnect();
     };
-  }, [accessToken]);
+  }, [accessToken, queryClient]);
 
   const value = useMemo(() => snapshot, [snapshot]);
   return <OfflineContext.Provider value={value}>{children}</OfflineContext.Provider>;

@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 23 — Đồng bộ thay đổi đa thiết bị
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: ghi `SyncEvent` trong transaction cho review, undo, CRUD deck/note/card; Socket.IO phát tín hiệu pull sau khi có event; client refetch notes/review queue vào IndexedDB và invalidate React Query trước khi tăng cursor; import Excel 10.000 dòng dùng chỉ mục nội dung một lần và `save` theo chunk 500 thay vì truy vấn lặp từng dòng.
+- Kiểm tra: thêm integration assertion cho thiết bị thứ hai pull CRUD event; giữ kiểm thử idempotency review và version conflict hiện có.
+
 ## Milestone 22 — Import an toàn và cử chỉ mobile
 
 - Trạng thái: Hoàn thành.

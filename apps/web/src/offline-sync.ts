@@ -1,7 +1,7 @@
 import { io, type Socket } from 'socket.io-client';
 
 import { ApiError, api } from './api.js';
-import { offlineDb, type PendingReviewEvent } from './offline-db.js';
+import { offlineDb, type CachedNote, type CachedReviewQueue, type PendingReviewEvent } from './offline-db.js';
 
 export interface SyncSnapshot {
   online: boolean;
@@ -64,13 +64,33 @@ async function pullEvents(): Promise<void> {
   let cursor = state?.cursor ?? 0;
   let hasMore = true;
   while (hasMore) {
-    const page = await api.get<{ nextCursor: number; hasMore: boolean }>(
+    const page = await api.get<{ nextCursor: number; hasMore: boolean; events: Array<{ entityType: string }> }>(
       `/sync/pull?cursor=${cursor}&limit=500`
     );
+    await applyEvents(page.events);
     cursor = page.nextCursor;
     hasMore = page.hasMore;
   }
   if (state !== undefined) await offlineDb.syncState.put({ ...state, cursor });
+}
+
+async function applyEvents(events: Array<{ entityType: string }>): Promise<void> {
+  if (events.length === 0) return;
+  const entityTypes = new Set(events.map((event) => event.entityType));
+  const refreshNotes = entityTypes.has('note') || entityTypes.has('deck');
+  const refreshQueue = entityTypes.has('card') || entityTypes.has('deck') || entityTypes.has('note');
+  if (refreshNotes) {
+    const notes = await api.get<CachedNote[]>('/notes');
+    await offlineDb.transaction('rw', offlineDb.notes, async () => {
+      await offlineDb.notes.clear();
+      await offlineDb.notes.bulkPut(notes);
+    });
+  }
+  if (refreshQueue) {
+    const queue = await api.get<Omit<CachedReviewQueue, 'id' | 'cachedAtUtc'>>('/reviews/queue');
+    await offlineDb.reviewQueue.put({ id: 'current', ...queue, cachedAtUtc: new Date().toISOString() });
+  }
+  window.dispatchEvent(new Event('flashcard-sync-applied'));
 }
 
 export async function synchronizePendingReviews(): Promise<void> {
@@ -92,7 +112,7 @@ export async function syncSnapshot(online: boolean, syncing = false): Promise<Sy
 
 export function connectSyncSocket(accessToken: string, onSyncRequired: () => void): Socket {
   const socket = io(socketUrl(), {
-    auth: { token: accessToken },
+    auth: { authorization: `Bearer ${accessToken}` },
     transports: ['websocket'],
     reconnection: true
   });

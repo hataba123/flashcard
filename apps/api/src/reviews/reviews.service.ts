@@ -13,6 +13,7 @@ import { CardEntity, CardState } from '../cards/entities/card.entity.js';
 import { DeckEntity } from '../cards/entities/deck.entity.js';
 import { ReviewLogEntity } from './entities/review-log.entity.js';
 import { SubmitReviewDto } from './dto/review.dto.js';
+import { SyncService } from '../sync/sync.service.js';
 
 export interface ReviewSubmission {
   card: CardEntity;
@@ -31,7 +32,8 @@ export class ReviewsService {
   constructor(
     @InjectRepository(CardEntity) private readonly cards: Repository<CardEntity>,
     @InjectRepository(DeckEntity) private readonly decks: Repository<DeckEntity>,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+    private readonly sync: SyncService
   ) {}
 
   async queue(userId: string, budgetSeconds = 7200): Promise<ReviewQueue> {
@@ -145,7 +147,17 @@ export class ReviewsService {
         cardVersionAfter: card.version,
         undoOfReviewLogId: null
       });
-      return { card, reviewLog: await logs.save(reviewLog), idempotent: false };
+      const savedLog = await logs.save(reviewLog);
+      await this.sync.record(manager, {
+        userId,
+        entityType: 'card',
+        entityId: card.id,
+        operation: 'Updated',
+        entityVersion: card.version,
+        payload: { reason: 'review', reviewLogId: savedLog.id },
+        deviceId: input.deviceId
+      });
+      return { card, reviewLog: savedLog, idempotent: false };
     });
   }
 
@@ -238,7 +250,17 @@ export class ReviewsService {
         cardVersionAfter: card.version,
         undoOfReviewLogId: original.id
       });
-      return { card, reviewLog: await logs.save(undoLog), idempotent: false };
+      const savedLog = await logs.save(undoLog);
+      await this.sync.record(manager, {
+        userId,
+        entityType: 'card',
+        entityId: card.id,
+        operation: 'Updated',
+        entityVersion: card.version,
+        payload: { reason: 'undo', reviewLogId: savedLog.id },
+        deviceId: original.deviceId
+      });
+      return { card, reviewLog: savedLog, idempotent: false };
     });
   }
 

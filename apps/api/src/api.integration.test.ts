@@ -55,6 +55,20 @@ describe('API integration', () => {
       .get(`/api/decks/${createdDeck.body.id}`)
       .set('Authorization', `Bearer ${secondAuth.accessToken}`)
       .expect(404);
+
+    const pulled = await request(app.getHttpServer())
+      .get('/api/sync/pull?cursor=0&limit=10')
+      .set('Authorization', `Bearer ${firstAuth.accessToken}`)
+      .expect(200);
+    expect(pulled.body.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          entityType: 'deck',
+          entityId: createdDeck.body.id,
+          operation: 'Created'
+        })
+      ])
+    );
   });
 
   async function register(email: string, password: string): Promise<AuthResponse> {
