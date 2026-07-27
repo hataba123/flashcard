@@ -1,5 +1,12 @@
 # Tiến độ triển khai
 
+## Cập nhật tài liệu — Mở rộng README
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: bổ sung mô tả sản phẩm, công nghệ, cấu trúc monorepo, cấu hình môi trường, hướng dẫn cài đặt/chạy local, luồng sử dụng, import Excel, API, offline-sync, lệnh kiểm tra, bảo mật và xử lý sự cố.
+- Hiệu chỉnh: tài liệu import phản ánh đúng khả năng đọc nhiều worksheet/nhiều bảng, xem trước, cập nhật nội dung trùng và hoàn tác lần import gần nhất.
+- Kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, Prettier cho hai file tài liệu và `git diff --check` đều đạt.
+
 ## Milestone 31 — Kế hoạch mục tiêu và dự báo hoàn thành
 
 - Trạng thái: Hoàn thành.
