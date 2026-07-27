@@ -258,20 +258,18 @@ function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   return (
     <main className="auth">
       <form onSubmit={form.handleSubmit((values) => login.mutate(values))} noValidate>
-        <div className="auth-brand" aria-label="Flashcard">
-          <span className="brand-mark" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </span>
-          <span>Flashcard</span>
-        </div>
-        <h1>{isRegister ? 'Tạo tài khoản' : 'Đăng nhập'}</h1>
-        <p className="muted">
-          {isRegister
-            ? 'Tạo tài khoản để lưu bộ thẻ và tiến độ học trên database.'
-            : 'Quay lại đúng chỗ bạn đã dừng và tiếp tục nhịp học hôm nay.'}
-        </p>
+        <header className="auth-header">
+          <div className="auth-brand" aria-label="Flashcard">
+            <img className="auth-logo" src="/icon.svg" alt="" aria-hidden="true" />
+            <span>Flashcard</span>
+          </div>
+          <h1>{isRegister ? 'Tạo tài khoản' : 'Chào mừng trở lại'}</h1>
+          <p className="muted">
+            {isRegister
+              ? 'Tạo tài khoản để lưu bộ thẻ và tiến độ học của bạn.'
+              : 'Đăng nhập để tiếp tục nhịp học hôm nay.'}
+          </p>
+        </header>
         <label>
           Email
           <input type="email" autoComplete="email" {...form.register('email')} />
