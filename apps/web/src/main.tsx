@@ -385,6 +385,7 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
             <button
               className="account-menu-trigger"
               type="button"
+              aria-label={accountMenuOpen ? 'Đóng menu tài khoản' : 'Mở menu tài khoản'}
               aria-expanded={accountMenuOpen}
               aria-controls="account-menu"
               onClick={() => setAccountMenuOpen((isOpen) => !isOpen)}
@@ -395,10 +396,6 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
               <span className="account-avatar" aria-hidden="true">
                 {accountInitial}
               </span>
-              <span className="account-menu-email" title={user?.email}>
-                {user?.email}
-              </span>
-              <span aria-hidden="true">⌄</span>
             </button>
             {accountMenuOpen && (
               <div id="account-menu" className="account-menu-content">
