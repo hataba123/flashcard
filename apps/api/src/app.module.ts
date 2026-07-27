@@ -14,6 +14,7 @@ import { HealthController } from './health/health.controller.js';
 import { ReviewsModule } from './reviews/reviews.module.js';
 import { MediaModule } from './media/media.module.js';
 import { SyncModule } from './sync/sync.module.js';
+import { StudyGoalsModule } from './study-goals/study-goals.module.js';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { SyncModule } from './sync/sync.module.js';
     DashboardModule,
     MediaModule,
     ReviewsModule,
+    StudyGoalsModule,
     SyncModule
   ],
   controllers: [HealthController],
