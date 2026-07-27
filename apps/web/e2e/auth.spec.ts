@@ -11,6 +11,7 @@ test('shows a validation error for an invalid login email', async ({ page }) => 
 });
 
 test('restores an authenticated session after login', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401 }));
   await page.route('**/api/auth/login', (route) =>
     route.fulfill({ json: { accessToken: 'test-token' } })
@@ -32,10 +33,10 @@ test('restores an authenticated session after login', async ({ page }) => {
   await page.getByRole('button', { name: 'Đăng nhập' }).click();
 
   await expect(page.getByRole('heading', { name: 'Học có chủ đích.' })).toBeVisible();
-  await expect(page.getByText('test@example.com')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Đăng xuất' })).toBeVisible();
 });
 
-test('closes mobile navigation after choosing a destination', async ({ page }) => {
+test('navigates to a destination from the mobile topbar', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401 }));
   await page.route('**/api/auth/login', (route) =>
@@ -57,19 +58,9 @@ test('closes mobile navigation after choosing a destination', async ({ page }) =
   await page.getByLabel('Mật khẩu').fill('mat-khau-hople');
   await page.getByRole('button', { name: 'Đăng nhập' }).click();
 
-  const menu = page.getByRole('button', { name: 'Mở điều hướng' });
-  await menu.click();
-  await expect(page.getByRole('button', { name: 'Đóng điều hướng' })).toHaveAttribute(
-    'aria-expanded',
-    'true'
-  );
   await page.getByRole('link', { name: 'Bộ thẻ', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Bộ thẻ', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Mở điều hướng' })).toHaveAttribute(
-    'aria-expanded',
-    'false'
-  );
 });
 
 test('shows review actions on a compact mobile viewport', async ({ page }) => {
@@ -137,7 +128,6 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
   await page.getByLabel('Email').fill('test@example.com');
   await page.getByLabel('Mật khẩu').fill('mat-khau-hople');
   await page.getByRole('button', { name: 'Đăng nhập' }).click();
-  await page.getByRole('button', { name: 'Mở điều hướng' }).click();
   await page.getByRole('link', { name: 'Ôn tập', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Phiên ôn tập', exact: true })).toBeVisible();
