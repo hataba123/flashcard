@@ -22,6 +22,8 @@ import {
   StudyGoalListQueryDto,
   UpdateStudyGoalDto
 } from './dto/study-goal.dto.js';
+import { RunForecastDto } from './dto/study-goal.dto.js';
+import { StudyGoalForecastService } from './forecast/study-goal-forecast.service.js';
 import { StudyGoalsService } from './study-goals.service.js';
 
 @ApiTags('study-goals')
@@ -29,7 +31,10 @@ import { StudyGoalsService } from './study-goals.service.js';
 @UseGuards(JwtAuthGuard)
 @Controller('study-goals')
 export class StudyGoalsController {
-  constructor(private readonly studyGoals: StudyGoalsService) {}
+  constructor(
+    private readonly studyGoals: StudyGoalsService,
+    private readonly forecasts: StudyGoalForecastService
+  ) {}
 
   @Post()
   create(@CurrentUser() user: UserEntity, @Body() input: CreateStudyGoalDto) {
@@ -44,6 +49,25 @@ export class StudyGoalsController {
   @Get(':id')
   get(@CurrentUser() user: UserEntity, @Param('id', new ParseUUIDPipe()) id: string) {
     return this.studyGoals.get(user.id, id);
+  }
+
+  @Post(':id/forecast')
+  forecast(
+    @CurrentUser() user: UserEntity,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() input: RunForecastDto
+  ) {
+    return this.forecasts.calculate(user.id, id, input.seed);
+  }
+
+  @Get(':id/forecast/latest')
+  latestForecast(@CurrentUser() user: UserEntity, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.forecasts.latest(user.id, id);
+  }
+
+  @Get(':id/daily-plan')
+  dailyPlan(@CurrentUser() user: UserEntity, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.forecasts.dailyPlan(user.id, id);
   }
 
   @Patch(':id')

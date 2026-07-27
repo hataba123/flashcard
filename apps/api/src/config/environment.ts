@@ -19,7 +19,12 @@ const environmentSchema = z.object({
   S3_BUCKET: z.string().trim().min(1).optional(),
   S3_ACCESS_KEY: z.string().min(1).optional(),
   S3_SECRET_KEY: z.string().min(1).optional(),
-  S3_FORCE_PATH_STYLE: z.coerce.boolean().default(true)
+  S3_FORCE_PATH_STYLE: z.coerce.boolean().default(true),
+  FORECAST_MONTE_CARLO_RUNS: z.coerce.number().int().min(1).max(1_000).default(300),
+  FORECAST_MAX_CARDS: z.coerce.number().int().min(1).max(100_000).default(20_000),
+  FORECAST_PROJECTION_CARD_LIMIT: z.coerce.number().int().min(100).max(10_000).default(1_200),
+  FORECAST_MAX_DAYS: z.coerce.number().int().min(30).max(730).default(730),
+  FORECAST_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(15_000)
 });
 
 export type Environment = z.infer<typeof environmentSchema>;
