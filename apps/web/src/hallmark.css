@@ -121,12 +121,6 @@ body {
   font-weight: 800;
 }
 
-.app-topbar .account-details {
-  display: grid;
-  min-width: 0;
-  gap: var(--space-3xs);
-}
-
 .app-topbar .account-label {
   color: var(--color-rule-2);
   font-family: var(--font-outlier);
@@ -175,6 +169,7 @@ body {
   cursor: pointer;
   font: inherit;
   font-weight: 700;
+  text-align: left;
   transition:
     background-color var(--dur-short) var(--ease-out),
     border-color var(--dur-short) var(--ease-out),
@@ -206,6 +201,41 @@ body {
   padding: var(--space-2xs);
   background: var(--color-surface);
   box-shadow: var(--shadow-raised);
+}
+
+.app-topbar .account-menu-email {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-topbar .account-menu-details {
+  display: grid;
+  gap: var(--space-3xs);
+  padding: var(--space-xs);
+}
+
+.app-topbar .account-menu-details .account-label {
+  color: var(--color-muted);
+}
+
+.app-topbar .account-menu-details .account-email {
+  color: var(--color-ink);
+}
+
+.app-topbar .account-menu-details .sync-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3xs);
+  width: fit-content;
+  border-radius: var(--radius-pill);
+  padding: var(--space-2xs) var(--space-xs);
+  background: var(--color-success-soft);
+}
+
+.app-topbar .account-menu-details .sync-state.offline {
+  background: var(--color-warning-soft);
 }
 
 .app-topbar .account-menu-item {

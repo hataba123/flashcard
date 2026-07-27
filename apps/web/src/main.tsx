@@ -381,16 +381,6 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
           </NavLink>
         </nav>
         <div className="account">
-          <span className="account-avatar" aria-hidden="true">
-            {accountInitial}
-          </span>
-          <div className="account-details">
-            <span className="account-label">Tài khoản</span>
-            <span className="account-email" title={user?.email}>
-              {user?.email}
-            </span>
-            <span className={offline.online ? 'sync-state' : 'sync-state offline'}>{syncLabel}</span>
-          </div>
           <div className="account-menu">
             <button
               className="account-menu-trigger"
@@ -402,14 +392,25 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
                 if (event.key === 'Escape') setAccountMenuOpen(false);
               }}
             >
-              Tùy chọn
+              <span className="account-avatar" aria-hidden="true">
+                {accountInitial}
+              </span>
+              <span className="account-menu-email" title={user?.email}>
+                {user?.email}
+              </span>
               <span aria-hidden="true">⌄</span>
             </button>
             {accountMenuOpen && (
-              <div id="account-menu" className="account-menu-content" role="menu">
+              <div id="account-menu" className="account-menu-content">
+                <div className="account-menu-details">
+                  <span className="account-label">Tài khoản</span>
+                  <span className="account-email" title={user?.email}>
+                    {user?.email}
+                  </span>
+                  <span className={offline.online ? 'sync-state' : 'sync-state offline'}>{syncLabel}</span>
+                </div>
                 <button
                   className="account-menu-item"
-                  role="menuitem"
                   type="button"
                   onClick={() => {
                     setAccountMenuOpen(false);
