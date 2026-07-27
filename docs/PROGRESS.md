@@ -1,5 +1,10 @@
 # Tiến độ triển khai
 
+## Milestone 28 — Tối ưu bố cục thẻ ôn tập
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: đưa điều khiển âm thanh đọc thẻ về thanh ngang đầy đủ dưới thẻ; tăng chiều rộng vùng học và căn giữa nội dung câu hỏi, đáp án để dễ tập trung.
+
 ## Milestone 27 — Căn chỉnh giao diện ôn tập
 
 - Trạng thái: Hoàn thành.

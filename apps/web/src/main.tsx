@@ -1000,10 +1000,6 @@ function Review() {
           </div>
         </div>
         <div className="review-header-actions">
-          <SpeechControl
-            contentKey={`${card.id}:${revealed ? 'back' : 'front'}`}
-            text={speechText}
-          />
           {lastReviewId !== null && (
             <button className="secondary" onClick={() => undo.mutate(lastReviewId)}>
               Hoàn tác
@@ -1069,6 +1065,10 @@ function Review() {
                 </div>
               </div>
               <div className="review-support">
+                <SpeechControl
+                  contentKey={`${card.id}:${revealed ? 'back' : 'front'}`}
+                  text={speechText}
+                />
                 <AudioControl mediaId={fields.audioMediaId} />
               </div>
               {!revealed ? (

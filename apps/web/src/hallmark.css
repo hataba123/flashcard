@@ -1033,7 +1033,7 @@ label {
 
 .review-study {
   display: grid;
-  width: min(100%, 52rem);
+  width: min(100%, 58rem);
   gap: var(--space-md);
   margin-inline: auto;
 }
@@ -1070,6 +1070,8 @@ label {
   background: var(--color-surface);
   color: var(--color-ink);
   box-shadow: var(--shadow-raised);
+  justify-items: center;
+  text-align: center;
   transition:
     opacity var(--dur-short) var(--ease-in-out),
     visibility 0s linear var(--dur-short);
@@ -1115,6 +1117,7 @@ label {
 
 .review-card-meta {
   display: flex;
+  width: 100%;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
@@ -1149,8 +1152,8 @@ label {
 }
 
 .review-face {
-  max-width: 30ch;
-  margin-inline: 0;
+  max-width: 36ch;
+  margin-inline: auto;
   color: var(--color-ink);
   font-family: var(--font-display);
   font-size: clamp(var(--text-xl), 5vw, var(--text-2xl));
@@ -1158,19 +1161,20 @@ label {
   font-style: normal;
   letter-spacing: -0.03em;
   line-height: 1.25;
-  text-align: start;
+  text-align: center;
 }
 
 .review-hint {
   margin: 0;
   color: var(--color-neutral);
   font-size: var(--text-base);
+  text-align: center;
 }
 
 .review-recall {
   display: grid;
   gap: var(--space-xs);
-  max-width: 42rem;
+  width: min(100%, 42rem);
   border-bottom: var(--rule-hair) dashed var(--color-rule-2);
   padding-block-end: var(--space-md);
 }
@@ -1182,10 +1186,12 @@ label {
   line-height: 1.5;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+  text-align: center;
 }
 
 .answer {
   max-width: 40ch;
+  margin-inline: auto;
   padding: 0;
   border: 0;
   color: var(--color-ink);
@@ -1195,7 +1201,7 @@ label {
   font-style: normal;
   letter-spacing: -0.02em;
   line-height: 1.35;
-  text-align: start;
+  text-align: center;
 }
 
 .review-support {
