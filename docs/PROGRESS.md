@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 30 — Chỉ đọc tiếng Anh khi ôn tập
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: lọc các từ tiếng Việt khỏi nội dung Web Speech API trên cả hai mặt thẻ; vẫn đọc các cụm tiếng Anh trong ví dụ, paraphrase và word family.
+- Kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm --filter @flashcard/web test -- speech-control.test.ts` và `pnpm build` đều đạt; test integration import Excel của API hiện timeout ngoài phạm vi thay đổi.
+
 ## Milestone 29 — Đặt điều khiển đọc phía trên thẻ
 
 - Trạng thái: Hoàn thành.

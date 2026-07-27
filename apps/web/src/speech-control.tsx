@@ -28,6 +28,32 @@ const defaultSettings: SpeechSettings = {
   rate: 1
 };
 
+const vietnameseWords = new Set(['xin']);
+
+const vietnameseCharacterPattern =
+  /[\u00e0-\u00e3\u00e8-\u00ea\u00ec\u00ed\u00f2-\u00f5\u00f9\u00fa\u00fd\u0103\u0111\u0129\u0169\u01a1\u01b0\u1ea0-\u1ef9]/iu;
+const wordPattern = /[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu;
+
+function isVietnameseWord(word: string): boolean {
+  if (vietnameseCharacterPattern.test(word)) return true;
+  const normalized = word
+    .toLocaleLowerCase('vi')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\u0111/g, 'd');
+  return vietnameseWords.has(normalized);
+}
+
+function getEnglishSpeechText(text: string): string {
+  return text
+    .replace(wordPattern, (word) => (isVietnameseWord(word) ? '' : word))
+    .replace(/\s+/g, ' ')
+    .replace(/\s+([,.;:!?])/g, '$1')
+    .replace(/^[,.;:!?\-+]+\s*/, '')
+    .replace(/[,:;\-+]+\s*$/g, '')
+    .trim();
+}
+
 function loadSettings(): SpeechSettings {
   try {
     const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -48,7 +74,7 @@ function loadSettings(): SpeechSettings {
 }
 
 export function getCardSpeechText(fields: Record<string, string>, revealed: boolean): string {
-  if (!revealed) return (fields.front ?? fields.text ?? '').trim();
+  if (!revealed) return getEnglishSpeechText(fields.front ?? fields.text ?? '');
 
   const frontKeys = new Set(['front', 'text', 'audioMediaId']);
   return [
@@ -57,7 +83,10 @@ export function getCardSpeechText(fields: Record<string, string>, revealed: bool
         .filter(([key, value]) => !frontKeys.has(key) && value.trim().length > 0)
         .map(([, value]) => value.trim())
     )
-  ].join('. ');
+  ]
+    .map(getEnglishSpeechText)
+    .filter((value) => value.length > 0)
+    .join('. ');
 }
 
 interface SpeechControlProps {

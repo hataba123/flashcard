@@ -16,7 +16,7 @@ describe('getCardSpeechText', () => {
     );
   });
 
-  it('reads all answer fields without media metadata or duplicate values', () => {
+  it('reads English answer content without media metadata, duplicates, or Vietnamese text', () => {
     expect(
       getCardSpeechText(
         {
@@ -28,7 +28,17 @@ describe('getCardSpeechText', () => {
         },
         true
       )
-    ).toBe('Xin chào. Hello, how are you?');
+    ).toBe('Hello, how are you?');
+  });
+
+  it('skips Vietnamese text on either face of the card', () => {
+    expect(getCardSpeechText({ front: 'Xin chào', back: 'Hello' }, false)).toBe('');
+    expect(
+      getCardSpeechText(
+        { front: 'achieve', back: 'Nghĩa: đạt được\n\nVí dụ: achieve a goal' },
+        true
+      )
+    ).toBe('achieve a goal');
   });
 });
 
@@ -58,9 +68,9 @@ describe('SpeechControl', () => {
     );
     expect(speak).toHaveBeenLastCalledWith(expect.objectContaining({ text: 'Hello' }));
 
-    view.rerender(createElement(SpeechControl, { contentKey: 'card-1:back', text: 'Xin chào' }));
+    view.rerender(createElement(SpeechControl, { contentKey: 'card-1:back', text: '' }));
     expect(cancel.mock.calls.length).toBeGreaterThanOrEqual(2);
-    expect(speak).toHaveBeenLastCalledWith(expect.objectContaining({ text: 'Xin chào' }));
+    expect(speak).toHaveBeenCalledTimes(1);
     view.unmount();
   });
 });
