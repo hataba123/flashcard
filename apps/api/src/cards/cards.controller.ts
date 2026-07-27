@@ -7,7 +7,9 @@ import {
   HttpCode,
   Param,
   Patch,
+  ParseUUIDPipe,
   Post,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors
@@ -54,8 +56,11 @@ export class CardsController {
   ) {
     return this.cardsService.deleteDeck(user.id, id);
   }
-  @Get('notes') notes(@CurrentUser() user: UserEntity) {
-    return this.cardsService.listNotes(user.id);
+  @Get('notes') notes(
+    @CurrentUser() user: UserEntity,
+    @Query('deckId', new ParseUUIDPipe({ optional: true })) deckId?: string
+  ) {
+    return this.cardsService.listNotes(user.id, deckId);
   }
   @Get('notes/:id') note(@CurrentUser() user: UserEntity, @Param('id') id: string) {
     return this.cardsService.note(user.id, id);

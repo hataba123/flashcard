@@ -999,11 +999,17 @@ function Review() {
             <span className="progress-value" style={{ transform: `scaleX(${progress / 100})` }} />
           </div>
         </div>
-        {lastReviewId !== null && (
-          <button className="secondary" onClick={() => undo.mutate(lastReviewId)}>
-            Hoàn tác
-          </button>
-        )}
+        <div className="review-header-actions">
+          <SpeechControl
+            contentKey={`${card.id}:${revealed ? 'back' : 'front'}`}
+            text={speechText}
+          />
+          {lastReviewId !== null && (
+            <button className="secondary" onClick={() => undo.mutate(lastReviewId)}>
+              Hoàn tác
+            </button>
+          )}
+        </div>
       </header>
       {!offline.online && (
         <p className="offline-notice" role="status">
@@ -1064,10 +1070,6 @@ function Review() {
               </div>
               <div className="review-support">
                 <AudioControl mediaId={fields.audioMediaId} />
-                <SpeechControl
-                  contentKey={`${card.id}:${revealed ? 'back' : 'front'}`}
-                  text={speechText}
-                />
               </div>
               {!revealed ? (
                 <ReviewControls

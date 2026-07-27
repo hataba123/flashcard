@@ -980,8 +980,9 @@ label {
  * icons: pass (30) · mobile: pass (34, 49–57)
  */
 .review-header {
+  position: relative;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   border-bottom: var(--rule-hair) solid var(--color-rule);
   padding-block-end: var(--space-md);
@@ -993,6 +994,13 @@ label {
 
 .review-title h1 {
   font-size: var(--text-xl);
+}
+
+.review-header-actions {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: var(--space-xs);
 }
 
 .review-progress {
@@ -1032,7 +1040,6 @@ label {
 
 .review-stage {
   min-width: 0;
-  perspective: 90rem;
 }
 
 .review-card {
@@ -1048,13 +1055,6 @@ label {
   background: transparent;
   box-shadow: none;
   text-align: start;
-  transform-style: preserve-3d;
-  transition: transform calc(var(--dur-long) + var(--dur-micro)) var(--ease-in-out);
-  will-change: transform;
-}
-
-.review-card.is-revealed {
-  transform: rotateY(180deg);
 }
 
 .review-card-face,
@@ -1070,8 +1070,9 @@ label {
   background: var(--color-surface);
   color: var(--color-ink);
   box-shadow: var(--shadow-raised);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+  transition:
+    opacity var(--dur-short) var(--ease-in-out),
+    visibility 0s linear var(--dur-short);
 }
 
 .review-card-front {
@@ -1092,7 +1093,19 @@ label {
 .review-card-back {
   background: var(--color-paper-2);
   color: var(--color-ink);
-  transform: rotateY(180deg);
+  visibility: hidden;
+  opacity: 0;
+}
+
+.review-card.is-revealed .review-card-front {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.review-card.is-revealed .review-card-back {
+  visibility: visible;
+  opacity: 1;
+  transition-delay: 0s;
 }
 
 .review-card-loading {
@@ -1142,6 +1155,7 @@ label {
   font-family: var(--font-display);
   font-size: clamp(var(--text-xl), 5vw, var(--text-2xl));
   font-weight: 700;
+  font-style: normal;
   letter-spacing: -0.03em;
   line-height: 1.25;
   text-align: start;
@@ -1178,6 +1192,7 @@ label {
   font-family: var(--font-display);
   font-size: clamp(var(--text-md), 3.5vw, var(--text-xl));
   font-weight: 700;
+  font-style: normal;
   letter-spacing: -0.02em;
   line-height: 1.35;
   text-align: start;
@@ -1516,7 +1531,7 @@ audio {
     justify-self: start;
   }
 
-  .review-header > button {
+  .review-header-actions {
     grid-column: 2;
     grid-row: 2;
   }

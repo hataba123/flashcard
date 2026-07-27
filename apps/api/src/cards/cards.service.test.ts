@@ -14,6 +14,10 @@ type ReadResult = {
 async function readWorksheet(rows: unknown[][]): Promise<ReadResult> {
   const workbook = new ExcelJS.Workbook();
   workbook.addWorksheet('Import').addRows(rows);
+  return readWorkbook(workbook);
+}
+
+async function readWorkbook(workbook: ExcelJS.Workbook): Promise<ReadResult> {
   const file = Buffer.from(await workbook.xlsx.writeBuffer());
   const service = new CardsService({} as never, {} as never, {} as never, {} as never, {} as never);
   return (service as unknown as { readExcelRows(file: Buffer): Promise<ReadResult> }).readExcelRows(
@@ -63,6 +67,24 @@ describe('CardsService Excel importer', () => {
     });
     expect(JSON.stringify(result.rows)).not.toContain('private');
     expect(JSON.stringify(result.rows)).not.toContain('Chưa học');
+  });
+
+  it('imports valid tables from every worksheet in the workbook', async () => {
+    const workbook = new ExcelJS.Workbook();
+    workbook.addWorksheet('Từ vựng').addRows([
+      ['Front', 'Back'],
+      ['first-sheet', 'first answer']
+    ]);
+    workbook.addWorksheet('Mẫu câu').addRows([
+      ['Front', 'Back'],
+      ['second-sheet', 'second answer']
+    ]);
+
+    const result = await readWorkbook(workbook);
+
+    expect(result.rows.map((row) => row.front)).toEqual(['first-sheet', 'second-sheet']);
+    expect(result.recognizedHeaders).toBe(2);
+    expect(result.scannedRows).toBe(2);
   });
 
   it('maps vocabulary, topic vocabulary, linking and academic verb learning fields', async () => {

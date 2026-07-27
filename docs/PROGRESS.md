@@ -1,5 +1,28 @@
 # Tiến độ triển khai
 
+## Milestone 27 — Căn chỉnh giao diện ôn tập
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: thay hiệu ứng lật 3D bằng chuyển mặt thẻ mờ dần để chữ luôn thẳng hàng; căn giữa tiêu đề phiên ôn tập và giữ điều khiển âm thanh ở phía phải.
+- Kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` đều đạt.
+
+## Milestone 26 — Lọc thẻ theo bộ thẻ
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: thêm bộ lọc bộ thẻ ở trang Notes; API chỉ truy vấn các note thuộc bộ thẻ được chọn theo chỉ mục `(userId, deckId, deletedAtUtc)`. React Query cache riêng từng bộ thẻ trong 30 giây để việc chọn lại không phải tải lại ngay.
+
+## Milestone 25 — Sửa import Excel kích thước lớn
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: giảm batch ghi note/card từ 500 xuống 100 bản ghi để không vượt giới hạn 2.100 tham số của SQL Server khi import workbook lớn.
+- Kiểm tra: thêm integration test import 500 thẻ; xác nhận tệp `2000_Topic_Vocabulary.xlsx` được đọc đủ 2.000 dòng hợp lệ.
+
+## Milestone 24 — Import Excel nhiều trang tính
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: bộ import Excel quét tất cả worksheet trong một tệp, tự nhận diện các bảng trên từng worksheet và vẫn áp dụng giới hạn tổng cộng 10.000 dòng dữ liệu trong một lần import.
+- Kiểm tra: thêm unit test cho dữ liệu hợp lệ trên hai worksheet.
+
 ## Milestone 23 — Đồng bộ thay đổi đa thiết bị
 
 - Trạng thái: Hoàn thành.

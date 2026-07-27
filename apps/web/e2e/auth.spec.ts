@@ -33,6 +33,7 @@ test('restores an authenticated session after login', async ({ page }) => {
   await page.getByRole('button', { name: 'Đăng nhập' }).click();
 
   await expect(page.getByRole('heading', { name: 'Học có chủ đích.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Mở menu tài khoản' }).click();
   await expect(page.getByRole('button', { name: 'Đăng xuất' })).toBeVisible();
 });
 

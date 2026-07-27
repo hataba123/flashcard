@@ -159,8 +159,11 @@ export class CardsService {
       await this.record(manager, deck, 'deck', 'Deleted');
     });
   }
-  listNotes(userId: string): Promise<NoteEntity[]> {
-    return this.notes.find({ where: { userId }, order: { updatedAtUtc: 'DESC' } });
+  listNotes(userId: string, deckId?: string): Promise<NoteEntity[]> {
+    return this.notes.find({
+      where: deckId === undefined ? { userId } : { userId, deckId },
+      order: { updatedAtUtc: 'DESC' }
+    });
   }
   async note(userId: string, id: string): Promise<NoteEntity> {
     return this.requireNote(userId, id);
@@ -297,8 +300,10 @@ export class CardsService {
           createdCards += 1;
         }
       }
-      await notes.save(notesToCreate, { chunk: 500 });
-      await cards.save(cardsToCreate, { chunk: 500 });
+      // SQL Server accepts at most 2,100 parameters per statement. Cards have many columns,
+      // so a 500-record batch can exceed that limit when importing a large workbook.
+      await notes.save(notesToCreate, { chunk: 100 });
+      await cards.save(cardsToCreate, { chunk: 100 });
       // A single deck event avoids producing tens of thousands of events for a bulk import.
       const deck = await manager.getRepository(DeckEntity).findOneByOrFail({ id: deckId, userId });
       deck.version += 1;
@@ -398,32 +403,42 @@ export class CardsService {
     } catch {
       throw new BadRequestException('Không thể đọc tệp Excel.');
     }
-    const sheet = workbook.worksheets[0];
-    if (sheet === undefined) throw new BadRequestException('Tệp Excel không có trang tính.');
+    if (workbook.worksheets.length === 0)
+      throw new BadRequestException('Tệp Excel không có trang tính.');
 
     const rows: ExcelImportRow[] = [];
     const errors: string[] = [];
     const maxRows = 10000;
-    let currentMapping: ExcelColumnMapping | undefined;
     let scannedRows = 0;
     let recognizedHeaders = 0;
-    for (let rowNumber = 1; rowNumber <= sheet.rowCount && scannedRows < maxRows; rowNumber += 1) {
-      const row = sheet.getRow(rowNumber);
-      if (this.isEmptyExcelRow(row)) continue;
-      const mapping = this.detectExcelLayout(row, rowNumber);
-      if (mapping !== undefined) {
-        currentMapping = mapping;
-        recognizedHeaders += 1;
-        continue;
+    let exceededRowLimit = false;
+    for (const [sheetIndex, sheet] of workbook.worksheets.entries()) {
+      let currentMapping: ExcelColumnMapping | undefined;
+      for (let rowNumber = 1; rowNumber <= sheet.rowCount && scannedRows < maxRows; rowNumber += 1) {
+        const row = sheet.getRow(rowNumber);
+        if (this.isEmptyExcelRow(row)) continue;
+        const mapping = this.detectExcelLayout(row, rowNumber);
+        if (mapping !== undefined) {
+          currentMapping = mapping;
+          recognizedHeaders += 1;
+          continue;
+        }
+        if (currentMapping === undefined) continue;
+        scannedRows += 1;
+        const imported = this.readExcelRow(row, currentMapping, rowNumber, errors);
+        if (imported !== undefined) rows.push(imported);
+        if (scannedRows === maxRows) {
+          exceededRowLimit =
+            rowNumber < sheet.rowCount ||
+            workbook.worksheets.slice(sheetIndex + 1).some((remainingSheet) => remainingSheet.rowCount > 0);
+          break;
+        }
       }
-      if (currentMapping === undefined) continue;
-      scannedRows += 1;
-      const imported = this.readExcelRow(row, currentMapping, rowNumber, errors);
-      if (imported !== undefined) rows.push(imported);
+      if (scannedRows === maxRows) break;
     }
     if (recognizedHeaders === 0)
       throw new BadRequestException('Tệp Excel không có bảng hợp lệ để tạo thẻ.');
-    if (sheet.rowCount > maxRows + recognizedHeaders)
+    if (exceededRowLimit)
       this.addImportError(errors, `Chỉ import tối đa ${maxRows} dòng dữ liệu đầu tiên.`);
     return { rows, errors, scannedRows, recognizedHeaders, recognizedBlocks: recognizedHeaders };
   }
