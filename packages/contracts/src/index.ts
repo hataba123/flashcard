@@ -3,3 +3,4 @@ export * from './cards/card.contracts.js';
 export * from './reviews/review.contracts.js';
 export * from './admission/admission.contracts.js';
 export * from './sync/sync.contracts.js';
+export * from './study-goals/study-goal.contracts.js';

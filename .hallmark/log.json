@@ -1,5 +1,15 @@
 [
   {
+    "date": "2026-07-27",
+    "scope": "screen",
+    "macrostructure": "Workbench",
+    "theme": "Hum",
+    "enrichment": "none",
+    "nav": "existing authenticated topbar",
+    "footer": "none (authenticated app shell)",
+    "brief": "Add the study goal planner and realistic forecast workbench"
+  },
+  {
     "date": "2026-07-24",
     "scope": "screen",
     "macrostructure": "Study Stage",

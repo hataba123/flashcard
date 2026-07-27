@@ -151,3 +151,119 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
     ).toBe(true);
   }
 });
+
+test('shows the study forecast dashboard without horizontal overflow', async ({ page }) => {
+  await page.route('**/api/auth/refresh', (route) =>
+    route.fulfill({ json: { accessToken: 'test-token' } })
+  );
+  await page.route('**/api/auth/me', (route) =>
+    route.fulfill({
+      json: {
+        id: 'd2d6978b-8a61-4d49-b9a1-268f37a4a560',
+        email: 'test@example.com',
+        timezone: 'Asia/Bangkok'
+      }
+    })
+  );
+  await page.route('**/api/decks', (route) =>
+    route.fulfill({ json: [{ id: 'deck-1', name: 'IELTS Essential', isArchived: false }] })
+  );
+  await page.route('**/api/study-goals?page=1&pageSize=100', (route) =>
+    route.fulfill({
+      json: {
+        total: 1,
+        items: [
+          {
+            id: 'goal-1',
+            name: 'IELTS 6.5',
+            goalType: 'IELTS',
+            targetDate: '2026-09-30',
+            dailyStudyMinutes: 45,
+            studyDaysOfWeek: [1, 2, 3, 4, 5, 6],
+            desiredRetention: 0.9,
+            finalReviewDays: 10,
+            maxNewCardsPerDay: 50,
+            timeZone: 'Asia/Bangkok',
+            status: 'Active',
+            decks: [{ deckId: 'deck-1', deckName: 'IELTS Essential', priorityWeight: 1 }],
+            createdAtUtc: '2026-07-27T00:00:00.000Z',
+            updatedAtUtc: '2026-07-27T00:00:00.000Z',
+            latestForecast: null
+          }
+        ]
+      }
+    })
+  );
+  await page.route('**/api/study-goals/goal-1/forecast/latest', (route) =>
+    route.fulfill({
+      json: {
+        id: 'forecast-1',
+        studyGoalId: 'goal-1',
+        calculatedAtUtc: '2026-07-27T08:00:00.000Z',
+        predictedNewCardsCompletedDate: '2026-08-20',
+        predictedCompletionP50Date: '2026-09-05',
+        predictedCompletionP80Date: '2026-09-18',
+        predictedCompletionP90Date: '2026-09-25',
+        probabilityBeforeTarget: 0.84,
+        requiredDailyMinutes: 46,
+        averageNewCardsPerDay: 22,
+        averageReviewsPerDay: 58,
+        overloadDays: 2,
+        confidenceLevel: 'Medium',
+        feasibility: 'OnTrack',
+        totalCards: 600,
+        newCards: 300,
+        learningCards: 150,
+        stableCards: 150,
+        daysRemaining: 65,
+        recommendations: ['Cần tăng từ 45 lên khoảng 46 phút/ngày.'],
+        scenarios: [
+          {
+            kind: 'CurrentHabits',
+            label: 'Giữ thói quen hiện tại',
+            dailyMinutes: 45,
+            completionDate: '2026-09-05',
+            probability: 0.84
+          },
+          {
+            kind: 'TargetDate',
+            label: 'Hoàn thành đúng ngày mục tiêu',
+            dailyMinutes: 46,
+            completionDate: '2026-09-30',
+            probability: 0.84
+          },
+          {
+            kind: 'SafePlan',
+            label: 'Kế hoạch an toàn khoảng 80%',
+            dailyMinutes: 46,
+            completionDate: '2026-09-18',
+            probability: 0.84
+          }
+        ],
+        dailyProjection: Array.from({ length: 20 }, (_, index) => ({
+          date: `2026-08-${String(index + 1).padStart(2, '0')}`,
+          dueCards: 30 + index,
+          newCards: 20,
+          totalReviews: 50 + index,
+          estimatedMinutes: 42,
+          backlog: index % 8 === 0 ? 3 : 0,
+          status: index % 8 === 0 ? 'Overloaded' : 'Planned'
+        }))
+      }
+    })
+  );
+
+  await page.goto('/study-plan');
+  await page.getByRole('button', { name: /IELTS 6.5/ }).click();
+  await expect(page.getByText('Ngày học hết thẻ mới')).toBeVisible();
+  await expect(page.getByText('Ngày hoàn thành dự kiến (P50)')).toBeVisible();
+  await expect(page.getByRole('table')).toBeVisible();
+  for (const width of [320, 375, 414, 768]) {
+    await page.setViewportSize({ width, height: width === 768 ? 1024 : 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth
+      )
+    ).toBe(true);
+  }
+});

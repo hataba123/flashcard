@@ -2,6 +2,8 @@
 
 API có prefix `/api`, Swagger tại `/api/docs`.
 
+Kế hoạch học tập dùng CRUD `/study-goals`, membership `/study-goals/:id/decks`, chạy/đọc dự báo tại `/study-goals/:id/forecast` và lịch ngày tại `/study-goals/:id/daily-plan`.
+
 - Auth: `/auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/logout-all`, `/auth/me`.
 - Nội dung: `/decks`, `/notes`, `/cards`; import spreadsheet tại `POST /decks/:id/import-excel`.
 - Ôn tập: `/reviews/queue`, `/reviews`, `/reviews/bulk`, `/reviews/:id/undo`, `/cards/:id/review-preview`.
