@@ -14,7 +14,41 @@ Trang đăng ký dùng cùng hệ thống nhận diện với trang đăng nhậ
 
 ![Ảnh chụp trang đăng ký](docs/ui-register.png)
 
-Các trang sau khi đăng nhập gồm Tổng quan, Kế hoạch học tập, Bộ thẻ, Thẻ và Ôn tập. Việc chụp các trang này cần một phiên đăng nhập hợp lệ và dữ liệu API hoạt động; trong lần kiểm tra này API trả lỗi khi tạo tài khoản nên chưa thể mở các màn hình bên trong.
+## Hình ảnh giao diện
+
+Các ảnh dưới đây được chụp trên màn hình desktop với một phiên đăng nhập hợp lệ. Dữ liệu trong ảnh phản ánh tài khoản và bộ thẻ đang có tại thời điểm chụp.
+
+### Tổng quan và tài khoản
+
+Trang **Tổng quan** hiển thị số lượng bộ thẻ, số thẻ cần ôn, trạng thái đồng bộ và các khối theo dõi hoạt động. Menu tài khoản cho biết trạng thái đồng bộ và cung cấp thao tác đăng xuất.
+
+![Ảnh chụp trang tổng quan](docs/ui-dashboard.png)
+
+![Ảnh chụp menu tài khoản](docs/ui-account.png)
+
+### Kế hoạch học tập và ôn tập
+
+Trang **Kế hoạch học tập** tập trung vào mục tiêu học; trang **Ôn tập** hiển thị tiến độ phiên, cài đặt hiển thị và thẻ đang học.
+
+![Ảnh chụp kế hoạch học tập](docs/ui-study-plan.png)
+
+![Ảnh chụp phiên ôn tập](docs/ui-review.png)
+
+### Bộ thẻ và thẻ
+
+Người dùng có thể xem, tìm kiếm, tạo và chỉnh sửa bộ thẻ; trong từng bộ thẻ, người dùng có thể nhập Excel, tạo thẻ mới hoặc chỉnh sửa thẻ hiện có.
+
+![Ảnh chụp danh sách bộ thẻ](docs/ui-decks.png)
+
+![Ảnh chụp biểu mẫu tạo bộ thẻ](docs/ui-deck-create.png)
+
+![Ảnh chụp biểu mẫu sửa bộ thẻ](docs/ui-deck-edit.png)
+
+![Ảnh chụp danh sách thẻ](docs/ui-notes.png)
+
+![Ảnh chụp biểu mẫu tạo thẻ](docs/ui-note-create.png)
+
+![Ảnh chụp biểu mẫu sửa thẻ](docs/ui-note-edit.png)
 
 ## Tính năng nổi bật
 
