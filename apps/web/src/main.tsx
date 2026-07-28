@@ -26,6 +26,12 @@ import { useSession, type User } from './session.js';
 import { getCardSpeechText, SpeechControl } from './speech-control.js';
 import { NotesPage } from './notes-page.js';
 import { StudyPlanPage } from './study-plan-page.js';
+import {
+  ThemeToggle,
+  useReviewDisplayPreferences,
+  type ReviewCardWidth,
+  type ReviewFontSize
+} from './display-preferences.js';
 import './styles.css';
 import './hallmark.css';
 import './study-plan.css';
@@ -384,6 +390,7 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
           </NavLink>
         </nav>
         <div className="account">
+          <ThemeToggle compact />
           <div className="account-menu">
             <button
               className="account-menu-trigger"
@@ -748,12 +755,21 @@ function Review() {
   const [lastReviewId, setLastReviewId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [hasConflict, setHasConflict] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [pausedAt, setPausedAt] = useState<Date | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(document.fullscreenElement !== null);
+  const { fontSize, setFontSize, cardWidth, setCardWidth } = useReviewDisplayPreferences();
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const sessionId = useState(() => crypto.randomUUID())[0];
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const offline = useOffline();
   useEffect(() => {
     void getDeviceId().then(setDeviceId);
+  }, []);
+  useEffect(() => {
+    const onFullscreenChange = () => setIsFullscreen(document.fullscreenElement !== null);
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
   }, []);
   const queue = useQuery({
     queryKey: ['review-queue'],
@@ -897,10 +913,46 @@ function Review() {
     },
     onError: (error) => setSubmitError(errorMessage(error))
   });
+  const togglePause = () => {
+    if (isPaused) {
+      const pauseDuration = pausedAt === null ? 0 : Date.now() - pausedAt.getTime();
+      setShownAt((value) => new Date(value.getTime() + pauseDuration));
+      setRevealedAt((value) => (value === null ? null : new Date(value.getTime() + pauseDuration)));
+      setPausedAt(null);
+      setIsPaused(false);
+      return;
+    }
+    window.speechSynthesis?.cancel();
+    setPausedAt(new Date());
+    setIsPaused(true);
+  };
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement === null) await document.documentElement.requestFullscreen();
+      else await document.exitFullscreen();
+    } catch {
+      setSubmitError('Trình duyệt không cho phép bật chế độ toàn màn hình.');
+    }
+  };
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement)
+      if (
+        event.target instanceof HTMLElement &&
+        (event.target.matches('input, textarea, select') || event.target.isContentEditable)
+      )
         return;
+      if (event.key.toLowerCase() === 'p') {
+        event.preventDefault();
+        togglePause();
+        return;
+      }
+      if (event.key.toLowerCase() === 'f') {
+        event.preventDefault();
+        void toggleFullscreen();
+        return;
+      }
+      if (event.target instanceof HTMLElement && event.target.matches('button, a')) return;
+      if (isPaused) return;
       if (event.key === ' ' && revealedAt === null) {
         event.preventDefault();
         setRevealedAt(new Date());
@@ -910,7 +962,7 @@ function Review() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [grade, revealedAt]);
+  }, [grade, isPaused, pausedAt, revealedAt, shownAt]);
   if (queue.isLoading)
     return (
       <Shell focus>
@@ -946,8 +998,8 @@ function Review() {
           </Link>
         </header>
         <EmptyState
-          title="Hoàn thành!"
-          description="Không còn thẻ đến hạn trong ngân sách hôm nay."
+          title="Phiên học đã xong"
+          description="Không còn thẻ đến hạn. Bạn có thể nghỉ ở đây và quay lại khi thuận tiện."
         />
         {lastReviewId !== null && (
           <button className="secondary" onClick={() => undo.mutate(lastReviewId)}>
@@ -1011,6 +1063,9 @@ function Review() {
           </div>
         </div>
         <div className="review-header-actions">
+          <button className="secondary" type="button" onClick={togglePause}>
+            {isPaused ? 'Tiếp tục' : 'Tạm dừng'} <kbd>P</kbd>
+          </button>
           {lastReviewId !== null && (
             <button className="secondary" onClick={() => undo.mutate(lastReviewId)}>
               Hoàn tác
@@ -1018,6 +1073,34 @@ function Review() {
           )}
         </div>
       </header>
+      <section className="review-toolbar" aria-label="Tùy chỉnh phiên học">
+        <label>
+          Cỡ chữ
+          <select
+            value={fontSize}
+            onChange={(event) => setFontSize(event.target.value as ReviewFontSize)}
+          >
+            <option value="small">Nhỏ</option>
+            <option value="medium">Vừa</option>
+            <option value="large">Lớn</option>
+          </select>
+        </label>
+        <label>
+          Chiều rộng thẻ
+          <select
+            value={cardWidth}
+            onChange={(event) => setCardWidth(event.target.value as ReviewCardWidth)}
+          >
+            <option value="compact">Gọn</option>
+            <option value="balanced">Cân bằng</option>
+            <option value="wide">Rộng</option>
+          </select>
+        </label>
+        <ThemeToggle />
+        <button className="secondary" type="button" onClick={() => void toggleFullscreen()}>
+          {isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'} <kbd>F</kbd>
+        </button>
+      </section>
       {!offline.online && (
         <p className="offline-notice" role="status">
           Lượt ôn offline được lưu trên thiết bị này và sẽ đồng bộ khi có kết nối lại.
@@ -1026,87 +1109,128 @@ function Review() {
       {note.isError ? (
         <QueryError title="Không thể tải nội dung thẻ." onRetry={() => void note.refetch()} />
       ) : (
-        <section className="review-study" aria-busy={note.isLoading || grade.isPending}>
-          {note.isLoading ? (
-            <div className="review-stage">
-              <div className="review-card review-card-loading">
-                <span
-                  className="skeleton"
-                  style={{ width: '72%', height: 40, justifySelf: 'center' }}
-                />
-                <span
-                  className="skeleton"
-                  style={{ width: '48%', height: 24, justifySelf: 'center' }}
-                />
-              </div>
+        <section
+          className="review-study"
+          data-font-size={fontSize}
+          data-card-width={cardWidth}
+          aria-busy={note.isLoading || grade.isPending}
+        >
+          {isPaused ? (
+            <div className="review-paused" role="status">
+              <span className="review-pause-mark" aria-hidden="true">
+                Ⅱ
+              </span>
+              <h2>Phiên học đang tạm dừng</h2>
+              <p>Tiến độ của bạn được giữ nguyên. Nghỉ một chút cũng là một phần của việc học.</p>
+              <button type="button" onClick={togglePause}>
+                Tiếp tục học <kbd>P</kbd>
+              </button>
             </div>
           ) : (
             <>
-              <div className="review-support">
-                <SpeechControl
-                  contentKey={`${card.id}:${revealed ? 'back' : 'front'}`}
-                  text={speechText}
-                />
-              </div>
-              <div
-                className="review-stage"
-                role="group"
-                aria-label={revealed ? 'Mặt sau của thẻ' : 'Mặt trước của thẻ'}
-                onTouchStart={(event) => {
-                  const touch = event.touches[0];
-                  if (touch !== undefined)
-                    touchStart.current = { x: touch.clientX, y: touch.clientY };
-                }}
-                onTouchEnd={handleTouchEnd}
-              >
-                <div key={card.id} className={`review-card${revealed ? ' is-revealed' : ''}`}>
-                  <article className="review-card-face review-card-front" aria-hidden={revealed}>
-                    <div className="review-card-meta">
-                      <span className="review-side-label">Câu hỏi</span>
-                      <span className="review-card-count">
-                        {index + 1} / {totalCards}
-                      </span>
-                    </div>
-                    <p className="review-face">{front}</p>
-                    <p className="review-hint">Nhớ câu trả lời trước khi lật thẻ.</p>
-                  </article>
-                  <article className="review-card-face review-card-back" aria-hidden={!revealed}>
-                    <div className="review-card-meta">
-                      <span className="review-side-label">Đáp án</span>
-                      <span className="review-answer-mark" aria-hidden="true">
-                        ✓
-                      </span>
-                    </div>
-                    <div className="review-recall">
-                      <span>Câu hỏi</span>
-                      <p>{front}</p>
-                    </div>
-                    <p className="answer">{back}</p>
-                  </article>
+              {note.isLoading ? (
+                <div className="review-stage">
+                  <div className="review-card review-card-loading">
+                    <span
+                      className="skeleton"
+                      style={{ width: '72%', height: 40, justifySelf: 'center' }}
+                    />
+                    <span
+                      className="skeleton"
+                      style={{ width: '48%', height: 24, justifySelf: 'center' }}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="review-support">
-                <AudioControl mediaId={fields.audioMediaId} />
-              </div>
-              {!revealed ? (
-                <ReviewControls
-                  revealed={false}
-                  previews={undefined}
-                  isSubmitting={grade.isPending || deviceId === null}
-                  onReveal={() => setRevealedAt(new Date())}
-                  onGrade={() => undefined}
-                />
               ) : (
-                <ReviewControls
-                  revealed
-                  previews={previews.data}
-                  isSubmitting={grade.isPending || deviceId === null}
-                  onReveal={() => undefined}
-                  onGrade={(rating) => grade.mutate(rating)}
-                />
+                <>
+                  <div className="review-support">
+                    <SpeechControl
+                      contentKey={`${card.id}:${revealed ? 'back' : 'front'}`}
+                      text={speechText}
+                    />
+                  </div>
+                  <div
+                    className="review-stage"
+                    role="group"
+                    aria-label={revealed ? 'Mặt sau của thẻ' : 'Mặt trước của thẻ'}
+                    onTouchStart={(event) => {
+                      const touch = event.touches[0];
+                      if (touch !== undefined)
+                        touchStart.current = { x: touch.clientX, y: touch.clientY };
+                    }}
+                    onTouchEnd={handleTouchEnd}
+                  >
+                    <div key={card.id} className={`review-card${revealed ? ' is-revealed' : ''}`}>
+                      <article
+                        className="review-card-face review-card-front"
+                        aria-hidden={revealed}
+                      >
+                        <div className="review-card-meta">
+                          <span className="review-side-label">Câu hỏi</span>
+                          <span className="review-card-count">
+                            {index + 1} / {totalCards}
+                          </span>
+                        </div>
+                        <p className="review-face">{front}</p>
+                        <p className="review-hint">Nhớ câu trả lời trước khi lật thẻ.</p>
+                      </article>
+                      <article
+                        className="review-card-face review-card-back"
+                        aria-hidden={!revealed}
+                      >
+                        <div className="review-card-meta">
+                          <span className="review-side-label">Đáp án</span>
+                          <span className="review-answer-mark" aria-hidden="true">
+                            ✓
+                          </span>
+                        </div>
+                        <div className="review-recall">
+                          <span>Câu hỏi</span>
+                          <p>{front}</p>
+                        </div>
+                        <p className="answer">{back}</p>
+                      </article>
+                    </div>
+                  </div>
+                  <div className="review-support">
+                    <AudioControl mediaId={fields.audioMediaId} />
+                  </div>
+                  {!revealed ? (
+                    <ReviewControls
+                      revealed={false}
+                      previews={undefined}
+                      isSubmitting={grade.isPending || deviceId === null}
+                      onReveal={() => setRevealedAt(new Date())}
+                      onGrade={() => undefined}
+                    />
+                  ) : (
+                    <ReviewControls
+                      revealed
+                      previews={previews.data}
+                      isSubmitting={grade.isPending || deviceId === null}
+                      onReveal={() => undefined}
+                      onGrade={(rating) => grade.mutate(rating)}
+                    />
+                  )}
+                </>
               )}
             </>
           )}
+          <div className="review-shortcuts" aria-label="Phím tắt trong phiên học">
+            <strong>Phím tắt</strong>
+            <span>
+              <kbd>Space</kbd> Lật thẻ
+            </span>
+            <span>
+              <kbd>1–4</kbd> Chấm điểm
+            </span>
+            <span>
+              <kbd>P</kbd> {isPaused ? 'Tiếp tục' : 'Tạm dừng'}
+            </span>
+            <span>
+              <kbd>F</kbd> Toàn màn hình
+            </span>
+          </div>
         </section>
       )}
       {submitError !== null && (

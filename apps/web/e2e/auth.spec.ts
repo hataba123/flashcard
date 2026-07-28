@@ -132,6 +132,19 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
   await page.getByRole('link', { name: 'Ôn tập', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Phiên ôn tập', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Phím tắt trong phiên học')).toContainText('Space');
+  await page.getByLabel('Cỡ chữ').selectOption('large');
+  await page.getByLabel('Chiều rộng thẻ').selectOption('compact');
+  await expect(page.locator('.review-study')).toHaveAttribute('data-font-size', 'large');
+  await expect(page.locator('.review-study')).toHaveAttribute('data-card-width', 'compact');
+  await page.getByRole('button', { name: /Tạm dừng/ }).click();
+  await expect(page.getByRole('heading', { name: 'Phiên học đang tạm dừng' })).toBeVisible();
+  await page.keyboard.press('p');
+  await expect(page.locator('.review-card-front .review-face')).toHaveText('Câu hỏi ngắn');
+  if ((await page.locator('html').getAttribute('data-theme')) !== 'dark') {
+    await page.locator('.review-toolbar .theme-toggle').click();
+  }
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('.review-card')).not.toHaveClass(/is-revealed/);
   expect(
     await page.evaluate(

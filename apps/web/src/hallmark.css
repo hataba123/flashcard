@@ -109,6 +109,18 @@ body {
   font-size: var(--text-xs);
 }
 
+.theme-toggle.compact {
+  display: grid;
+  width: 2.75rem;
+  min-height: 2.75rem;
+  place-items: center;
+  border-color: var(--color-ink-2);
+  padding: 0;
+  background: transparent;
+  color: var(--color-paper);
+  box-shadow: none;
+}
+
 .app-topbar .account-avatar {
   display: grid;
   flex: 0 0 auto;
@@ -1119,6 +1131,59 @@ label {
   margin-inline: auto;
 }
 
+.review-study[data-card-width='compact'] {
+  width: min(100%, 46rem);
+}
+
+.review-study[data-card-width='wide'] {
+  width: min(100%, 68rem);
+}
+
+.review-study[data-font-size='small'] {
+  --review-front-size: clamp(var(--text-lg), 4vw, var(--text-xl));
+  --review-back-size: clamp(var(--text-base), 3vw, var(--text-lg));
+}
+
+.review-study[data-font-size='medium'] {
+  --review-front-size: clamp(var(--text-xl), 5vw, var(--text-2xl));
+  --review-back-size: clamp(var(--text-md), 3.5vw, var(--text-xl));
+}
+
+.review-study[data-font-size='large'] {
+  --review-front-size: clamp(var(--text-2xl), 6vw, var(--text-3xl));
+  --review-back-size: clamp(var(--text-xl), 4.5vw, var(--text-2xl));
+}
+
+.review-toolbar {
+  display: flex;
+  width: min(100%, 68rem);
+  align-items: end;
+  justify-content: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+  margin: calc(var(--space-sm) * -1) auto var(--space-md);
+  padding-block-end: var(--space-sm);
+}
+
+.review-toolbar label {
+  display: grid;
+  gap: var(--space-3xs);
+  min-width: 9rem;
+  color: var(--color-neutral);
+  font-size: var(--text-xs);
+}
+
+.review-toolbar select,
+.review-toolbar button {
+  min-height: 2.75rem;
+}
+
+.review-toolbar kbd,
+.review-header-actions kbd {
+  font-family: var(--font-outlier);
+  font-size: var(--text-xs);
+}
+
 .review-stage {
   min-width: 0;
 }
@@ -1236,8 +1301,8 @@ label {
   max-width: 36ch;
   margin-inline: auto;
   color: var(--color-ink);
-  font-family: var(--font-display);
-  font-size: clamp(var(--text-xl), 5vw, var(--text-2xl));
+  font-family: 'Noto Sans', 'Segoe UI', 'DejaVu Sans', sans-serif;
+  font-size: var(--review-front-size, clamp(var(--text-xl), 5vw, var(--text-2xl)));
   font-weight: 700;
   font-style: normal;
   letter-spacing: -0.03em;
@@ -1276,13 +1341,80 @@ label {
   padding: 0;
   border: 0;
   color: var(--color-ink);
-  font-family: var(--font-display);
-  font-size: clamp(var(--text-md), 3.5vw, var(--text-xl));
+  font-family: 'Noto Sans', 'Segoe UI', 'DejaVu Sans', sans-serif;
+  font-size: var(--review-back-size, clamp(var(--text-md), 3.5vw, var(--text-xl)));
   font-weight: 700;
   font-style: normal;
   letter-spacing: -0.02em;
   line-height: 1.35;
   text-align: center;
+}
+
+.review-paused {
+  display: grid;
+  min-height: clamp(23rem, 52svh, 34rem);
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-sm);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: calc(var(--radius-card) + var(--space-xs));
+  padding: var(--space-lg);
+  background: var(--color-paper-2);
+  color: var(--color-ink);
+  text-align: center;
+}
+
+.review-paused h2,
+.review-paused p {
+  margin: 0;
+}
+
+.review-paused p {
+  max-width: 38ch;
+  color: var(--color-neutral);
+  line-height: 1.6;
+}
+
+.review-pause-mark {
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  place-items: center;
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: var(--radius-pill);
+  color: var(--color-accent-2);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.review-shortcuts {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs) var(--space-md);
+  flex-wrap: wrap;
+  color: var(--color-neutral);
+  font-size: var(--text-xs);
+}
+
+.review-shortcuts strong {
+  color: var(--color-ink-2);
+}
+
+.review-shortcuts span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+.review-shortcuts kbd {
+  border: var(--rule-hair) solid var(--color-rule-2);
+  border-radius: var(--space-3xs);
+  padding: var(--space-3xs) var(--space-2xs);
+  background: var(--color-surface);
+  color: var(--color-ink-2);
+  font-family: var(--font-outlier);
+  box-shadow: 0 1px 0 var(--color-rule-2);
 }
 
 .review-support {
@@ -1625,6 +1757,21 @@ audio {
 
   .review-progress {
     grid-row: 3;
+  }
+
+  .review-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .review-toolbar label,
+  .review-toolbar button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .review-shortcuts {
+    justify-content: flex-start;
   }
 
   .grade-actions {

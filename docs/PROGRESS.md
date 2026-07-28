@@ -341,3 +341,10 @@
 - Đã thực hiện: tách route `/notes` cùng form tạo/sửa thẻ sang `notes-page.tsx`; chuyển các kiểu dữ liệu thẻ dùng chung sang `card-types.ts`; bổ sung nút Sửa, nạp giá trị thẻ hiện có và cập nhật qua `PATCH /notes/:id`.
 - Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `git diff --check`.
 - Quyết định quan trọng: giữ nguyên API và hành vi tạo thẻ—chỉ thao tác tạo mới mới gọi generate-cards; thao tác sửa cập nhật note hiện có, nên không phát sinh card trùng.
+
+## Milestone 23 — Chế độ tập trung khi ôn tập
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: bổ sung toàn màn hình, pause/resume có loại trừ thời gian nghỉ, tùy chỉnh cỡ chữ và chiều rộng thẻ, giao diện tối theo token riêng, font đọc tốt tiếng Việt/IPA và dải phím tắt hiển thị ngay trong phiên học.
+- Quyết định quan trọng: không thêm animation ăn mừng hoặc cơ chế streak; thông điệp hoàn tất khuyến khích nghỉ và quay lại khi thuận tiện. Mọi tương tác vẫn tôn trọng `prefers-reduced-motion`.
+- Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test` (74 test), `pnpm build`, Playwright E2E (5/5), kiểm tra trực quan dark mode và `git diff --check`.
