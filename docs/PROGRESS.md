@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 33 — Chỉ đọc nội dung phiên âm
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: khi mặt sau có trường hoặc nhãn phiên âm, chỉ gửi nội dung phiên âm cho Web Speech API; bỏ nhãn và cặp dấu gạch chéo bao ngoài nhưng giữ ký hiệu nhấn âm bên trong.
+- Kiểm tra: bổ sung test cho phiên âm nằm trong nội dung mặt sau và trường `phonetic` riêng; `pnpm lint`, `pnpm typecheck`, `pnpm test` và `pnpm build` đều đạt.
+
 ## Milestone 32 — Loại bỏ tiếng Việt khỏi nội dung phát âm
 
 - Trạng thái: Hoàn thành.

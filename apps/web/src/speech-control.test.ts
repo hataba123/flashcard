@@ -56,6 +56,21 @@ describe('getCardSpeechText', () => {
       'They ban unsafe products'
     );
   });
+
+  it('reads only the pronunciation without its label or wrapping slashes', () => {
+    expect(
+      getCardSpeechText(
+        {
+          front: 'resume',
+          back: "lấy lại, chiếm lại; lại tiếp tục\n\nPhiên âm: /ri'zju:m/"
+        },
+        true
+      )
+    ).toBe("ri'zju:m");
+    expect(getCardSpeechText({ front: 'resume', phonetic: "/ri'zju:m/" }, true)).toBe(
+      "ri'zju:m"
+    );
+  });
 });
 
 describe('SpeechControl', () => {
