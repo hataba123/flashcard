@@ -2,6 +2,20 @@
 
 Flashcard Platform là ứng dụng học bằng thẻ ghi nhớ theo phương pháp lặp lại ngắt quãng. Hệ thống giúp người học tổ chức kiến thức thành bộ thẻ, nhập dữ liệu lớn từ Excel, ôn tập theo lịch FSRS và theo dõi tiến độ trên dashboard. Giao diện web có thể cài đặt như PWA, hoạt động tốt trên máy tính lẫn thiết bị di động và tiếp tục ghi nhận lượt ôn khi kết nối mạng bị gián đoạn.
 
+## Giao diện trang đăng nhập
+
+Trang đầu tiên của ứng dụng là màn hình đăng nhập với bố cục tập trung, nền tối và các mảng hình học trang trí ở hai bên. Thẻ đăng nhập có logo Flashcard, tiêu đề “Chào mừng trở lại” và lời nhắc tiếp tục nhịp học trong ngày. Người dùng nhập email và mật khẩu, sau đó chọn nút “Đăng nhập” màu vàng nổi bật. Bên dưới biểu mẫu là liên kết “Đăng ký” dành cho người chưa có tài khoản.
+
+Giao diện ưu tiên độ tương phản, khoảng cách thoáng và khả năng hiển thị tốt trên màn hình máy tính cũng như thiết bị di động. Ảnh chụp thực tế của trang đăng nhập được hiển thị trong phần kết quả kiểm tra giao diện của task này.
+
+![Ảnh chụp trang đăng nhập](docs/ui-login.png)
+
+Trang đăng ký dùng cùng hệ thống nhận diện với trang đăng nhập, gồm logo Flashcard, tiêu đề “Tạo tài khoản”, trường email, trường mật khẩu và nút “Đăng ký”. Liên kết cuối biểu mẫu đưa người dùng quay lại trang đăng nhập.
+
+![Ảnh chụp trang đăng ký](docs/ui-register.png)
+
+Các trang sau khi đăng nhập gồm Tổng quan, Kế hoạch học tập, Bộ thẻ, Thẻ và Ôn tập. Việc chụp các trang này cần một phiên đăng nhập hợp lệ và dữ liệu API hoạt động; trong lần kiểm tra này API trả lỗi khi tạo tài khoản nên chưa thể mở các màn hình bên trong.
+
 ## Tính năng nổi bật
 
 - Đăng ký, đăng nhập, làm mới phiên và đăng xuất trên một hoặc tất cả thiết bị.
