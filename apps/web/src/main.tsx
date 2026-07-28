@@ -26,6 +26,7 @@ import { useSession, type User } from './session.js';
 import { getCardSpeechText, SpeechControl } from './speech-control.js';
 import { NotesPage } from './notes-page.js';
 import { StudyPlanPage } from './study-plan-page.js';
+import { WeaknessAnalysis, type WeaknessAnalysisData } from './weakness-analysis.js';
 import {
   ThemeToggle,
   useReviewDisplayPreferences,
@@ -462,9 +463,13 @@ function Dashboard() {
     queryKey: ['dashboard', 'activity'],
     queryFn: () => api.get<DashboardActivity[]>('/dashboard/activity')
   });
+  const weaknesses = useQuery({
+    queryKey: ['dashboard', 'weaknesses'],
+    queryFn: () => api.get<WeaknessAnalysisData>('/dashboard/weaknesses')
+  });
   const offline = useOffline();
-  const queries = [decks, notes, today, retention, backlog, activity];
-  const isLoading = queries.every((query) => query.isLoading);
+  const queries = [decks, notes, today, retention, backlog, activity, weaknesses];
+  const isLoading = queries.some((query) => query.isLoading);
   const hasError = queries.some((query) => query.isError);
   const retry = () => {
     void Promise.all(queries.map((query) => query.refetch()));
@@ -531,6 +536,7 @@ function Dashboard() {
               </p>
             </div>
           </section>
+          {weaknesses.data !== undefined && <WeaknessAnalysis data={weaknesses.data} />}
           <section className="panel study-callout">
             <div>
               <h2>Tiếp tục học</h2>

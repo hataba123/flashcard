@@ -32,4 +32,8 @@ export class DashboardController {
   @Get('activity') activity(@CurrentUser() user: UserEntity) {
     return this.dashboardService.activity(user.id);
   }
+
+  @Get('weaknesses') weaknesses(@CurrentUser() user: UserEntity) {
+    return this.dashboardService.weaknesses(user.id);
+  }
 }

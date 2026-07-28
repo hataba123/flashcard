@@ -348,3 +348,10 @@
 - Đã thực hiện: bổ sung toàn màn hình, pause/resume có loại trừ thời gian nghỉ, tùy chỉnh cỡ chữ và chiều rộng thẻ, giao diện tối theo token riêng, font đọc tốt tiếng Việt/IPA và dải phím tắt hiển thị ngay trong phiên học.
 - Quyết định quan trọng: không thêm animation ăn mừng hoặc cơ chế streak; thông điệp hoàn tất khuyến khích nghỉ và quay lại khi thuận tiện. Mọi tương tác vẫn tôn trọng `prefers-reduced-motion`.
 - Kiểm tra đã chạy: `pnpm lint`, `pnpm typecheck`, `pnpm test` (74 test), `pnpm build`, Playwright E2E (5/5), kiểm tra trực quan dark mode và `git diff --check`.
+
+## Milestone 24 — Phân tích điểm yếu có thể hành động
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: tổng hợp theo nhãn và bộ thẻ với tỷ lệ Again 7/30 ngày, thời gian trả lời trung vị, số thẻ leech, độ ổn định ghi nhớ, xu hướng xấu đi và tỷ trọng thẻ mới; dashboard sắp xếp các vấn đề theo mức tác động và đưa ra khuyến nghị có số liệu cụ thể.
+- Quyết định quan trọng: chỉ đánh dấu tỷ lệ Again cao khi nhóm có ít nhất 10 lượt ôn trong 30 ngày; chỉ đánh dấu xu hướng xấu đi khi cả hai cửa sổ 7 ngày có ít nhất 5 lượt và mức Again tăng ít nhất 10 điểm phần trăm. Lượt review đã undo không được tính vào phân tích.
+- Kiểm tra: unit test cho thuật toán xếp hạng/khuyến nghị và component chuyển nhóm; integration test endpoint trên SQL Server thật; chạy đủ lint, typecheck, test và build.

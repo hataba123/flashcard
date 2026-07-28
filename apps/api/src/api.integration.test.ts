@@ -121,6 +121,22 @@ describe('API integration', () => {
       });
   });
 
+  it('returns an empty actionable weakness analysis for a new user', async () => {
+    const auth = await register(
+      `${suffix}-weaknesses@integration.local`,
+      'IntegrationPassword123!'
+    );
+
+    await request(app.getHttpServer())
+      .get('/api/dashboard/weaknesses')
+      .set('Authorization', `Bearer ${auth.accessToken}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({ overall: null, groups: [] });
+        expect(body.generatedAtUtc).toEqual(expect.any(String));
+      });
+  });
+
   it('previews and imports Excel cards into a deck', async () => {
     const auth = await register(`${suffix}-excel@integration.local`, 'IntegrationPassword123!');
     const deck = await request(app.getHttpServer())
