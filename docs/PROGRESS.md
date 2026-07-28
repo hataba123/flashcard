@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 37 — Ưu tiên ví dụ tiếng Anh khi đọc mặt sau
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: mặt sau chỉ đọc nội dung tiếng Anh có ích cho việc học, chẳng hạn `to resume one's spirits`; luôn bỏ qua dòng/trường phiên âm, kể cả khi không có nội dung tiếng Anh khác.
+- Kiểm tra: bổ sung test cho ưu tiên ví dụ và bỏ qua phiên âm.
+
 ## Milestone 36 — Bảo toàn đầy đủ ký hiệu nhấn âm
 
 - Trạng thái: Hoàn thành.

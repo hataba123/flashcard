@@ -57,37 +57,24 @@ describe('getCardSpeechText', () => {
     );
   });
 
-  it('keeps internal pronunciation marks but removes labels and wrapping slashes', () => {
+  it('prefers English answer content over pronunciation on the back of a card', () => {
     expect(
       getCardSpeechText(
         {
           front: 'resume',
-          back: "lấy lại, chiếm lại; lại tiếp tục\n\nPhiên âm: /ri'zju:m/"
+          back:
+            "lấy lại, chiếm lại; lại tiếp tục\n\nPhiên âm: /ri'zju:m/\n\nVí dụ: to resume one's spirits"
         },
         true
       )
-    ).toBe("ri'zju:m");
-    expect(getCardSpeechText({ front: 'resume', phonetic: "/ri'zju:m/" }, true)).toBe(
-      "ri'zju:m"
-    );
-    expect(
-      getCardSpeechText({ front: 'resume', back: "Phiên âm: (/ri'zju:m/)." }, true)
-    ).toBe("ri'zju:m");
+    ).toBe('to resume ones spirits');
   });
 
-  it('preserves primary, secondary, ASCII, long, and half-long pronunciation marks', () => {
-    expect(getCardSpeechText({ front: 'resume', phonetic: '/ˈriːzjuːm/' }, true)).toBe(
-      'ˈriːzjuːm'
-    );
-    expect(getCardSpeechText({ front: 'example', phonetic: '/ɪɡˌzɑːmpəl/' }, true)).toBe(
-      'ɪɡˌzɑːmpəl'
-    );
-    expect(getCardSpeechText({ front: 'resume', phonetic: "'ri:zju:m" }, true)).toBe(
-      "'ri:zju:m"
-    );
-    expect(getCardSpeechText({ front: 'detail', phonetic: '[dɪˈteɪlˑ]' }, true)).toBe(
-      'dɪˈteɪlˑ'
-    );
+  it('does not read pronunciation when the back has no English answer content', () => {
+    expect(getCardSpeechText({ front: 'resume', phonetic: "/ri'zju:m/" }, true)).toBe('');
+    expect(
+      getCardSpeechText({ front: 'resume', back: "Phiên âm: (/ri'zju:m/)." }, true)
+    ).toBe('');
   });
 
   it('removes punctuation from regular card content', () => {

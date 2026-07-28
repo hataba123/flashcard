@@ -59,8 +59,8 @@ const vietnameseWords = new Set([
 const vietnameseCharacterPattern =
   /[\u00e0-\u00e3\u00e8-\u00ea\u00ec\u00ed\u00f2-\u00f5\u00f9\u00fa\u00fd\u0103\u0111\u0129\u0169\u01a1\u01b0\u1ea0-\u1ef9]/iu;
 const wordPattern = /[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu;
-const pronunciationLabelPattern = /(?:phiên\s*âm|phien\s*am)\s*:\s*([^\r\n]+)/iu;
 const pronunciationFieldKeys = new Set(['phonetic', 'phonetics', 'pronunciation', 'ipa']);
+const pronunciationLinePattern = /(?:phiên\s*âm|phien\s*am)\s*:\s*[^\r\n]*/giu;
 
 function isVietnameseWord(word: string): boolean {
   if (vietnameseCharacterPattern.test(word)) return true;
@@ -94,34 +94,6 @@ function removeSpeechMarks(text: string): string {
     .trim();
 }
 
-function cleanPronunciation(text: string): string {
-  const trimmedText = text.trim();
-  const firstSlash = trimmedText.indexOf('/');
-  const lastSlash = trimmedText.lastIndexOf('/');
-  let pronunciation =
-    firstSlash >= 0 && lastSlash > firstSlash
-      ? trimmedText.slice(firstSlash + 1, lastSlash)
-      : trimmedText;
-  const leadingWrappers = new Set(['/', '[', '(', '{']);
-  const trailingWrappers = new Set(['/', ']', ')', '}', '.', '!', '?', ';', ',']);
-  while (leadingWrappers.has(pronunciation[0] ?? '')) pronunciation = pronunciation.slice(1);
-  while (trailingWrappers.has(pronunciation.at(-1) ?? '')) pronunciation = pronunciation.slice(0, -1);
-  return pronunciation.trim();
-}
-
-function getPronunciation(fields: Record<string, string>): string {
-  for (const [key, value] of Object.entries(fields)) {
-    if (pronunciationFieldKeys.has(key.toLocaleLowerCase('en'))) {
-      const pronunciation = cleanPronunciation(value);
-      if (pronunciation.length > 0) return pronunciation;
-    }
-
-    const match = value.match(pronunciationLabelPattern);
-    if (match?.[1] !== undefined) return cleanPronunciation(match[1]);
-  }
-  return '';
-}
-
 function loadSettings(): SpeechSettings {
   try {
     const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -146,15 +118,17 @@ function loadSettings(): SpeechSettings {
 export function getCardSpeechText(fields: Record<string, string>, revealed: boolean): string {
   if (!revealed) return removeSpeechMarks(getEnglishSpeechText(fields.front ?? fields.text ?? ''));
 
-  const pronunciation = getPronunciation(fields);
-  if (pronunciation.length > 0) return pronunciation;
-
   const frontKeys = new Set(['front', 'text', 'audioMediaId']);
   const answerText = [
     ...new Set(
       Object.entries(fields)
-        .filter(([key, value]) => !frontKeys.has(key) && value.trim().length > 0)
-        .map(([, value]) => value.trim())
+        .filter(
+          ([key, value]) =>
+            !frontKeys.has(key) &&
+            !pronunciationFieldKeys.has(key.toLocaleLowerCase('en')) &&
+            value.trim().length > 0
+        )
+        .map(([, value]) => value.replace(pronunciationLinePattern, '').trim())
     )
   ]
     .map(getEnglishSpeechText)
