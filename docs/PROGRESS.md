@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 36 — Bảo toàn đầy đủ ký hiệu nhấn âm
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: bảo toàn dấu nhấn ASCII `'`, nhấn chính `ˈ`, nhấn phụ `ˌ`, âm dài `ː` và nửa dài `ˑ`, kể cả khi ký hiệu nằm ở đầu hoặc cuối phiên âm; chỉ bóc nhãn và dấu bao ngoài.
+- Kiểm tra: bổ sung test cho từng nhóm ký hiệu phiên âm và dạng bao bằng `/.../`, `[...]`; `pnpm lint`, `pnpm typecheck`, `pnpm test` và `pnpm build` đều đạt.
+
 ## Milestone 35 — Giữ ký hiệu nhấn trong phiên âm
 
 - Trạng thái: Hoàn thành.

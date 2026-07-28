@@ -98,11 +98,15 @@ function cleanPronunciation(text: string): string {
   const trimmedText = text.trim();
   const firstSlash = trimmedText.indexOf('/');
   const lastSlash = trimmedText.lastIndexOf('/');
-  const pronunciation =
+  let pronunciation =
     firstSlash >= 0 && lastSlash > firstSlash
       ? trimmedText.slice(firstSlash + 1, lastSlash)
       : trimmedText;
-  return pronunciation.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').trim();
+  const leadingWrappers = new Set(['/', '[', '(', '{']);
+  const trailingWrappers = new Set(['/', ']', ')', '}', '.', '!', '?', ';', ',']);
+  while (leadingWrappers.has(pronunciation[0] ?? '')) pronunciation = pronunciation.slice(1);
+  while (trailingWrappers.has(pronunciation.at(-1) ?? '')) pronunciation = pronunciation.slice(0, -1);
+  return pronunciation.trim();
 }
 
 function getPronunciation(fields: Record<string, string>): string {

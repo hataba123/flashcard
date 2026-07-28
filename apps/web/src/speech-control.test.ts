@@ -75,6 +75,21 @@ describe('getCardSpeechText', () => {
     ).toBe("ri'zju:m");
   });
 
+  it('preserves primary, secondary, ASCII, long, and half-long pronunciation marks', () => {
+    expect(getCardSpeechText({ front: 'resume', phonetic: '/ˈriːzjuːm/' }, true)).toBe(
+      'ˈriːzjuːm'
+    );
+    expect(getCardSpeechText({ front: 'example', phonetic: '/ɪɡˌzɑːmpəl/' }, true)).toBe(
+      'ɪɡˌzɑːmpəl'
+    );
+    expect(getCardSpeechText({ front: 'resume', phonetic: "'ri:zju:m" }, true)).toBe(
+      "'ri:zju:m"
+    );
+    expect(getCardSpeechText({ front: 'detail', phonetic: '[dɪˈteɪlˑ]' }, true)).toBe(
+      'dɪˈteɪlˑ'
+    );
+  });
+
   it('removes punctuation from regular card content', () => {
     expect(getCardSpeechText({ front: 'hello, world!', back: '' }, false)).toBe('hello world');
   });
