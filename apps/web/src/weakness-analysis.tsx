@@ -57,7 +57,7 @@ function DiagnosticMetric({
 export function WeaknessAnalysis({ data }: { data: WeaknessAnalysisData }) {
   const [groupType, setGroupType] = useState<'tag' | 'deck'>('tag');
   const actionableGroups = data.groups.filter((group) => group.type === groupType);
-  const groups = actionableGroups.slice(0, 5);
+  const groups = actionableGroups.slice(0, 3);
 
   return (
     <section className="weakness-analysis" aria-labelledby="weakness-title">
@@ -179,7 +179,7 @@ export function WeaknessAnalysis({ data }: { data: WeaknessAnalysisData }) {
           ))}
           {actionableGroups.length > groups.length && (
             <p className="diagnostic-limit">
-              Đang hiển thị {groups.length} ưu tiên cao nhất trong {actionableGroups.length} nhóm.
+              Hiển thị {groups.length} ưu tiên cần xử lý trước trong {actionableGroups.length} nhóm.
             </p>
           )}
         </div>

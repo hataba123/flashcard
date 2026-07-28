@@ -1,5 +1,15 @@
 [
   {
+    "date": "2026-07-28",
+    "scope": "app",
+    "macrostructure": "Workbench / Study Stage",
+    "theme": "Hum",
+    "enrichment": "none",
+    "nav": "compact authenticated topbar",
+    "footer": "none (authenticated app shell)",
+    "brief": "Simplify the complete learning UI and reduce management noise"
+  },
+  {
     "date": "2026-07-27",
     "scope": "screen",
     "macrostructure": "Workbench",

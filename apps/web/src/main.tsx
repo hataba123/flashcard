@@ -1079,34 +1079,37 @@ function Review() {
           )}
         </div>
       </header>
-      <section className="review-toolbar" aria-label="Tùy chỉnh phiên học">
-        <label>
-          Cỡ chữ
-          <select
-            value={fontSize}
-            onChange={(event) => setFontSize(event.target.value as ReviewFontSize)}
-          >
-            <option value="small">Nhỏ</option>
-            <option value="medium">Vừa</option>
-            <option value="large">Lớn</option>
-          </select>
-        </label>
-        <label>
-          Chiều rộng thẻ
-          <select
-            value={cardWidth}
-            onChange={(event) => setCardWidth(event.target.value as ReviewCardWidth)}
-          >
-            <option value="compact">Gọn</option>
-            <option value="balanced">Cân bằng</option>
-            <option value="wide">Rộng</option>
-          </select>
-        </label>
-        <ThemeToggle />
-        <button className="secondary" type="button" onClick={() => void toggleFullscreen()}>
-          {isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'} <kbd>F</kbd>
-        </button>
-      </section>
+      <details className="review-options">
+        <summary>Tùy chỉnh phiên học</summary>
+        <section className="review-toolbar" aria-label="Tùy chỉnh phiên học">
+          <label>
+            Cỡ chữ
+            <select
+              value={fontSize}
+              onChange={(event) => setFontSize(event.target.value as ReviewFontSize)}
+            >
+              <option value="small">Nhỏ</option>
+              <option value="medium">Vừa</option>
+              <option value="large">Lớn</option>
+            </select>
+          </label>
+          <label>
+            Chiều rộng thẻ
+            <select
+              value={cardWidth}
+              onChange={(event) => setCardWidth(event.target.value as ReviewCardWidth)}
+            >
+              <option value="compact">Gọn</option>
+              <option value="balanced">Cân bằng</option>
+              <option value="wide">Rộng</option>
+            </select>
+          </label>
+          <ThemeToggle />
+          <button className="secondary" type="button" onClick={() => void toggleFullscreen()}>
+            {isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'} <kbd>F</kbd>
+          </button>
+        </section>
+      </details>
       {!offline.online && (
         <p className="offline-notice" role="status">
           Lượt ôn offline được lưu trên thiết bị này và sẽ đồng bộ khi có kết nối lại.

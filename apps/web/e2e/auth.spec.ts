@@ -133,6 +133,7 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Phiên ôn tập', exact: true })).toBeVisible();
   await expect(page.getByLabel('Phím tắt trong phiên học')).toContainText('Space');
+  await page.locator('.review-options > summary').click();
   await page.getByLabel('Cỡ chữ').selectOption('large');
   await page.getByLabel('Chiều rộng thẻ').selectOption('compact');
   await expect(page.locator('.review-study')).toHaveAttribute('data-font-size', 'large');

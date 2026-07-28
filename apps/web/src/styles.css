@@ -333,7 +333,8 @@ small {
   display: none;
 }
 
-aside {
+/* Keep legacy shell styles from leaking into semantic asides inside pages. */
+.app-shell > aside {
   position: sticky;
   top: 0;
   display: flex;
@@ -357,12 +358,12 @@ aside {
   text-decoration: none;
 }
 
-nav {
+.app-shell > aside nav {
   display: grid;
   gap: 4px;
 }
 
-nav a {
+.app-shell > aside nav a {
   display: flex;
   min-height: 40px;
   align-items: center;
@@ -377,12 +378,12 @@ nav a {
     color 150ms ease;
 }
 
-nav a.active {
+.app-shell > aside nav a.active {
   background: #eef2ff;
   color: #4338ca;
 }
 
-nav a:hover {
+.app-shell > aside nav a:hover {
   background: #f8fafc;
   color: #0f172a;
 }
@@ -809,7 +810,7 @@ audio {
     grid-template-columns: 200px minmax(0, 1fr);
   }
 
-  aside {
+  .app-shell > aside {
     padding: 24px 12px;
   }
 
@@ -852,7 +853,7 @@ audio {
     background: rgba(15, 23, 42, 0.28);
   }
 
-  aside {
+  .app-shell > aside {
     position: fixed;
     z-index: 5;
     top: 0;
@@ -865,7 +866,7 @@ audio {
     transition: transform 200ms ease;
   }
 
-  aside.navigation-open {
+  .app-shell > aside.navigation-open {
     transform: translateX(0);
   }
 

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router';
 import { z } from 'zod';
@@ -16,6 +16,7 @@ const noteSchema = z.object({
 });
 
 type NoteForm = z.infer<typeof noteSchema>;
+const notesPerPage = 12;
 
 const errorMessage = (error: unknown) =>
   error instanceof ApiError
@@ -72,13 +73,29 @@ function QueryError({ title, onRetry }: { title: string; onRetry(): void }) {
     <section className="page-state error" role="alert">
       <h2>{title}</h2>
       <p>Vui lòng kiểm tra kết nối và thử lại.</p>
-      <button className="secondary" onClick={onRetry}>Thử lại</button>
+      <button className="secondary" onClick={onRetry}>
+        Thử lại
+      </button>
     </section>
   );
 }
 
-function EmptyState({ title, description, action }: { title: string; description: string; action?: ReactNode }) {
-  return <section className="page-state"><h2>{title}</h2><p>{description}</p>{action}</section>;
+function EmptyState({
+  title,
+  description,
+  action
+}: {
+  title: string;
+  description: string;
+  action?: ReactNode;
+}) {
+  return (
+    <section className="page-state">
+      <h2>{title}</h2>
+      <p>{description}</p>
+      {action}
+    </section>
+  );
 }
 
 function parseJson<T>(value: string, fallback: T): T {
@@ -111,8 +128,14 @@ function NoteEditor({ decks, note, done }: { decks: Deck[]; note: Note | null; d
       const body = {
         deckId: input.deckId,
         noteType: input.noteType,
-        fields: input.noteType === 'Cloze' ? { text: input.front, back: input.back } : { front: input.front, back: input.back },
-        tags: input.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
+        fields:
+          input.noteType === 'Cloze'
+            ? { text: input.front, back: input.back }
+            : { front: input.front, back: input.back },
+        tags: input.tags
+          .split(',')
+          .map((tag) => tag.trim())
+          .filter(Boolean)
       };
       if (note === null) {
         const created = await api.post<Note>('/notes', body);
@@ -128,18 +151,67 @@ function NoteEditor({ decks, note, done }: { decks: Deck[]; note: Note | null; d
   return (
     <section className="panel">
       <h2>{editing ? 'Sửa thẻ' : 'Tạo thẻ'}</h2>
-      <form className="editor-form" onSubmit={form.handleSubmit((values) => save.mutate(values))} noValidate>
-        <label>Bộ thẻ<select {...form.register('deckId')}>{decks.map((deck) => <option key={deck.id} value={deck.id}>{deck.name}</option>)}</select></label>
-        <label>Loại thẻ<select {...form.register('noteType')}><option value="Basic">Basic</option><option value="BasicAndReverse">Basic và đảo chiều</option><option value="Cloze">Cloze</option></select></label>
-        <label><span className="field-label">Mặt trước / nội dung <span className="required" aria-hidden="true">*</span></span><textarea aria-required="true" {...form.register('front')} /></label>
+      <form
+        className="editor-form"
+        onSubmit={form.handleSubmit((values) => save.mutate(values))}
+        noValidate
+      >
+        <label>
+          Bộ thẻ
+          <select {...form.register('deckId')}>
+            {decks.map((deck) => (
+              <option key={deck.id} value={deck.id}>
+                {deck.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Loại thẻ
+          <select {...form.register('noteType')}>
+            <option value="Basic">Basic</option>
+            <option value="BasicAndReverse">Basic và đảo chiều</option>
+            <option value="Cloze">Cloze</option>
+          </select>
+        </label>
+        <label>
+          <span className="field-label">
+            Mặt trước / nội dung{' '}
+            <span className="required" aria-hidden="true">
+              *
+            </span>
+          </span>
+          <textarea aria-required="true" {...form.register('front')} />
+        </label>
         <FormError message={form.formState.errors.front?.message} />
-        <label><span className="field-label">Mặt sau <span className="required" aria-hidden="true">*</span></span><textarea aria-required="true" {...form.register('back')} /></label>
+        <label>
+          <span className="field-label">
+            Mặt sau{' '}
+            <span className="required" aria-hidden="true">
+              *
+            </span>
+          </span>
+          <textarea aria-required="true" {...form.register('back')} />
+        </label>
         <FormError message={form.formState.errors.back?.message} />
-        <label>Nhãn, cách nhau bằng dấu phẩy<input {...form.register('tags')} /></label>
-        {submitError !== null && <p className="form-error" role="alert">{submitError}</p>}
+        <label>
+          Nhãn, cách nhau bằng dấu phẩy
+          <input {...form.register('tags')} />
+        </label>
+        {submitError !== null && (
+          <p className="form-error" role="alert">
+            {submitError}
+          </p>
+        )}
         <div className="actions">
-          <button disabled={save.isPending} aria-busy={save.isPending}><ButtonContent loading={save.isPending}>{save.isPending ? 'Đang lưu…' : editing ? 'Lưu thay đổi' : 'Lưu và tạo thẻ'}</ButtonContent></button>
-          <button type="button" className="secondary" onClick={done}>Hủy</button>
+          <button disabled={save.isPending} aria-busy={save.isPending}>
+            <ButtonContent loading={save.isPending}>
+              {save.isPending ? 'Đang lưu…' : editing ? 'Lưu thay đổi' : 'Lưu và tạo thẻ'}
+            </ButtonContent>
+          </button>
+          <button type="button" className="secondary" onClick={done}>
+            Hủy
+          </button>
         </div>
       </form>
     </section>
@@ -155,6 +227,8 @@ export function NotesPage() {
   const [selectedDeckId, setSelectedDeckId] = useState('');
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<ExcelImportPreview | null>(null);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const fileInput = useRef<HTMLInputElement>(null);
   const decks = useQuery({ queryKey: ['decks'], queryFn: () => api.get<Deck[]>('/decks') });
   const activeDeckId = selectedDeckId || decks.data?.[0]?.id || '';
@@ -164,31 +238,307 @@ export function NotesPage() {
     enabled: activeDeckId !== '',
     staleTime: 30_000
   });
-  const remove = useMutation({ mutationFn: (id: string) => api.delete(`/notes/${id}`), onSuccess: () => { setRemoveError(null); void client.invalidateQueries({ queryKey: ['notes'] }); }, onError: (error) => setRemoveError(errorMessage(error)) });
+  const filteredNotes = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase('vi-VN');
+    if (query === '') return notes.data ?? [];
+    return (notes.data ?? []).filter((note) =>
+      `${note.fieldsJson} ${note.tagsJson} ${note.noteType}`
+        .toLocaleLowerCase('vi-VN')
+        .includes(query)
+    );
+  }, [notes.data, search]);
+  const pageCount = Math.max(1, Math.ceil(filteredNotes.length / notesPerPage));
+  const currentPage = Math.min(page, pageCount);
+  const visibleNotes = filteredNotes.slice(
+    (currentPage - 1) * notesPerPage,
+    currentPage * notesPerPage
+  );
+  useEffect(() => setPage(1), [activeDeckId, search]);
+  const remove = useMutation({
+    mutationFn: (id: string) => api.delete(`/notes/${id}`),
+    onSuccess: () => {
+      setRemoveError(null);
+      void client.invalidateQueries({ queryKey: ['notes'] });
+    },
+    onError: (error) => setRemoveError(errorMessage(error))
+  });
   const importExcel = useMutation({
-    mutationFn: ({ deckId, file }: { deckId: string; file: File }) => { const data = new FormData(); data.append('file', file); return api.postForm<ExcelImportResult>(`/decks/${deckId}/import-excel`, data); },
-    onSuccess: (result) => { setImportError(null); setImportResult(result); void client.invalidateQueries({ queryKey: ['notes'] }); },
+    mutationFn: ({ deckId, file }: { deckId: string; file: File }) => {
+      const data = new FormData();
+      data.append('file', file);
+      return api.postForm<ExcelImportResult>(`/decks/${deckId}/import-excel`, data);
+    },
+    onSuccess: (result) => {
+      setImportError(null);
+      setImportResult(result);
+      void client.invalidateQueries({ queryKey: ['notes'] });
+    },
     onError: (error) => setImportError(errorMessage(error))
   });
-  const previewExcel = useMutation({ mutationFn: ({ deckId, file }: { deckId: string; file: File }) => { const data = new FormData(); data.append('file', file); return api.postForm<ExcelImportPreview>(`/decks/${deckId}/import-excel/preview`, data); }, onSuccess: (preview) => { setImportError(null); setImportPreview(preview); } });
-  const undoImport = useMutation({ mutationFn: (deckId: string) => api.post<{ undoneNotes: number }>(`/decks/${deckId}/import-excel/undo`, {}), onSuccess: () => { setImportResult(null); setImportPreview(null); void client.invalidateQueries({ queryKey: ['notes'] }); }, onError: (error) => setImportError(errorMessage(error)) });
-  const done = () => { setEditing(undefined); void client.invalidateQueries({ queryKey: ['notes'] }); };
-  return <>
-    <header className="page-header"><div><p className="eyebrow">Nội dung học</p><h1>Thẻ</h1><p className="muted">{notes.data === undefined ? 'Đang tải số lượng…' : `${notes.data.length} thẻ`}</p></div><div className="page-actions">
-      <label className="import-deck"><span className="sr-only">Bộ thẻ đang xem và nhận dữ liệu import</span><select aria-label="Bộ thẻ đang xem và nhận dữ liệu import" disabled={decks.isLoading || !decks.data?.length || importExcel.isPending} value={activeDeckId} onChange={(event) => setSelectedDeckId(event.target.value)}>{decks.data?.map((deck) => <option key={deck.id} value={deck.id}>{deck.name}</option>)}</select></label>
-      <input ref={fileInput} className="sr-only" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file !== undefined && activeDeckId) { setImportFile(file); previewExcel.mutate({ deckId: activeDeckId, file }); } }} />
-      <button type="button" className="secondary" disabled={decks.isLoading || !decks.data?.length || previewExcel.isPending} onClick={() => fileInput.current?.click()}><ButtonContent loading={previewExcel.isPending}>{previewExcel.isPending ? 'Đang đọc tệp…' : 'Chọn Excel'}</ButtonContent></button>
-      {importPreview !== null && importFile !== null && <button type="button" disabled={importExcel.isPending} onClick={() => importExcel.mutate({ deckId: activeDeckId, file: importFile })}>Xác nhận import</button>}
-      <button type="button" className="secondary" disabled={undoImport.isPending || !activeDeckId} onClick={() => undoImport.mutate(activeDeckId)}>Hoàn tác import gần nhất</button>
-      <button disabled={decks.isLoading || !decks.data?.length} onClick={() => setEditing(null)}>Tạo thẻ</button>
-    </div></header>
-    <p className="muted import-help">Hỗ trợ Front | Back | Tags | Type; danh sách từ vựng, từ vựng theo chủ đề, collocation, synonym/paraphrase, word family, mẫu câu và morphology. Mỗi worksheet có thể có nhiều bảng: ứng dụng tự phát hiện header từng bảng và đọc tất cả worksheet trong tệp. Type không bắt buộc (mặc định Basic); STT, trạng thái, ghi chú và dữ liệu tần suất sẽ bị bỏ qua.</p>
-    {importResult !== null && <div className="import-result" role="status"><p>Đã tạo {importResult.importedNotes} thẻ và {importResult.createdCards} thẻ ôn tập.{` Đã nhận diện ${importResult.recognizedBlocks} bảng và duyệt ${importResult.scannedRows} dòng.`}{importResult.skippedRows > 0 ? ` Bỏ qua ${importResult.skippedRows} dòng không hợp lệ.` : ''}</p>{importResult.errors.length > 0 && <ul>{importResult.errors.slice(0, 3).map((error) => <li key={error}>{error}</li>)}</ul>}</div>}
-    {importPreview !== null && <div className="import-result"><p>Xem trước: {importPreview.validRows} dòng hợp lệ, {importPreview.skippedRows} dòng lỗi.</p><ul>{importPreview.rows.slice(0, 5).map((row, index) => <li key={`${row.front}-${index}`}>{row.front} → {row.back}</li>)}</ul></div>}
-    {importError !== null && <p className="form-error" role="alert">{importError}</p>}
-    {!decks.isLoading && decks.data?.length === 0 && <EmptyState title="Bạn cần một bộ thẻ trước" description="Tạo bộ thẻ để bắt đầu thêm thẻ học." action={<Link className="button" to="/decks">Tạo bộ thẻ</Link>} />}
-    {editing !== undefined && <NoteEditor decks={decks.data ?? []} note={editing} done={done} />}
-    {removeError !== null && <p className="form-error" role="alert">{removeError}</p>}
-    {notes.isLoading ? <ListSkeleton /> : notes.isError ? <QueryError title="Không thể tải danh sách thẻ." onRetry={() => void notes.refetch()} /> : notes.data?.length === 0 ? <EmptyState title="Bạn chưa có thẻ nào" description="Thêm thẻ để bắt đầu ôn tập với bộ thẻ của bạn." action={decks.data?.length ? <button onClick={() => setEditing(null)}>Tạo thẻ</button> : undefined} /> : <div className="card-list">{notes.data?.map((note) => { const fields = parseJson<Record<string, string>>(note.fieldsJson, {}); const tags = parseJson<string[]>(note.tagsJson, []); return <article className="card" key={note.id}><div><h2>{fields.front ?? fields.text ?? 'Thẻ'}</h2><p>{fields.back ?? ''}</p><small>{note.noteType}</small>{tags.length > 0 && <div className="tag-list" aria-label="Nhãn">{tags.map((tag) => <span className="tag" key={tag}>{tag}</span>)}</div>}</div><div className="actions"><button className="secondary" onClick={() => setEditing(note)}>Sửa</button><button className="danger" disabled={remove.isPending} onClick={() => { if (confirm('Xóa mềm thẻ này?')) remove.mutate(note.id); }}>Xóa</button></div></article>; })}</div>}
-  </>;
+  const previewExcel = useMutation({
+    mutationFn: ({ deckId, file }: { deckId: string; file: File }) => {
+      const data = new FormData();
+      data.append('file', file);
+      return api.postForm<ExcelImportPreview>(`/decks/${deckId}/import-excel/preview`, data);
+    },
+    onSuccess: (preview) => {
+      setImportError(null);
+      setImportPreview(preview);
+    }
+  });
+  const undoImport = useMutation({
+    mutationFn: (deckId: string) =>
+      api.post<{ undoneNotes: number }>(`/decks/${deckId}/import-excel/undo`, {}),
+    onSuccess: () => {
+      setImportResult(null);
+      setImportPreview(null);
+      void client.invalidateQueries({ queryKey: ['notes'] });
+    },
+    onError: (error) => setImportError(errorMessage(error))
+  });
+  const done = () => {
+    setEditing(undefined);
+    void client.invalidateQueries({ queryKey: ['notes'] });
+  };
+  return (
+    <>
+      <header className="page-header">
+        <div>
+          <p className="eyebrow">Nội dung học</p>
+          <h1>Thẻ</h1>
+          <p className="muted">
+            {notes.data === undefined ? 'Đang tải số lượng…' : `${notes.data.length} thẻ`}
+          </p>
+        </div>
+        <div className="page-actions">
+          <label className="import-deck">
+            <span className="sr-only">Bộ thẻ đang xem</span>
+            <select
+              aria-label="Bộ thẻ đang xem"
+              disabled={decks.isLoading || !decks.data?.length || importExcel.isPending}
+              value={activeDeckId}
+              onChange={(event) => setSelectedDeckId(event.target.value)}
+            >
+              {decks.data?.map((deck) => (
+                <option key={deck.id} value={deck.id}>
+                  {deck.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            disabled={decks.isLoading || !decks.data?.length}
+            onClick={() => setEditing(null)}
+          >
+            Tạo thẻ
+          </button>
+        </div>
+      </header>
+
+      <div className="notes-toolbar">
+        <label className="search-field">
+          <span className="sr-only">Tìm trong thẻ</span>
+          <input
+            type="search"
+            placeholder="Tìm mặt trước, mặt sau hoặc nhãn"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </label>
+        <details className="import-tools">
+          <summary>Nhập từ Excel</summary>
+          <div className="import-tools-body">
+            <input
+              ref={fileInput}
+              className="sr-only"
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (file !== undefined && activeDeckId) {
+                  setImportFile(file);
+                  previewExcel.mutate({ deckId: activeDeckId, file });
+                }
+              }}
+            />
+            <div className="actions">
+              <button
+                type="button"
+                className="secondary"
+                disabled={decks.isLoading || !decks.data?.length || previewExcel.isPending}
+                onClick={() => fileInput.current?.click()}
+              >
+                <ButtonContent loading={previewExcel.isPending}>
+                  {previewExcel.isPending ? 'Đang đọc tệp…' : 'Chọn Excel'}
+                </ButtonContent>
+              </button>
+              {importPreview !== null && importFile !== null && (
+                <button
+                  type="button"
+                  disabled={importExcel.isPending}
+                  onClick={() => importExcel.mutate({ deckId: activeDeckId, file: importFile })}
+                >
+                  Xác nhận import
+                </button>
+              )}
+              <button
+                type="button"
+                className="secondary"
+                disabled={undoImport.isPending || !activeDeckId}
+                onClick={() => undoImport.mutate(activeDeckId)}
+              >
+                Hoàn tác import gần nhất
+              </button>
+            </div>
+            <p className="muted import-help">
+              Hỗ trợ Front, Back, Tags và Type trên mọi worksheet. Ứng dụng tự nhận diện nhiều bảng;
+              các cột STT, trạng thái, ghi chú và tần suất sẽ được bỏ qua.
+            </p>
+          </div>
+        </details>
+      </div>
+
+      {importResult !== null && (
+        <div className="import-result" role="status">
+          <p>
+            Đã tạo {importResult.importedNotes} thẻ và {importResult.createdCards} thẻ ôn tập.
+            {` Đã nhận diện ${importResult.recognizedBlocks} bảng và duyệt ${importResult.scannedRows} dòng.`}
+            {importResult.skippedRows > 0
+              ? ` Bỏ qua ${importResult.skippedRows} dòng không hợp lệ.`
+              : ''}
+          </p>
+          {importResult.errors.length > 0 && (
+            <ul>
+              {importResult.errors.slice(0, 3).map((error) => (
+                <li key={error}>{error}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {importPreview !== null && (
+        <div className="import-result">
+          <p>
+            Xem trước: {importPreview.validRows} dòng hợp lệ, {importPreview.skippedRows} dòng lỗi.
+          </p>
+          <ul>
+            {importPreview.rows.slice(0, 5).map((row, index) => (
+              <li key={`${row.front}-${index}`}>
+                {row.front} → {row.back}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {importError !== null && (
+        <p className="form-error" role="alert">
+          {importError}
+        </p>
+      )}
+      {!decks.isLoading && decks.data?.length === 0 && (
+        <EmptyState
+          title="Bạn cần một bộ thẻ trước"
+          description="Tạo bộ thẻ để bắt đầu thêm thẻ học."
+          action={
+            <Link className="button" to="/decks">
+              Tạo bộ thẻ
+            </Link>
+          }
+        />
+      )}
+      {editing !== undefined && <NoteEditor decks={decks.data ?? []} note={editing} done={done} />}
+      {removeError !== null && (
+        <p className="form-error" role="alert">
+          {removeError}
+        </p>
+      )}
+
+      {notes.isLoading ? (
+        <ListSkeleton />
+      ) : notes.isError ? (
+        <QueryError title="Không thể tải danh sách thẻ." onRetry={() => void notes.refetch()} />
+      ) : notes.data?.length === 0 ? (
+        <EmptyState
+          title="Bạn chưa có thẻ nào"
+          description="Thêm thẻ để bắt đầu ôn tập với bộ thẻ của bạn."
+          action={
+            decks.data?.length ? (
+              <button onClick={() => setEditing(null)}>Tạo thẻ</button>
+            ) : undefined
+          }
+        />
+      ) : filteredNotes.length === 0 ? (
+        <EmptyState
+          title="Không tìm thấy thẻ"
+          description="Thử từ khóa ngắn hơn hoặc kiểm tra lại bộ thẻ đang xem."
+          action={
+            <button className="secondary" onClick={() => setSearch('')}>
+              Xóa tìm kiếm
+            </button>
+          }
+        />
+      ) : (
+        <>
+          <div className="card-list notes-card-list">
+            {visibleNotes.map((note) => {
+              const fields = parseJson<Record<string, string>>(note.fieldsJson, {});
+              const tags = parseJson<string[]>(note.tagsJson, []);
+              return (
+                <article className="card" key={note.id}>
+                  <div>
+                    <h2>{fields.front ?? fields.text ?? 'Thẻ'}</h2>
+                    <p>{fields.back ?? ''}</p>
+                    <small>{note.noteType}</small>
+                    {tags.length > 0 && (
+                      <div className="tag-list" aria-label="Nhãn">
+                        {tags.map((tag) => (
+                          <span className="tag" key={tag}>
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="actions">
+                    <button className="secondary" onClick={() => setEditing(note)}>
+                      Sửa
+                    </button>
+                    <button
+                      className="danger"
+                      disabled={remove.isPending}
+                      onClick={() => {
+                        if (confirm('Xóa mềm thẻ này?')) remove.mutate(note.id);
+                      }}
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          <nav className="notes-pagination" aria-label="Phân trang thẻ">
+            <button
+              className="secondary"
+              disabled={currentPage === 1}
+              onClick={() => setPage((value) => Math.max(1, value - 1))}
+            >
+              Trang trước
+            </button>
+            <span>
+              Trang {currentPage}/{pageCount} · {filteredNotes.length} kết quả
+            </span>
+            <button
+              className="secondary"
+              disabled={currentPage === pageCount}
+              onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
+            >
+              Trang sau
+            </button>
+          </nav>
+        </>
+      )}
+    </>
+  );
 }

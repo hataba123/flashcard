@@ -188,6 +188,8 @@
 .study-plan-placeholder {
   position: sticky;
   top: calc(5rem + var(--space-md));
+  display: block;
+  height: auto;
 }
 .study-empty-state,
 .study-query-error {

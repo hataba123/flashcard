@@ -355,3 +355,11 @@
 - Đã thực hiện: tổng hợp theo nhãn và bộ thẻ với tỷ lệ Again 7/30 ngày, thời gian trả lời trung vị, số thẻ leech, độ ổn định ghi nhớ, xu hướng xấu đi và tỷ trọng thẻ mới; dashboard sắp xếp các vấn đề theo mức tác động và đưa ra khuyến nghị có số liệu cụ thể.
 - Quyết định quan trọng: chỉ đánh dấu tỷ lệ Again cao khi nhóm có ít nhất 10 lượt ôn trong 30 ngày; chỉ đánh dấu xu hướng xấu đi khi cả hai cửa sổ 7 ngày có ít nhất 5 lượt và mức Again tăng ít nhất 10 điểm phần trăm. Lượt review đã undo không được tính vào phân tích.
 - Kiểm tra: unit test cho thuật toán xếp hạng/khuyến nghị và component chuyển nhóm; integration test endpoint trên SQL Server thật; chạy đủ lint, typecheck, test và build.
+
+## Milestone 25 — Tối giản giao diện theo nhịp học
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: thu gọn topbar và giữ menu tài khoản trên mobile; sửa selector CSS cũ làm khối kế hoạch học bị kéo cao; giới hạn dashboard còn 3 điểm yếu cần xử lý trước; đưa tùy chỉnh phiên ôn tập và công cụ nhập Excel vào vùng thu gọn; thêm tìm kiếm và phân trang 12 thẻ mỗi trang.
+- Quyết định quan trọng: giữ nguyên Hum/Workbench và Study Stage, route, API, dữ liệu, FSRS, import Excel và offline-sync; không thêm framework, dependency hoặc thay đổi nghiệp vụ.
+- Kiểm tra trực quan: toàn bộ route chính ở desktop và các viewport 320/375/414/768px không tràn ngang; phiên chạy sạch không có lỗi console mới.
+- Kiểm tra kỹ thuật: `pnpm audit --audit-level high`, `pnpm lint`, `pnpm typecheck`, `pnpm test` (83 test), `pnpm build`, Playwright E2E (5/5), Prettier cho toàn bộ tệp thay đổi và `git diff --check` đều đạt.
