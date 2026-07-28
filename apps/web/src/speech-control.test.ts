@@ -57,7 +57,7 @@ describe('getCardSpeechText', () => {
     );
   });
 
-  it('reads only pronunciation letters without labels or pronunciation marks', () => {
+  it('keeps internal pronunciation marks but removes labels and wrapping slashes', () => {
     expect(
       getCardSpeechText(
         {
@@ -66,10 +66,16 @@ describe('getCardSpeechText', () => {
         },
         true
       )
-    ).toBe('rizjum');
+    ).toBe("ri'zju:m");
     expect(getCardSpeechText({ front: 'resume', phonetic: "/ri'zju:m/" }, true)).toBe(
-      'rizjum'
+      "ri'zju:m"
     );
+    expect(
+      getCardSpeechText({ front: 'resume', back: "Phiên âm: (/ri'zju:m/)." }, true)
+    ).toBe("ri'zju:m");
+  });
+
+  it('removes punctuation from regular card content', () => {
     expect(getCardSpeechText({ front: 'hello, world!', back: '' }, false)).toBe('hello world');
   });
 });

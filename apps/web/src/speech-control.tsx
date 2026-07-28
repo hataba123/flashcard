@@ -59,7 +59,7 @@ const vietnameseWords = new Set([
 const vietnameseCharacterPattern =
   /[\u00e0-\u00e3\u00e8-\u00ea\u00ec\u00ed\u00f2-\u00f5\u00f9\u00fa\u00fd\u0103\u0111\u0129\u0169\u01a1\u01b0\u1ea0-\u1ef9]/iu;
 const wordPattern = /[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu;
-const pronunciationLabelPattern = /(?:phiên\s*âm|phien\s*am)\s*:\s*\/?([^/\r\n]+)\/?/iu;
+const pronunciationLabelPattern = /(?:phiên\s*âm|phien\s*am)\s*:\s*([^\r\n]+)/iu;
 const pronunciationFieldKeys = new Set(['phonetic', 'phonetics', 'pronunciation', 'ipa']);
 
 function isVietnameseWord(word: string): boolean {
@@ -95,7 +95,14 @@ function removeSpeechMarks(text: string): string {
 }
 
 function cleanPronunciation(text: string): string {
-  return text.trim().replace(/^\/+|\/+$/g, '').trim();
+  const trimmedText = text.trim();
+  const firstSlash = trimmedText.indexOf('/');
+  const lastSlash = trimmedText.lastIndexOf('/');
+  const pronunciation =
+    firstSlash >= 0 && lastSlash > firstSlash
+      ? trimmedText.slice(firstSlash + 1, lastSlash)
+      : trimmedText;
+  return pronunciation.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').trim();
 }
 
 function getPronunciation(fields: Record<string, string>): string {
@@ -136,7 +143,7 @@ export function getCardSpeechText(fields: Record<string, string>, revealed: bool
   if (!revealed) return removeSpeechMarks(getEnglishSpeechText(fields.front ?? fields.text ?? ''));
 
   const pronunciation = getPronunciation(fields);
-  if (pronunciation.length > 0) return removeSpeechMarks(pronunciation);
+  if (pronunciation.length > 0) return pronunciation;
 
   const frontKeys = new Set(['front', 'text', 'audioMediaId']);
   const answerText = [

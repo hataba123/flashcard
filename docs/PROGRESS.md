@@ -1,9 +1,15 @@
 # Tiến độ triển khai
 
+## Milestone 35 — Giữ ký hiệu nhấn trong phiên âm
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: giữ dấu nhấn và độ dài âm nằm bên trong phiên âm, đồng thời tiếp tục bỏ nhãn, cặp dấu gạch chéo bao ngoài và dấu câu của nội dung thông thường; `/ri'zju:m/` được gửi tới Web Speech API dưới dạng `ri'zju:m`.
+- Kiểm tra: bổ sung test tách biệt ký hiệu phiên âm với dấu câu văn bản thông thường; `pnpm lint`, `pnpm typecheck`, `pnpm test` và `pnpm build` đều đạt.
+
 ## Milestone 34 — Không đọc dấu và ký hiệu
 
 - Trạng thái: Hoàn thành.
-- Đã thực hiện: loại toàn bộ dấu câu, ký hiệu và dấu nhấn/độ dài phiên âm khỏi chuỗi trước khi gửi cho Web Speech API; `/ri'zju:m/` được chuyển thành `rizjum`.
+- Đã thực hiện: loại dấu câu và ký hiệu khỏi nội dung văn bản thông thường trước khi gửi cho Web Speech API.
 - Kiểm tra: bổ sung test cho dấu câu thông thường và ký hiệu phiên âm; `pnpm lint`, `pnpm typecheck`, `pnpm test` và `pnpm build` đều đạt.
 
 ## Milestone 33 — Chỉ đọc nội dung phiên âm
