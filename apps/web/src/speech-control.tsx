@@ -5,7 +5,6 @@ const STORAGE_KEY = 'flashcard:speech-settings';
 const languageOptions = [
   { value: 'en-US', label: 'Tiếng Anh (Mỹ)' },
   { value: 'en-GB', label: 'Tiếng Anh (Anh)' },
-  { value: 'vi-VN', label: 'Tiếng Việt' },
   { value: 'fr-FR', label: 'Tiếng Pháp' },
   { value: 'de-DE', label: 'Tiếng Đức' },
   { value: 'es-ES', label: 'Tiếng Tây Ban Nha' },
@@ -28,7 +27,34 @@ const defaultSettings: SpeechSettings = {
   rate: 1
 };
 
-const vietnameseWords = new Set(['xin']);
+const vietnameseWords = new Set([
+  'anh',
+  'ban',
+  'chao',
+  'chung',
+  'cua',
+  'dat',
+  'dang',
+  'day',
+  'dich',
+  'du',
+  'duoc',
+  'giai',
+  'hoc',
+  'khong',
+  'la',
+  'loai',
+  'muc',
+  'nghia',
+  'ngu',
+  'nhung',
+  'phien',
+  'tieng',
+  'toi',
+  'tranh',
+  'vi',
+  'xin'
+]);
 
 const vietnameseCharacterPattern =
   /[\u00e0-\u00e3\u00e8-\u00ea\u00ec\u00ed\u00f2-\u00f5\u00f9\u00fa\u00fd\u0103\u0111\u0129\u0169\u01a1\u01b0\u1ea0-\u1ef9]/iu;
@@ -45,8 +71,13 @@ function isVietnameseWord(word: string): boolean {
 }
 
 function getEnglishSpeechText(text: string): string {
+  const words = text.match(wordPattern) ?? [];
+  const vietnameseWordCount = words.filter(isVietnameseWord).length;
   return text
-    .replace(wordPattern, (word) => (isVietnameseWord(word) ? '' : word))
+    .replace(wordPattern, (word) => {
+      if (vietnameseCharacterPattern.test(word)) return '';
+      return vietnameseWordCount >= 2 && isVietnameseWord(word) ? '' : word;
+    })
     .replace(/\s+/g, ' ')
     .replace(/\s+([,.;:!?])/g, '$1')
     .replace(/^[,.;:!?\-+]+\s*/, '')
@@ -61,7 +92,9 @@ function loadSettings(): SpeechSettings {
     const parsed = JSON.parse(saved) as Partial<SpeechSettings>;
     return {
       autoRead: typeof parsed.autoRead === 'boolean' ? parsed.autoRead : defaultSettings.autoRead,
-      language: typeof parsed.language === 'string' ? parsed.language : defaultSettings.language,
+      language: languageOptions.some((option) => option.value === parsed.language)
+        ? parsed.language ?? defaultSettings.language
+        : defaultSettings.language,
       voiceUri: typeof parsed.voiceUri === 'string' ? parsed.voiceUri : defaultSettings.voiceUri,
       rate:
         typeof parsed.rate === 'number' && parsed.rate >= 0.5 && parsed.rate <= 2

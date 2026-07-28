@@ -33,12 +33,28 @@ describe('getCardSpeechText', () => {
 
   it('skips Vietnamese text on either face of the card', () => {
     expect(getCardSpeechText({ front: 'Xin chào', back: 'Hello' }, false)).toBe('');
+    expect(getCardSpeechText({ front: 'Toi dang hoc tieng Anh', back: 'Hello' }, false)).toBe('');
     expect(
       getCardSpeechText(
         { front: 'achieve', back: 'Nghĩa: đạt được\n\nVí dụ: achieve a goal' },
         true
       )
     ).toBe('achieve a goal');
+    expect(
+      getCardSpeechText(
+        { front: 'achieve', back: 'Nghia: dat duoc\n\nVi du: achieve a goal' },
+        true
+      )
+    ).toBe('achieve a goal');
+  });
+
+  it('keeps English words that are also valid unaccented Vietnamese words', () => {
+    expect(getCardSpeechText({ front: 'A productive day', back: '' }, false)).toBe(
+      'A productive day'
+    );
+    expect(getCardSpeechText({ front: 'They ban unsafe products', back: '' }, false)).toBe(
+      'They ban unsafe products'
+    );
   });
 });
 

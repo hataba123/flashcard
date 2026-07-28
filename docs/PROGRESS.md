@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 32 — Loại bỏ tiếng Việt khỏi nội dung phát âm
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: mở rộng bộ lọc cho nội dung tiếng Việt không dấu thường gặp; loại tùy chọn giọng Việt và tự đưa cấu hình `vi-VN` cũ về giọng Anh mặc định.
+- Kiểm tra: bổ sung test hồi quy cho tiếng Việt có dấu, không dấu, nội dung trộn Việt–Anh và từ tiếng Anh trùng từ Việt không dấu; `pnpm lint`, `pnpm typecheck`, `pnpm test` và `pnpm build` đều đạt.
+
 ## Cập nhật tài liệu — Import Excel và đọc tiếng Anh
 
 - Trạng thái: Hoàn thành.
