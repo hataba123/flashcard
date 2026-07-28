@@ -87,6 +87,13 @@ function getEnglishSpeechText(text: string): string {
     .trim();
 }
 
+function removeSpeechMarks(text: string): string {
+  return text
+    .replace(/[\p{P}\p{S}\u02c8\u02cc\u02d0\u02d1]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function cleanPronunciation(text: string): string {
   return text.trim().replace(/^\/+|\/+$/g, '').trim();
 }
@@ -126,13 +133,13 @@ function loadSettings(): SpeechSettings {
 }
 
 export function getCardSpeechText(fields: Record<string, string>, revealed: boolean): string {
-  if (!revealed) return getEnglishSpeechText(fields.front ?? fields.text ?? '');
+  if (!revealed) return removeSpeechMarks(getEnglishSpeechText(fields.front ?? fields.text ?? ''));
 
   const pronunciation = getPronunciation(fields);
-  if (pronunciation.length > 0) return pronunciation;
+  if (pronunciation.length > 0) return removeSpeechMarks(pronunciation);
 
   const frontKeys = new Set(['front', 'text', 'audioMediaId']);
-  return [
+  const answerText = [
     ...new Set(
       Object.entries(fields)
         .filter(([key, value]) => !frontKeys.has(key) && value.trim().length > 0)
@@ -142,6 +149,7 @@ export function getCardSpeechText(fields: Record<string, string>, revealed: bool
     .map(getEnglishSpeechText)
     .filter((value) => value.length > 0)
     .join('. ');
+  return removeSpeechMarks(answerText);
 }
 
 interface SpeechControlProps {

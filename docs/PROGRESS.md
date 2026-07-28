@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 34 — Không đọc dấu và ký hiệu
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: loại toàn bộ dấu câu, ký hiệu và dấu nhấn/độ dài phiên âm khỏi chuỗi trước khi gửi cho Web Speech API; `/ri'zju:m/` được chuyển thành `rizjum`.
+- Kiểm tra: bổ sung test cho dấu câu thông thường và ký hiệu phiên âm; `pnpm lint`, `pnpm typecheck`, `pnpm test` và `pnpm build` đều đạt.
+
 ## Milestone 33 — Chỉ đọc nội dung phiên âm
 
 - Trạng thái: Hoàn thành.

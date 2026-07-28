@@ -28,7 +28,7 @@ describe('getCardSpeechText', () => {
         },
         true
       )
-    ).toBe('Hello, how are you?');
+    ).toBe('Hello how are you');
   });
 
   it('skips Vietnamese text on either face of the card', () => {
@@ -57,7 +57,7 @@ describe('getCardSpeechText', () => {
     );
   });
 
-  it('reads only the pronunciation without its label or wrapping slashes', () => {
+  it('reads only pronunciation letters without labels or pronunciation marks', () => {
     expect(
       getCardSpeechText(
         {
@@ -66,10 +66,11 @@ describe('getCardSpeechText', () => {
         },
         true
       )
-    ).toBe("ri'zju:m");
+    ).toBe('rizjum');
     expect(getCardSpeechText({ front: 'resume', phonetic: "/ri'zju:m/" }, true)).toBe(
-      "ri'zju:m"
+      'rizjum'
     );
+    expect(getCardSpeechText({ front: 'hello, world!', back: '' }, false)).toBe('hello world');
   });
 });
 
