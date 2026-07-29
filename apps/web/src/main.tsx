@@ -1080,8 +1080,12 @@ function Review() {
         )}
       </Shell>
     );
+  const currentNote = note.data?.id === card.noteId ? note.data : undefined;
+  const hasCurrentNote = currentNote !== undefined;
   const fields =
-    note.data === undefined ? {} : parseJson<Record<string, string>>(note.data.fieldsJson, {});
+    currentNote === undefined
+      ? {}
+      : parseJson<Record<string, string>>(currentNote.fieldsJson, {});
   const front = fields.front ?? fields.text ?? 'Đang tải nội dung…';
   const back = fields.back ?? '';
   const revealed = revealedAt !== null;
@@ -1232,7 +1236,7 @@ function Review() {
           className="review-study"
           data-font-size={fontSize}
           data-card-width={cardWidth}
-          aria-busy={note.isLoading || grade.isPending}
+          aria-busy={!hasCurrentNote || grade.isPending}
         >
           {isPaused ? (
             <div className="review-paused" role="status">
@@ -1247,7 +1251,7 @@ function Review() {
             </div>
           ) : (
             <>
-              {note.isLoading ? (
+              {!hasCurrentNote ? (
                 <div className="review-stage">
                   <div className="review-card review-card-loading">
                     <span

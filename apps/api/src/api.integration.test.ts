@@ -176,6 +176,60 @@ describe('API integration', () => {
       });
   });
 
+  it('restores the original note once when an import contains duplicate rows', async () => {
+    const auth = await register(
+      `${suffix}-excel-duplicate@integration.local`,
+      'IntegrationPassword123!'
+    );
+    const deck = await request(app.getHttpServer())
+      .post('/api/decks')
+      .set('Authorization', `Bearer ${auth.accessToken}`)
+      .send({ name: `Duplicate Excel deck ${suffix}` })
+      .expect(201);
+    const note = await request(app.getHttpServer())
+      .post('/api/notes')
+      .set('Authorization', `Bearer ${auth.accessToken}`)
+      .send({
+        deckId: deck.body.id,
+        noteType: 'Basic',
+        fields: { front: 'Question', back: 'Answer' },
+        tags: ['original']
+      })
+      .expect(201);
+    const workbook = new ExcelJS.Workbook();
+    workbook.addWorksheet('Cards').addRows([
+      ['Front', 'Back', 'Tags'],
+      ['Question', 'Answer', 'first import value'],
+      ['Question', 'Answer', 'second import value']
+    ]);
+    const file = Buffer.from(await workbook.xlsx.writeBuffer());
+
+    await request(app.getHttpServer())
+      .post(`/api/decks/${deck.body.id}/import-excel`)
+      .set('Authorization', `Bearer ${auth.accessToken}`)
+      .attach('file', file, 'duplicate-cards.xlsx')
+      .expect(201)
+      .expect(({ body }) => {
+        expect(body.createdCards).toBe(0);
+      });
+
+    await request(app.getHttpServer())
+      .post(`/api/decks/${deck.body.id}/import-excel/undo`)
+      .set('Authorization', `Bearer ${auth.accessToken}`)
+      .expect(201)
+      .expect(({ body }) => {
+        expect(body.undoneNotes).toBe(1);
+      });
+
+    await request(app.getHttpServer())
+      .get(`/api/notes/${note.body.id}`)
+      .set('Authorization', `Bearer ${auth.accessToken}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(JSON.parse(body.tagsJson)).toEqual(['original']);
+      });
+  });
+
   it('imports a large Excel batch within SQL Server parameter limits', async () => {
     const auth = await register(
       `${suffix}-large-excel@integration.local`,

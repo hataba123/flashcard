@@ -66,6 +66,10 @@ test('navigates to a destination from the mobile topbar', async ({ page }) => {
 
 test('shows review actions on a compact mobile viewport', async ({ page }) => {
   let submittedRating: string | undefined;
+  let releaseSecondNote: (() => void) | undefined;
+  const secondNoteReady = new Promise<void>((resolve) => {
+    releaseSecondNote = resolve;
+  });
   await page.setViewportSize({ width: 375, height: 812 });
   await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401 }));
   await page.route('**/api/auth/login', (route) =>
@@ -87,6 +91,21 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
           {
             id: '00000000-0000-4000-8000-000000000001',
             noteId: '00000000-0000-4000-8000-000000000002',
+            version: 1,
+            state: 'New',
+            dueAtUtc: '2026-07-23T00:00:00.000Z',
+            lastReviewAtUtc: null,
+            stability: 0,
+            difficulty: 0,
+            elapsedDays: 0,
+            scheduledDays: 0,
+            learningStep: 0,
+            reviewCount: 0,
+            lapseCount: 0
+          },
+          {
+            id: '00000000-0000-4000-8000-000000000005',
+            noteId: '00000000-0000-4000-8000-000000000006',
             version: 1,
             state: 'New',
             dueAtUtc: '2026-07-23T00:00:00.000Z',
@@ -139,6 +158,18 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
       }
     })
   );
+  await page.route('**/api/notes/00000000-0000-4000-8000-000000000006', async (route) => {
+    await secondNoteReady;
+    await route.fulfill({
+      json: {
+        id: '00000000-0000-4000-8000-000000000006',
+        deckId: '00000000-0000-4000-8000-000000000003',
+        noteType: 'Basic',
+        fieldsJson: '{"front":"Câu hỏi tiếp theo","back":"Đáp án tiếp theo"}',
+        tagsJson: '[]'
+      }
+    });
+  });
   await page.route('**/api/cards/00000000-0000-4000-8000-000000000001/review-preview', (route) =>
     route.fulfill({
       json: [
@@ -172,7 +203,7 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Phiên ôn tập', exact: true })).toBeVisible();
   await expect(page.getByText('Phiên học 20 phút')).toBeVisible();
   await expect(page.getByText('Còn khoảng 20 phút')).toBeVisible();
-  await expect(page.getByText('Đã hoàn thành 0/1 lượt dự kiến')).toBeVisible();
+  await expect(page.getByText('Đã hoàn thành 0/2 lượt dự kiến')).toBeVisible();
   await expect(page.getByLabel('Phím tắt trong phiên học')).toContainText('Space');
   await page.locator('.review-options > summary').click();
   await page.getByLabel('Cỡ chữ').selectOption('large');
@@ -198,8 +229,11 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
   await expect(page.locator('.grade-actions button')).toHaveCount(4);
   await expect(page.getByText('Câu trả lời', { exact: true })).toBeVisible();
   await expect(page.locator('.grade-actions button').first()).toBeEnabled();
-  await page.keyboard.press('1');
-  await expect.poll(() => submittedRating).toBe('Again');
+  await page.keyboard.press('2');
+  await expect.poll(() => submittedRating).toBe('Hard');
+  await expect(page.locator('.review-card-front .review-face')).toHaveCount(0);
+  releaseSecondNote?.();
+  await expect(page.locator('.review-card-front .review-face')).toHaveText('Câu hỏi tiếp theo');
   for (const width of [320, 375, 414, 768]) {
     await page.setViewportSize({ width, height: width === 768 ? 1024 : 900 });
     expect(

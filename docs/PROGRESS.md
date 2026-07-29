@@ -451,3 +451,9 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: thêm migration đặt `NEWSEQUENTIALID()` mặc định cho khóa chính `review_logs.id`, tránh SQL Server chèn `NULL` khi ghi một lượt ôn tập.
 - Kiểm tra: integration test gửi mức `Hard` qua API và SQL Server đạt; typecheck API đạt. Toàn bộ test API còn một lỗi timeout không liên quan ở ca import Excel 500 dòng.
+
+## Milestone 42 — Ngăn nội dung thẻ cũ chớp khi chuyển thẻ
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: chỉ render nội dung note khi `note.id` khớp với `noteId` của thẻ hiện tại; trong lúc note kế tiếp đang tải, giao diện hiển thị skeleton thay vì tái sử dụng front của thẻ trước.
+- Kiểm tra: typecheck web, Vitest web (23/23) và Playwright E2E mô phỏng note kế tiếp tải chậm sau khi chấm `Hard` đều đạt.

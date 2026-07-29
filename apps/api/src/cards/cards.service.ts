@@ -258,13 +258,17 @@ export class CardsService {
       const existingByContent = new Map(candidates.map((note) => [this.cardContentKey(note), note]));
       const notesToCreate: NoteEntity[] = [];
       const cardsToCreate: CardEntity[] = [];
+      const createdNoteIds = new Set<string>();
+      const updatedNotes = new Map<string, NoteEntity>();
       for (const row of rows) {
         const duplicate = existingByContent.get(this.cardContentKeyFromValues(row.front, row.back));
         if (duplicate !== undefined) {
-          batchItems.push({ action: 'updated', note: { id: duplicate.id, noteType: duplicate.noteType, fieldsJson: duplicate.fieldsJson, tagsJson: duplicate.tagsJson, normalizedHash: duplicate.normalizedHash, version: duplicate.version } });
+          if (!createdNoteIds.has(duplicate.id) && !updatedNotes.has(duplicate.id)) {
+            batchItems.push({ action: 'updated', note: { id: duplicate.id, noteType: duplicate.noteType, fieldsJson: duplicate.fieldsJson, tagsJson: duplicate.tagsJson, normalizedHash: duplicate.normalizedHash, version: duplicate.version } });
+            duplicate.version += 1;
+            updatedNotes.set(duplicate.id, duplicate);
+          }
           Object.assign(duplicate, this.noteValues(userId, { deckId, noteType: row.noteType, fields: row.noteType === 'Cloze' ? { text: row.front, back: row.back } : { front: row.front, back: row.back }, tags: row.tags }));
-          duplicate.version += 1;
-          await notes.save(duplicate);
           existingByContent.set(this.cardContentKey(duplicate), duplicate);
           continue;
         }
@@ -281,6 +285,7 @@ export class CardsService {
             })
           });
         notesToCreate.push(note);
+        createdNoteIds.add(note.id);
         existingByContent.set(this.cardContentKey(note), note);
         batchItems.push({ action: 'created', noteId: note.id });
         const ordinals = row.noteType === 'BasicAndReverse' ? [0, 1] : [0];
@@ -303,6 +308,7 @@ export class CardsService {
       // SQL Server accepts at most 2,100 parameters per statement. Cards have many columns,
       // so a 500-record batch can exceed that limit when importing a large workbook.
       await notes.save(notesToCreate, { chunk: 100 });
+      await notes.save([...updatedNotes.values()], { chunk: 100 });
       await cards.save(cardsToCreate, { chunk: 100 });
       // A single deck event avoids producing tens of thousands of events for a bulk import.
       const deck = await manager.getRepository(DeckEntity).findOneByOrFail({ id: deckId, userId });
