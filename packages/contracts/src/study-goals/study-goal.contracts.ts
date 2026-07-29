@@ -4,11 +4,24 @@ export const studyGoalTypeSchema = z.enum(['IELTS', 'TOEIC', 'Exam', 'Interview'
 export const studyGoalStatusSchema = z.enum(['Active', 'Paused', 'Completed', 'Archived']);
 export const forecastConfidenceSchema = z.enum(['Low', 'Medium', 'High']);
 export const goalFeasibilitySchema = z.enum(['OnTrack', 'AtRisk', 'Unrealistic', 'Completed']);
+export const studyDateSchema = z.iso.date();
+export const dailyAvailabilityInputSchema = z.object({
+  date: studyDateSchema,
+  availableMinutes: z.number().int().min(1).max(720)
+});
 
 export type StudyGoalType = z.infer<typeof studyGoalTypeSchema>;
 export type StudyGoalStatus = z.infer<typeof studyGoalStatusSchema>;
 export type ForecastConfidence = z.infer<typeof forecastConfidenceSchema>;
 export type GoalFeasibility = z.infer<typeof goalFeasibilitySchema>;
+export type DailyAvailabilityInput = z.infer<typeof dailyAvailabilityInputSchema>;
+
+export interface StudyGoalDailyAvailabilityModel {
+  date: string;
+  availableMinutes: number | null;
+  defaultDailyMinutes: number;
+  effectiveMinutes: number;
+}
 
 export interface StudyGoalDeckModel {
   deckId: string;

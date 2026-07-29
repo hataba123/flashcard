@@ -236,6 +236,60 @@ describe('API integration', () => {
       })
       .expect(201);
 
+    const studyDate = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Bangkok',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(new Date());
+    await request(app.getHttpServer())
+      .put(`/api/study-goals/${goal.body.id}/daily-availability`)
+      .set('Authorization', `Bearer ${first.accessToken}`)
+      .send({ date: studyDate, availableMinutes: 20 })
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({
+          date: studyDate,
+          availableMinutes: 20,
+          defaultDailyMinutes: 45,
+          effectiveMinutes: 20
+        });
+      });
+    await request(app.getHttpServer())
+      .get(`/api/study-goals/${goal.body.id}/daily-availability?date=${studyDate}`)
+      .set('Authorization', `Bearer ${first.accessToken}`)
+      .expect(200)
+      .expect(({ body }) => expect(body.availableMinutes).toBe(20));
+    const nextDate = new Date(`${studyDate}T00:00:00.000Z`);
+    nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+    await request(app.getHttpServer())
+      .get(
+        `/api/study-goals/${goal.body.id}/daily-availability?date=${nextDate.toISOString().slice(0, 10)}`
+      )
+      .set('Authorization', `Bearer ${first.accessToken}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.availableMinutes).toBeNull();
+        expect(body.effectiveMinutes).toBe(45);
+      });
+    for (const availableMinutes of [0, -1, 721]) {
+      await request(app.getHttpServer())
+        .put(`/api/study-goals/${goal.body.id}/daily-availability`)
+        .set('Authorization', `Bearer ${first.accessToken}`)
+        .send({ date: studyDate, availableMinutes })
+        .expect(400);
+    }
+    await request(app.getHttpServer())
+      .put(`/api/study-goals/${goal.body.id}/daily-availability`)
+      .set('Authorization', `Bearer ${second.accessToken}`)
+      .send({ date: studyDate, availableMinutes: 30 })
+      .expect(404);
+    await request(app.getHttpServer())
+      .get(`/api/study-goals/${goal.body.id}`)
+      .set('Authorization', `Bearer ${first.accessToken}`)
+      .expect(200)
+      .expect(({ body }) => expect(body.dailyStudyMinutes).toBe(45));
+
     await request(app.getHttpServer())
       .post(`/api/study-goals/${goal.body.id}/decks`)
       .set('Authorization', `Bearer ${first.accessToken}`)

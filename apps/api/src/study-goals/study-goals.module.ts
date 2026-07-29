@@ -7,6 +7,7 @@ import { CardEntity } from '../cards/entities/card.entity.js';
 import { ReviewLogEntity } from '../reviews/entities/review-log.entity.js';
 import { SyncModule } from '../sync/sync.module.js';
 import { ForecastSnapshotEntity } from './entities/forecast-snapshot.entity.js';
+import { StudyGoalDailyAvailabilityEntity } from './entities/study-goal-daily-availability.entity.js';
 import { StudyGoalDeckEntity } from './entities/study-goal-deck.entity.js';
 import { StudyGoalEntity } from './entities/study-goal.entity.js';
 import { StudyGoalsController } from './study-goals.controller.js';
@@ -21,6 +22,7 @@ import { StudyGoalForecastService } from './forecast/study-goal-forecast.service
       StudyGoalEntity,
       StudyGoalDeckEntity,
       ForecastSnapshotEntity,
+      StudyGoalDailyAvailabilityEntity,
       DeckEntity,
       CardEntity,
       ReviewLogEntity

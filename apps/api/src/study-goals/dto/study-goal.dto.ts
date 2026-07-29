@@ -12,10 +12,21 @@ import {
   IsString,
   IsUUID,
   Length,
+  Matches,
   Max,
   Min,
   ValidateNested
 } from 'class-validator';
+
+const studyDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+export class DailyAvailabilityDateQueryDto {
+  @Matches(studyDatePattern) @IsDateString({ strict: true }) date!: string;
+}
+
+export class UpsertDailyAvailabilityDto extends DailyAvailabilityDateQueryDto {
+  @IsInt() @Min(1) @Max(720) availableMinutes!: number;
+}
 
 export class StudyGoalDeckDto {
   @IsUUID() deckId!: string;

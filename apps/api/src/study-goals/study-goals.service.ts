@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import type {
   ForecastSnapshotModel,
+  StudyGoalDailyAvailabilityModel,
   StudyGoalModel,
   StudyGoalStatus,
   StudyGoalType
@@ -15,9 +16,11 @@ import {
   AttachStudyGoalDeckDto,
   CreateStudyGoalDto,
   StudyGoalDeckDto,
-  UpdateStudyGoalDto
+  UpdateStudyGoalDto,
+  UpsertDailyAvailabilityDto
 } from './dto/study-goal.dto.js';
 import { ForecastSnapshotEntity } from './entities/forecast-snapshot.entity.js';
+import { StudyGoalDailyAvailabilityEntity } from './entities/study-goal-daily-availability.entity.js';
 import { StudyGoalDeckEntity } from './entities/study-goal-deck.entity.js';
 import { StudyGoalEntity } from './entities/study-goal.entity.js';
 
@@ -34,6 +37,8 @@ export class StudyGoalsService {
     @InjectRepository(StudyGoalEntity) private readonly goals: Repository<StudyGoalEntity>,
     @InjectRepository(ForecastSnapshotEntity)
     private readonly snapshots: Repository<ForecastSnapshotEntity>,
+    @InjectRepository(StudyGoalDailyAvailabilityEntity)
+    private readonly dailyAvailability: Repository<StudyGoalDailyAvailabilityEntity>,
     private readonly sync: SyncService
   ) {}
 
@@ -174,6 +179,77 @@ export class StudyGoalsService {
 
   async requireOwnedGoal(userId: string, id: string): Promise<StudyGoalEntity> {
     return this.requireGoal(this.goals, userId, id);
+  }
+
+  async upsertDailyAvailability(
+    userId: string,
+    goalId: string,
+    input: UpsertDailyAvailabilityDto
+  ): Promise<StudyGoalDailyAvailabilityModel> {
+    const goal = await this.requireGoal(this.goals, userId, goalId);
+    this.requireCurrentStudyDate(input.date, goal.timeZone);
+    await this.dailyAvailability.manager.transaction('SERIALIZABLE', async (manager) => {
+      const repository = manager.getRepository(StudyGoalDailyAvailabilityEntity);
+      const existing = await repository.findOneBy({
+        userId,
+        studyGoalId: goalId,
+        studyDate: input.date
+      });
+      await repository.save(
+        existing === null
+          ? repository.create({
+              id: randomUUID(),
+              userId,
+              studyGoalId: goalId,
+              studyDate: input.date,
+              availableMinutes: input.availableMinutes
+            })
+          : repository.merge(existing, { availableMinutes: input.availableMinutes })
+      );
+    });
+    return {
+      date: input.date,
+      availableMinutes: input.availableMinutes,
+      defaultDailyMinutes: goal.dailyStudyMinutes,
+      effectiveMinutes: input.availableMinutes
+    };
+  }
+
+  async getDailyAvailability(
+    userId: string,
+    goalId: string,
+    studyDate: string
+  ): Promise<StudyGoalDailyAvailabilityModel> {
+    const goal = await this.requireGoal(this.goals, userId, goalId);
+    const availability = await this.dailyAvailability.findOneBy({
+      userId,
+      studyGoalId: goalId,
+      studyDate
+    });
+    return {
+      date: studyDate,
+      availableMinutes: availability?.availableMinutes ?? null,
+      defaultDailyMinutes: goal.dailyStudyMinutes,
+      effectiveMinutes: availability?.availableMinutes ?? goal.dailyStudyMinutes
+    };
+  }
+
+  async deleteDailyAvailability(userId: string, goalId: string, studyDate: string): Promise<void> {
+    const goal = await this.requireGoal(this.goals, userId, goalId);
+    this.requireCurrentStudyDate(studyDate, goal.timeZone);
+    await this.dailyAvailability.delete({ userId, studyGoalId: goalId, studyDate });
+  }
+
+  private requireCurrentStudyDate(studyDate: string, timeZone: string): void {
+    const currentDate = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(new Date());
+    if (studyDate !== currentDate) {
+      throw new BadRequestException('Daily availability can only be changed for today.');
+    }
   }
 
   private validateSettings(targetDate: string, timeZone: string): void {
