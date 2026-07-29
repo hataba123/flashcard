@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { StudyGoalDailyAvailabilityModel, TimeBoxedDailyPlan } from '@flashcard/contracts';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { z } from 'zod';
 
 import { ApiError, api } from './api.js';
@@ -88,6 +89,20 @@ const goalSchema = z.object({
   maxNewCardsPerDay: z.coerce.number().int().min(0).max(1000),
   timeZone: z.string().min(1, 'Hãy nhập múi giờ.')
 });
+
+export const dailyAvailabilityMinutesSchema = z
+  .string()
+  .trim()
+  .min(1, 'Hãy nhập số phút bạn có thể học hôm nay.')
+  .regex(/^\d+$/, 'Thời gian phải là số nguyên, không chứa dấu hoặc ký tự khác.')
+  .transform(Number)
+  .pipe(
+    z
+      .number()
+      .int()
+      .min(1, 'Thời gian tối thiểu là 1 phút.')
+      .max(720, 'Thời gian tối đa là 720 phút.')
+  );
 
 type GoalForm = z.infer<typeof goalSchema>;
 
@@ -229,6 +244,274 @@ export function StudyPlanPage() {
 }
 
 function ForecastDashboard({ goal }: { goal: StudyGoal }) {
+  return (
+    <div className="study-goal-detail">
+      <DailyAvailabilityPanel goal={goal} />
+      <ForecastPanel goal={goal} />
+    </div>
+  );
+}
+
+function DailyAvailabilityPanel({ goal }: { goal: StudyGoal }) {
+  const client = useQueryClient();
+  const offline = useOffline();
+  const studyDate = today();
+  const [minutes, setMinutes] = useState(String(goal.dailyStudyMinutes));
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const availability = useQuery({
+    queryKey: ['study-goal-daily-availability', goal.id, studyDate],
+    queryFn: () =>
+      api.get<StudyGoalDailyAvailabilityModel>(
+        `/study-goals/${goal.id}/daily-availability?date=${studyDate}`
+      ),
+    enabled: offline.online,
+    retry: false
+  });
+  const dailyPlan = useQuery({
+    queryKey: ['study-goal-time-boxed-plan', goal.id, studyDate],
+    queryFn: () =>
+      api.get<TimeBoxedDailyPlan>(`/study-goals/${goal.id}/daily-plan?date=${studyDate}`),
+    enabled: offline.online && availability.isSuccess,
+    retry: false
+  });
+
+  useEffect(() => {
+    if (availability.data !== undefined) {
+      setMinutes(String(availability.data.availableMinutes ?? availability.data.effectiveMinutes));
+    }
+  }, [availability.data]);
+
+  const save = useMutation({
+    mutationFn: (availableMinutes: number) =>
+      api.put<StudyGoalDailyAvailabilityModel>(`/study-goals/${goal.id}/daily-availability`, {
+        date: studyDate,
+        availableMinutes
+      }),
+    onSuccess: async (data) => {
+      client.setQueryData(['study-goal-daily-availability', goal.id, studyDate], data);
+      setSuccessMessage(`Đã lưu ${data.effectiveMinutes} phút cho hôm nay.`);
+      await dailyPlan.refetch();
+    }
+  });
+  const clear = useMutation({
+    mutationFn: () => api.delete(`/study-goals/${goal.id}/daily-availability?date=${studyDate}`),
+    onSuccess: async () => {
+      const data: StudyGoalDailyAvailabilityModel = {
+        date: studyDate,
+        availableMinutes: null,
+        defaultDailyMinutes: goal.dailyStudyMinutes,
+        effectiveMinutes: goal.dailyStudyMinutes
+      };
+      client.setQueryData(['study-goal-daily-availability', goal.id, studyDate], data);
+      setMinutes(String(goal.dailyStudyMinutes));
+      setSuccessMessage(`Đã dùng lại ngân sách mặc định ${goal.dailyStudyMinutes} phút.`);
+      await dailyPlan.refetch();
+    }
+  });
+  const pending = save.isPending || clear.isPending || dailyPlan.isFetching;
+  const submit = () => {
+    setValidationError(null);
+    setSuccessMessage(null);
+    const parsed = dailyAvailabilityMinutesSchema.safeParse(minutes);
+    if (!parsed.success) {
+      setValidationError(parsed.error.issues[0]?.message ?? 'Số phút chưa hợp lệ.');
+      return;
+    }
+    save.mutate(parsed.data);
+  };
+
+  return (
+    <section className="study-availability-panel" aria-labelledby="daily-availability-title">
+      <div className="study-availability-heading">
+        <div>
+          <p className="eyebrow">Phiên hôm nay</p>
+          <h2 id="daily-availability-title">Bạn rảnh bao nhiêu phút để học hôm nay?</h2>
+        </div>
+        <span className="study-default-budget">Mặc định {goal.dailyStudyMinutes} phút/ngày</span>
+      </div>
+
+      {!offline.online && (
+        <p className="study-offline-notice" role="status">
+          Bạn đang offline. Kết nối mạng để lưu thời gian và tạo kế hoạch hôm nay.
+        </p>
+      )}
+      {availability.isLoading && <AvailabilitySkeleton />}
+      {availability.isError && (
+        <div className="study-query-error">
+          <p>Không thể tải thời gian học hôm nay.</p>
+          <button className="secondary" type="button" onClick={() => void availability.refetch()}>
+            Thử lại
+          </button>
+        </div>
+      )}
+      {!availability.isLoading && !availability.isError && (
+        <>
+          <div className="study-minute-presets" role="group" aria-label="Chọn nhanh số phút">
+            {[5, 10, 20, 30].map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={minutes === String(value) ? 'active' : 'secondary'}
+                disabled={pending || !offline.online}
+                onClick={() => {
+                  setMinutes(String(value));
+                  setValidationError(null);
+                  setSuccessMessage(null);
+                }}
+              >
+                {value} phút
+              </button>
+            ))}
+          </div>
+          <label className="study-custom-minutes">
+            <span>Hoặc nhập số phút khác</span>
+            <div>
+              <input
+                value={minutes}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                aria-invalid={validationError !== null}
+                aria-describedby={validationError === null ? undefined : 'availability-error'}
+                disabled={pending || !offline.online}
+                onChange={(event) => {
+                  setMinutes(event.target.value);
+                  setValidationError(null);
+                  setSuccessMessage(null);
+                }}
+              />
+              <span>phút</span>
+            </div>
+          </label>
+          <div className="study-availability-actions">
+            <button
+              type="button"
+              disabled={pending || !offline.online}
+              aria-busy={pending}
+              onClick={submit}
+            >
+              {save.isPending || dailyPlan.isFetching
+                ? 'Đang tạo kế hoạch…'
+                : 'Tạo kế hoạch hôm nay'}
+            </button>
+            {availability.data?.availableMinutes !== null &&
+              availability.data?.availableMinutes !== undefined && (
+                <button
+                  className="secondary"
+                  type="button"
+                  disabled={pending || !offline.online}
+                  onClick={() => clear.mutate()}
+                >
+                  Dùng thời gian mặc định
+                </button>
+              )}
+          </div>
+          {validationError !== null && (
+            <p id="availability-error" className="study-form-error" role="alert">
+              {validationError}
+            </p>
+          )}
+          {(save.isError || clear.isError) && (
+            <p className="study-form-error" role="alert">
+              {messageFor(save.error ?? clear.error)}
+            </p>
+          )}
+          {successMessage !== null && (
+            <p className="study-save-success" role="status">
+              {successMessage}
+            </p>
+          )}
+        </>
+      )}
+
+      {dailyPlan.isLoading ? (
+        <AvailabilitySkeleton />
+      ) : dailyPlan.isError ? (
+        <div className="study-query-error">
+          <p>Không thể tạo kế hoạch hôm nay.</p>
+          <button className="secondary" type="button" onClick={() => void dailyPlan.refetch()}>
+            Thử lại
+          </button>
+        </div>
+      ) : dailyPlan.data !== undefined ? (
+        <TimeBoxedPlanView plan={dailyPlan.data} />
+      ) : null}
+    </section>
+  );
+}
+
+function TimeBoxedPlanView({ plan }: { plan: TimeBoxedDailyPlan }) {
+  const plannedCards = plan.sections
+    .filter((section) => section.type !== 'QUICK_CHECK')
+    .reduce((total, section) => total + section.estimatedCardCount, 0);
+  return (
+    <section
+      className="study-time-box"
+      aria-label={`Kế hoạch hôm nay ${plan.requestedMinutes} phút`}
+    >
+      <div className="study-time-box-title">
+        <div>
+          <p className="eyebrow">Kế hoạch hôm nay</p>
+          <h3>{plan.requestedMinutes} phút đã dành</h3>
+        </div>
+        <strong>{plan.estimatedTotalMinutes} phút dự kiến</strong>
+      </div>
+      {plan.sections.length === 0 ? (
+        <div className="study-plan-empty">
+          <h3>Hôm nay không có thẻ cần học trong mục tiêu này.</h3>
+          <p>Bạn đã xử lý hết khối lượng hiện tại. Hãy quay lại khi có thẻ đến hạn mới.</p>
+        </div>
+      ) : (
+        <>
+          <div className="study-time-ruler" aria-hidden="true">
+            {plan.sections.map((section) => (
+              <span
+                key={section.type}
+                data-section={section.type}
+                style={{ flexGrow: section.allocatedMinutes }}
+              />
+            ))}
+          </div>
+          <div className="study-time-sections">
+            {plan.sections.map((section) => (
+              <article key={section.type}>
+                <span className="study-time-dot" data-section={section.type} aria-hidden="true" />
+                <div>
+                  <strong>{section.title}</strong>
+                  <small>{section.reason}</small>
+                </div>
+                <b>{section.allocatedMinutes} phút</b>
+                <span>{section.estimatedCardCount} lượt dự kiến</span>
+              </article>
+            ))}
+          </div>
+        </>
+      )}
+      {plan.adjustmentReason !== undefined && (
+        <p className="study-adjustment-note">{plan.adjustmentReason}</p>
+      )}
+      {plannedCards > 0 && (
+        <Link
+          className="button-link study-start-session"
+          to={`/review?studyGoalId=${plan.studyGoalId}&date=${plan.date}`}
+        >
+          Bắt đầu phiên {plan.requestedMinutes} phút
+        </Link>
+      )}
+    </section>
+  );
+}
+
+function AvailabilitySkeleton() {
+  return (
+    <div className="study-availability-skeleton" aria-busy="true" aria-label="Đang tải kế hoạch">
+      <span />
+      <span />
+    </div>
+  );
+}
+
+function ForecastPanel({ goal }: { goal: StudyGoal }) {
   const client = useQueryClient();
   const offline = useOffline();
   const [cachedAtUtc, setCachedAtUtc] = useState<string | null>(null);
@@ -844,7 +1127,11 @@ function messageFor(error: unknown): string {
 }
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  const value = new Date();
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 function addDays(date: string, days: number) {
   return new Date(new Date(`${date}T00:00:00Z`).getTime() + days * 86_400_000)

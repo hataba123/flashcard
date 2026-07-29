@@ -112,6 +112,166 @@
   align-items: start;
   gap: var(--space-lg);
 }
+.study-goal-detail {
+  display: grid;
+  gap: var(--space-lg);
+  min-width: 0;
+}
+.study-availability-panel {
+  display: grid;
+  gap: var(--space-md);
+  min-width: 0;
+  padding: var(--space-lg);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+.study-availability-heading,
+.study-time-box-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+.study-availability-heading h2,
+.study-time-box-title h3,
+.study-plan-empty h3 {
+  margin: 0;
+}
+.study-default-budget {
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--radius-pill);
+  color: var(--color-neutral);
+  background: var(--color-paper-2);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+.study-minute-presets,
+.study-availability-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+.study-minute-presets button {
+  min-height: 40px;
+  padding-inline: var(--space-sm);
+}
+.study-minute-presets button.active {
+  color: var(--color-accent-ink);
+  background: var(--color-accent);
+}
+.study-custom-minutes {
+  display: grid;
+  gap: var(--space-2xs);
+  color: var(--color-ink-2);
+  font-weight: 700;
+}
+.study-custom-minutes > div {
+  display: grid;
+  grid-template-columns: minmax(0, 9rem) auto;
+  align-items: center;
+  gap: var(--space-xs);
+}
+.study-custom-minutes input {
+  font-variant-numeric: tabular-nums;
+}
+.study-save-success {
+  margin: 0;
+  padding: var(--space-sm);
+  border-radius: var(--radius-input);
+  color: var(--color-success);
+  background: var(--color-success-soft);
+}
+.study-availability-panel .study-query-error {
+  padding-block: var(--space-sm);
+}
+.study-time-box {
+  display: grid;
+  gap: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: var(--rule-hair) solid var(--color-rule);
+}
+.study-time-box-title strong {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.study-time-ruler {
+  display: flex;
+  gap: 2px;
+  height: 0.65rem;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-paper-2);
+}
+.study-time-ruler span {
+  min-width: 3px;
+}
+.study-time-ruler [data-section='DUE_REVIEW'],
+.study-time-dot[data-section='DUE_REVIEW'] {
+  background: var(--color-accent-2);
+}
+.study-time-ruler [data-section='WEAK_REVIEW'],
+.study-time-dot[data-section='WEAK_REVIEW'] {
+  background: var(--color-warning);
+}
+.study-time-ruler [data-section='NEW_CARD'],
+.study-time-dot[data-section='NEW_CARD'] {
+  background: var(--color-accent-deep);
+}
+.study-time-ruler [data-section='QUICK_CHECK'],
+.study-time-dot[data-section='QUICK_CHECK'] {
+  background: var(--color-neutral);
+}
+.study-time-sections {
+  display: grid;
+  gap: var(--space-xs);
+}
+.study-time-sections article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3xs) var(--space-xs);
+  padding-block: var(--space-xs);
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+}
+.study-time-sections article > div {
+  display: grid;
+  gap: var(--space-3xs);
+}
+.study-time-sections article small,
+.study-plan-empty p {
+  color: var(--color-neutral);
+}
+.study-time-sections article > span:last-child {
+  grid-column: 2 / -1;
+  color: var(--color-neutral);
+  font-size: var(--text-sm);
+}
+.study-time-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+}
+.study-adjustment-note {
+  margin: 0;
+  padding: var(--space-sm);
+  border-radius: var(--radius-input);
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+}
+.study-start-session {
+  justify-self: start;
+}
+.study-availability-skeleton {
+  display: grid;
+  gap: var(--space-xs);
+}
+.study-availability-skeleton span {
+  min-height: 3rem;
+  border-radius: var(--radius-input);
+  background: var(--color-paper-2);
+  opacity: 0.7;
+}
 .study-goal-list {
   display: grid;
   gap: var(--space-xs);
@@ -243,6 +403,14 @@
   .study-row-actions {
     flex-wrap: wrap;
   }
+  .study-availability-heading,
+  .study-time-box-title {
+    flex-direction: column;
+  }
+  .study-default-budget,
+  .study-time-box-title strong {
+    white-space: normal;
+  }
 }
 @media (max-width: 24rem) {
   .study-deck-option {
@@ -250,8 +418,21 @@
   }
   .study-goal-editor,
   .study-goal-list-panel,
-  .study-plan-placeholder {
+  .study-plan-placeholder,
+  .study-availability-panel {
     padding: var(--space-sm);
+  }
+  .study-minute-presets button,
+  .study-availability-actions button,
+  .study-start-session {
+    width: 100%;
+  }
+  .study-custom-minutes > div,
+  .study-time-sections article {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .study-time-sections article > span:last-child {
+    grid-column: auto;
   }
 }
 @media (prefers-reduced-motion: reduce) {

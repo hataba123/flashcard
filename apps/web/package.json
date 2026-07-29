@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
   "dependencies": {
+    "@flashcard/contracts": "workspace:*",
     "@flashcard/scheduling": "workspace:*",
     "@tanstack/react-query": "5.90.20",
     "dexie": "4.4.4",

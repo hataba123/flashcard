@@ -413,3 +413,10 @@
 - Đã thực hiện: Daily Plan dùng dữ liệu sống để ưu tiên thẻ FSRS đến hạn/quá hạn, retrievability thấp, leech/lapse và thẻ mới theo trọng số deck; Review Queue nhận goal/date và trả đúng danh sách của kế hoạch.
 - Quyết định quan trọng: không sửa due date FSRS, không tạo ReviewLog khi lập kế hoạch; thời gian mỗi thẻ dùng median lịch sử có chặn outlier và fallback tập trung.
 - Kiểm tra: unit test backlog cao, không có due, phiên 5 phút, hoàn thành sớm và integration test Daily Plan/Review Queue/không ghi ReviewLog đều đạt; lệnh test API loại `dist/**` để tránh chạy trùng artifact đã build.
+
+## Milestone 26.3 — Giao diện thời gian học hôm nay
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: trang Kế hoạch học tập có lựa chọn nhanh 5/10/20/30 phút, nhập tùy chỉnh, validation 1–720, lưu/xóa override, loading/error/offline/success state và hiển thị kế hoạch bằng thước thời gian phân đoạn.
+- Quyết định quan trọng: API vẫn là nguồn dữ liệu chuẩn; nút bắt đầu truyền goal/date sang trang Ôn tập và mọi mutation bị khóa khi offline hoặc đang xử lý.
+- Kiểm tra: unit test validation, Vitest web, lint, typecheck, production build và Playwright E2E cho lưu 20 phút cùng kiểm tra không tràn ngang ở 320/375/414/768px đều đạt.

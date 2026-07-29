@@ -167,6 +167,7 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
 });
 
 test('shows the study forecast dashboard without horizontal overflow', async ({ page }) => {
+  let availableMinutes: number | null = null;
   await page.route('**/api/auth/refresh', (route) =>
     route.fulfill({ json: { accessToken: 'test-token' } })
   );
@@ -266,9 +267,75 @@ test('shows the study forecast dashboard without horizontal overflow', async ({ 
       }
     })
   );
+  await page.route('**/api/study-goals/goal-1/daily-availability*', async (route) => {
+    if (route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON() as { availableMinutes: number };
+      availableMinutes = body.availableMinutes;
+    }
+    await route.fulfill({
+      json: {
+        date: '2026-07-29',
+        availableMinutes,
+        defaultDailyMinutes: 45,
+        effectiveMinutes: availableMinutes ?? 45
+      }
+    });
+  });
+  await page.route('**/api/study-goals/goal-1/daily-plan?date=*', (route) => {
+    const requestedMinutes = availableMinutes ?? 45;
+    return route.fulfill({
+      json: {
+        studyGoalId: 'goal-1',
+        date: '2026-07-29',
+        requestedMinutes,
+        effectiveMinutes: requestedMinutes,
+        estimatedTotalMinutes: requestedMinutes,
+        sections: [
+          {
+            type: 'DUE_REVIEW',
+            title: 'Ôn thẻ đến hạn',
+            allocatedMinutes: Math.max(1, requestedMinutes - 5),
+            estimatedCardCount: 30,
+            reason: 'Ưu tiên lịch FSRS, thẻ quá hạn lâu và nguy cơ quên cao.'
+          },
+          {
+            type: 'WEAK_REVIEW',
+            title: 'Củng cố thẻ yếu',
+            allocatedMinutes: 4,
+            estimatedCardCount: 8,
+            reason: 'Ưu tiên thẻ leech hoặc đã quên nhiều lần.'
+          },
+          {
+            type: 'QUICK_CHECK',
+            title: 'Kiểm tra nhanh',
+            allocatedMinutes: 1,
+            estimatedCardCount: 6,
+            reason: 'Nhắc lại nhanh các ý quan trọng ở cuối phiên.'
+          }
+        ],
+        summary: {
+          dueCardCount: 120,
+          overdueCardCount: 80,
+          weakCardCount: 8,
+          newCardCount: 300,
+          backlogRemaining: 90
+        },
+        adjustmentReason: 'Hôm nay hệ thống tạm dừng thẻ mới vì còn nhiều thẻ quá hạn.'
+      }
+    });
+  });
 
   await page.goto('/study-plan');
   await page.getByRole('button', { name: /IELTS 6.5/ }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Bạn rảnh bao nhiêu phút để học hôm nay?' })
+  ).toBeVisible();
+  await page.getByRole('button', { name: '20 phút' }).click();
+  await page.getByRole('button', { name: 'Tạo kế hoạch hôm nay' }).click();
+  await expect(page.getByText('Đã lưu 20 phút cho hôm nay.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '20 phút đã dành' })).toBeVisible();
+  await expect(page.getByText('Ôn thẻ đến hạn')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Bắt đầu phiên 20 phút' })).toBeVisible();
   await expect(page.getByText('Ngày học hết thẻ mới')).toBeVisible();
   await expect(page.getByText('Ngày hoàn thành dự kiến (P50)')).toBeVisible();
   await expect(page.getByRole('table')).toBeVisible();

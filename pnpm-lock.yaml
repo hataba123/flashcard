@@ -153,6 +153,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@flashcard/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@flashcard/scheduling':
         specifier: workspace:*
         version: link:../../packages/scheduling
