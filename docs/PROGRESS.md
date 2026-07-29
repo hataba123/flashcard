@@ -427,3 +427,9 @@
 - Đã thực hiện: trang Ôn tập nhận kế hoạch goal/date, dùng queue riêng có cache offline, hiển thị thời lượng phiên, số phút còn lại và tiến độ lượt dự kiến; khi hết ngân sách cho phép kết thúc hoặc chủ động học thêm từng 5 phút.
 - Quyết định quan trọng: đồng hồ không tính thời gian pause và không tự ngắt câu trả lời đang làm; ngày học trên giao diện được tính theo timezone của mục tiêu để đồng nhất với API.
 - Kiểm tra: unit test đồng hồ phiên học, Vitest web (22/22) và Playwright E2E (5/5) gồm viewport mobile đều đạt.
+
+## Milestone 38 — Tăng giới hạn thẻ mới theo ngày
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: tăng giới hạn `maxNewCardsPerDay` của Kế hoạch học tập từ 1.000 lên 10.000 ở cả giao diện và API, phù hợp với giới hạn import hiện có.
+- Kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test` và `pnpm build` đều đạt.

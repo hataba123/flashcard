@@ -48,7 +48,7 @@ export class CreateStudyGoalDto {
   studyDaysOfWeek!: number[];
   @IsNumber() @Min(0.7) @Max(0.97) desiredRetention = 0.9;
   @IsInt() @Min(0) @Max(90) finalReviewDays = 10;
-  @IsInt() @Min(0) @Max(1_000) maxNewCardsPerDay = 50;
+  @IsInt() @Min(0) @Max(10_000) maxNewCardsPerDay = 50;
   @IsString() @Length(1, 100) timeZone!: string;
   @IsOptional() @IsIn(['Active', 'Paused', 'Completed', 'Archived']) status?: string;
   @IsArray()
@@ -74,7 +74,7 @@ export class UpdateStudyGoalDto {
   studyDaysOfWeek?: number[];
   @IsOptional() @IsNumber() @Min(0.7) @Max(0.97) desiredRetention?: number;
   @IsOptional() @IsInt() @Min(0) @Max(90) finalReviewDays?: number;
-  @IsOptional() @IsInt() @Min(0) @Max(1_000) maxNewCardsPerDay?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(10_000) maxNewCardsPerDay?: number;
   @IsOptional() @IsString() @Length(1, 100) timeZone?: string;
   @IsOptional() @IsIn(['Active', 'Paused', 'Completed', 'Archived']) status?: string;
   @IsOptional()

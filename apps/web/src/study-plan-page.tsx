@@ -86,7 +86,7 @@ const goalSchema = z.object({
   dailyStudyMinutes: z.coerce.number().int().min(1, 'Thời gian học phải từ 1 phút.').max(1440),
   desiredRetention: z.coerce.number().min(0.7).max(0.97),
   finalReviewDays: z.coerce.number().int().min(0).max(90),
-  maxNewCardsPerDay: z.coerce.number().int().min(0).max(1000),
+  maxNewCardsPerDay: z.coerce.number().int().min(0).max(10_000),
   timeZone: z.string().min(1, 'Hãy nhập múi giờ.')
 });
 
@@ -940,7 +940,7 @@ function GoalEditor({
             <input type="number" min="0" max="90" {...form.register('finalReviewDays')} />
           </Field>
           <Field label="Thẻ mới tối đa/ngày">
-            <input type="number" min="0" max="1000" {...form.register('maxNewCardsPerDay')} />
+            <input type="number" min="0" max="10000" {...form.register('maxNewCardsPerDay')} />
           </Field>
         </div>
         <fieldset>
