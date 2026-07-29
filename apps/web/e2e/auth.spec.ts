@@ -65,6 +65,7 @@ test('navigates to a destination from the mobile topbar', async ({ page }) => {
 });
 
 test('shows review actions on a compact mobile viewport', async ({ page }) => {
+  let submittedRating: string | undefined;
   await page.setViewportSize({ width: 375, height: 812 });
   await page.route('**/api/auth/refresh', (route) => route.fulfill({ status: 401 }));
   await page.route('**/api/auth/login', (route) =>
@@ -148,6 +149,16 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
       ]
     })
   );
+  await page.route('**/api/reviews', async (route) => {
+    submittedRating = JSON.parse(route.request().postData() ?? '{}').rating as string | undefined;
+    await route.fulfill({
+      json: {
+        card: {},
+        reviewLog: { id: '00000000-0000-4000-8000-000000000004' },
+        idempotent: false
+      }
+    });
+  });
   await page.goto('/login');
   await page.getByLabel('Email').fill('test@example.com');
   await page.getByLabel('Mật khẩu').fill('mat-khau-hople');
@@ -186,6 +197,9 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
   await expect(page.locator('.review-card')).toHaveClass(/is-revealed/);
   await expect(page.locator('.grade-actions button')).toHaveCount(4);
   await expect(page.getByText('Câu trả lời', { exact: true })).toBeVisible();
+  await expect(page.locator('.grade-actions button').first()).toBeEnabled();
+  await page.keyboard.press('1');
+  await expect.poll(() => submittedRating).toBe('Again');
   for (const width of [320, 375, 414, 768]) {
     await page.setViewportSize({ width, height: width === 768 ? 1024 : 900 });
     expect(

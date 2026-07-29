@@ -439,3 +439,9 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: tách nội dung đọc theo dòng, loại dòng nghĩa tiếng Việt và phần dịch sau dấu gạch ngang; giữ dấu nháy trong từ tiếng Anh như `one's` để trình duyệt phát âm tự nhiên.
 - Kiểm tra: unit test cho mẫu thẻ `resume`, `pnpm --filter web test -- speech-control.test.ts` và `pnpm --filter web typecheck` đều đạt.
+
+## Milestone 40 — Sửa phím tắt chấm điểm khi ôn tập
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: lưu snapshot thẻ và thời điểm hiển thị đáp án trước khi UI chuyển thẻ, giúp phím `1`–`4` gửi chấm điểm ổn định; phím tắt vẫn hoạt động khi focus đang nằm trên nút.
+- Kiểm tra: `pnpm --filter @flashcard/web typecheck`, `pnpm --filter @flashcard/web test` và Playwright E2E cho phím `1` đều đạt.

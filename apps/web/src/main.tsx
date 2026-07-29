@@ -785,6 +785,7 @@ function Review() {
   const [index, setIndex] = useState(0);
   const [shownAt, setShownAt] = useState(() => new Date());
   const [revealedAt, setRevealedAt] = useState<Date | null>(null);
+  const revealedAtRef = useRef<Date | null>(null);
   const [lastReviewId, setLastReviewId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [hasConflict, setHasConflict] = useState(false);
@@ -839,6 +840,11 @@ function Review() {
     return () => window.clearInterval(timer);
   }, [sessionStartedAtMs]);
   const card = queue.data?.cards[index];
+  const revealCard = () => {
+    const revealedAt = new Date();
+    revealedAtRef.current = revealedAt;
+    setRevealedAt(revealedAt);
+  };
   const note = useQuery({
     queryKey: ['review-note', card?.noteId],
     queryFn: async () => {
@@ -878,7 +884,17 @@ function Review() {
     }
   }, [client, index, queue.data]);
   const grade = useMutation({
-    mutationFn: async (rating: ReviewRating) => {
+    mutationFn: async ({
+      card,
+      rating,
+      revealedAt,
+      shownAt
+    }: {
+      card: ReviewCard | undefined;
+      rating: ReviewRating;
+      revealedAt: Date | null;
+      shownAt: Date;
+    }) => {
       if (card === undefined || revealedAt === null)
         throw new Error('Hãy xem đáp án trước khi chấm điểm.');
       if (deviceId === null) throw new Error('Thiết bị đang được chuẩn bị. Vui lòng thử lại.');
@@ -935,6 +951,7 @@ function Review() {
       const previousShownAt = shownAt;
       const previousRevealedAt = revealedAt;
       setIndex(nextReviewIndex);
+      revealedAtRef.current = null;
       setRevealedAt(null);
       setShownAt(new Date());
       return { previousIndex, previousShownAt, previousRevealedAt };
@@ -947,12 +964,15 @@ function Review() {
       if (context !== undefined) {
         setIndex(context.previousIndex);
         setShownAt(context.previousShownAt);
+        revealedAtRef.current = context.previousRevealedAt;
         setRevealedAt(context.previousRevealedAt);
       }
       setHasConflict(error instanceof ApiError && error.status === 409);
       setSubmitError(errorMessage(error));
     }
   });
+  const submitGrade = (rating: ReviewRating) =>
+    grade.mutate({ card, rating, revealedAt: revealedAtRef.current, shownAt });
   const undo = useMutation({
     mutationFn: (reviewLogId: string) => api.post(`/reviews/${reviewLogId}/undo`, {}),
     onSuccess: () => {
@@ -1001,14 +1021,16 @@ function Review() {
         void toggleFullscreen();
         return;
       }
-      if (event.target instanceof HTMLElement && event.target.matches('button, a')) return;
       if (isPaused) return;
       if (event.key === ' ' && revealedAt === null) {
         event.preventDefault();
-        setRevealedAt(new Date());
+        revealCard();
       }
       const rating = ratingForShortcut(event.key);
-      if (rating !== null && revealedAt !== null && !grade.isPending) grade.mutate(rating);
+      if (rating !== null && revealedAtRef.current !== null && !grade.isPending) {
+        event.preventDefault();
+        submitGrade(rating);
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -1072,13 +1094,15 @@ function Review() {
     const dx = touch.clientX - start.x;
     const dy = touch.clientY - start.y;
     if (Math.max(Math.abs(dx), Math.abs(dy)) < 36) {
-      if (!revealed) setRevealedAt(new Date());
+      if (!revealed) revealCard();
       return;
     }
     if (!revealed) return;
-    if (dy < -60 && Math.abs(dy) > Math.abs(dx)) grade.mutate('Easy');
-    else if (dx < -60 && Math.abs(dx) > Math.abs(dy)) grade.mutate('Again');
-    else if (dx > 60 && Math.abs(dx) > Math.abs(dy)) grade.mutate('Good');
+    const revealedAt = revealedAtRef.current;
+    if (revealedAt === null) return;
+    if (dy < -60 && Math.abs(dy) > Math.abs(dx)) submitGrade('Easy');
+    else if (dx < -60 && Math.abs(dx) > Math.abs(dy)) submitGrade('Again');
+    else if (dx > 60 && Math.abs(dx) > Math.abs(dy)) submitGrade('Good');
   };
   const speechText = getCardSpeechText(fields, revealed);
   const totalCards = queue.data?.cards.length ?? 0;
@@ -1295,7 +1319,7 @@ function Review() {
                       revealed={false}
                       previews={undefined}
                       isSubmitting={grade.isPending || deviceId === null}
-                      onReveal={() => setRevealedAt(new Date())}
+                      onReveal={revealCard}
                       onGrade={() => undefined}
                     />
                   ) : (
@@ -1303,8 +1327,8 @@ function Review() {
                       revealed
                       previews={previews.data}
                       isSubmitting={grade.isPending || deviceId === null}
-                      onReveal={() => undefined}
-                      onGrade={(rating) => grade.mutate(rating)}
+                      onReveal={revealCard}
+                      onGrade={submitGrade}
                     />
                   )}
                 </>
