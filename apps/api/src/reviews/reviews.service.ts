@@ -6,14 +6,16 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { schedulingService, type ReviewPreview, type SchedulingCard } from '@flashcard/scheduling';
+import type { TimeBoxedDailyPlan } from '@flashcard/contracts';
 import { randomUUID } from 'node:crypto';
-import { DataSource, IsNull, LessThanOrEqual, Repository } from 'typeorm';
+import { DataSource, In, IsNull, LessThanOrEqual, Repository } from 'typeorm';
 
 import { CardEntity, CardState } from '../cards/entities/card.entity.js';
 import { DeckEntity } from '../cards/entities/deck.entity.js';
 import { ReviewLogEntity } from './entities/review-log.entity.js';
 import { SubmitReviewDto } from './dto/review.dto.js';
 import { SyncService } from '../sync/sync.service.js';
+import { StudyGoalForecastService } from '../study-goals/forecast/study-goal-forecast.service.js';
 
 export interface ReviewSubmission {
   card: CardEntity;
@@ -25,6 +27,7 @@ export interface ReviewQueue {
   cards: CardEntity[];
   totalEstimatedSeconds: number;
   budgetSeconds: number;
+  sessionPlan?: TimeBoxedDailyPlan;
 }
 
 @Injectable()
@@ -33,10 +36,41 @@ export class ReviewsService {
     @InjectRepository(CardEntity) private readonly cards: Repository<CardEntity>,
     @InjectRepository(DeckEntity) private readonly decks: Repository<DeckEntity>,
     private readonly dataSource: DataSource,
-    private readonly sync: SyncService
+    private readonly sync: SyncService,
+    private readonly studyGoalForecasts: StudyGoalForecastService
   ) {}
 
-  async queue(userId: string, budgetSeconds = 7200): Promise<ReviewQueue> {
+  async queue(
+    userId: string,
+    budgetSeconds = 7200,
+    studyGoalId?: string,
+    studyDate?: string
+  ): Promise<ReviewQueue> {
+    if ((studyGoalId === undefined) !== (studyDate === undefined)) {
+      throw new BadRequestException('studyGoalId and date must be provided together.');
+    }
+    if (studyGoalId !== undefined && studyDate !== undefined) {
+      const built = await this.studyGoalForecasts.buildDailyPlan(userId, studyGoalId, studyDate);
+      const selected =
+        built.selectedCardIds.length === 0
+          ? []
+          : await this.cards.find({
+              where: { userId, id: In(built.selectedCardIds), suspendedAtUtc: IsNull() }
+            });
+      const selectedMap = new Map(selected.map((card) => [card.id, card]));
+      const cards = built.selectedCardIds
+        .map((id) => selectedMap.get(id))
+        .filter((card): card is CardEntity => card !== undefined);
+      return {
+        cards,
+        totalEstimatedSeconds: cards.reduce(
+          (total, card) => total + card.estimatedReviewSeconds,
+          0
+        ),
+        budgetSeconds: built.plan.requestedMinutes * 60,
+        sessionPlan: built.plan
+      };
+    }
     const dueCards = await this.cards.find({
       where: {
         userId,

@@ -8,9 +8,15 @@ import { ReviewLogEntity } from './entities/review-log.entity.js';
 import { ReviewsController } from './reviews.controller.js';
 import { ReviewsService } from './reviews.service.js';
 import { SyncModule } from '../sync/sync.module.js';
+import { StudyGoalsModule } from '../study-goals/study-goals.module.js';
 
 @Module({
-  imports: [AuthModule, SyncModule, TypeOrmModule.forFeature([CardEntity, DeckEntity, ReviewLogEntity])],
+  imports: [
+    AuthModule,
+    SyncModule,
+    StudyGoalsModule,
+    TypeOrmModule.forFeature([CardEntity, DeckEntity, ReviewLogEntity])
+  ],
   controllers: [ReviewsController],
   providers: [ReviewsService]
 })

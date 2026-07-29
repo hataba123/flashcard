@@ -1,11 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import type { ForecastSnapshotModel, ReviewRating } from '@flashcard/contracts';
+import type { ForecastSnapshotModel, ReviewRating, TimeBoxedDailyPlan } from '@flashcard/contracts';
+import { schedulingService } from '@flashcard/scheduling';
 import { createHash, randomUUID } from 'node:crypto';
 import { In, IsNull, type Repository } from 'typeorm';
 
 import { CardEntity } from '../../cards/entities/card.entity.js';
+import { DeckEntity } from '../../cards/entities/deck.entity.js';
 import type { Environment } from '../../config/environment.js';
 import { ReviewLogEntity } from '../../reviews/entities/review-log.entity.js';
 import { SyncService } from '../../sync/sync.service.js';
@@ -20,11 +22,18 @@ import {
   type ForecastCard,
   type ForecastHistoryLog
 } from './forecast-engine.js';
+import {
+  buildTimeBoxedPlan,
+  TIME_BOXED_PLAN_DEFAULTS,
+  type BuiltTimeBoxedPlan,
+  type TimeBoxedPlanDurations
+} from './time-boxed-plan.js';
 
 @Injectable()
 export class StudyGoalForecastService {
   constructor(
     @InjectRepository(CardEntity) private readonly cards: Repository<CardEntity>,
+    @InjectRepository(DeckEntity) private readonly decks: Repository<DeckEntity>,
     @InjectRepository(ReviewLogEntity) private readonly logs: Repository<ReviewLogEntity>,
     @InjectRepository(StudyGoalDeckEntity)
     private readonly memberships: Repository<StudyGoalDeckEntity>,
@@ -157,13 +166,90 @@ export class StudyGoalForecastService {
     return snapshotToModel(snapshot);
   }
 
-  async dailyPlan(userId: string, goalId: string) {
-    const snapshot = await this.latest(userId, goalId);
-    return {
+  async dailyPlan(userId: string, goalId: string, studyDate: string): Promise<TimeBoxedDailyPlan> {
+    return (await this.buildDailyPlan(userId, goalId, studyDate)).plan;
+  }
+
+  async buildDailyPlan(
+    userId: string,
+    goalId: string,
+    studyDate: string
+  ): Promise<BuiltTimeBoxedPlan> {
+    const goal = await this.goals.requireOwnedGoal(userId, goalId);
+    const currentDate = dateStringInTimeZone(new Date(), goal.timeZone);
+    if (studyDate !== currentDate) {
+      throw new BadRequestException('The time-boxed daily plan is only available for today.');
+    }
+    const availability = await this.goals.getDailyAvailability(userId, goalId, studyDate);
+    const memberships = await this.memberships.find({ where: { studyGoalId: goalId } });
+    const deckIds = memberships.map((membership) => membership.deckId);
+    if (deckIds.length === 0) {
+      return buildTimeBoxedPlan({
+        studyGoalId: goalId,
+        date: studyDate,
+        requestedMinutes: availability.effectiveMinutes,
+        now: new Date(),
+        maxNewCardsPerDay: goal.maxNewCardsPerDay,
+        cards: [],
+        durations: TIME_BOXED_PLAN_DEFAULTS
+      });
+    }
+
+    const [cards, decks, logs] = await Promise.all([
+      this.cards.find({
+        where: { userId, deckId: In(deckIds), suspendedAtUtc: IsNull() }
+      }),
+      this.decks.find({ where: { userId, id: In(deckIds) } }),
+      this.logs
+        .createQueryBuilder('log')
+        .innerJoin(CardEntity, 'card', 'card.id = log.cardId AND card.userId = :userId', {
+          userId
+        })
+        .where('log.userId = :userId', { userId })
+        .andWhere('card.deckId IN (:...deckIds)', { deckIds })
+        .andWhere('log.eventType = :eventType', { eventType: 'Review' })
+        .andWhere('log.answerLatencyMs > 0')
+        .andWhere('log.reviewedAtUtc >= :historyStart', {
+          historyStart: new Date(Date.now() - 60 * 86_400_000)
+        })
+        .getMany()
+    ]);
+    const membershipPriority = new Map(
+      memberships.map((membership) => [membership.deckId, Number(membership.priorityWeight)])
+    );
+    const deckMap = new Map(decks.map((deck) => [deck.id, deck]));
+    const now = new Date();
+    return buildTimeBoxedPlan({
       studyGoalId: goalId,
-      calculatedAtUtc: snapshot.calculatedAtUtc,
-      days: snapshot.dailyProjection
-    };
+      date: studyDate,
+      requestedMinutes: availability.effectiveMinutes,
+      now,
+      maxNewCardsPerDay: goal.maxNewCardsPerDay,
+      durations: observedDurations(logs),
+      cards: cards.map((card) => {
+        const deck = deckMap.get(card.deckId);
+        return {
+          id: card.id,
+          state: card.state,
+          dueAtUtc: card.dueAtUtc,
+          lapseCount: card.lapseCount,
+          isLeech: card.isLeech,
+          priorityWeight: Number(card.priorityWeight),
+          deckPriorityWeight: membershipPriority.get(card.deckId) ?? 1,
+          retrievability:
+            card.state === 'New'
+              ? 1
+              : schedulingService.getRetrievability(
+                  {
+                    ...card,
+                    desiredRetention: Number(deck?.desiredRetention ?? goal.desiredRetention),
+                    isCore: deck?.isCore ?? false
+                  },
+                  now
+                )
+        };
+      })
+    });
   }
 
   private hashInput(
@@ -265,6 +351,53 @@ function dateInTimeZone(date: Date, timeZone: string): Date {
   }).formatToParts(date);
   const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return new Date(`${value.year}-${value.month}-${value.day}T00:00:00.000Z`);
+}
+
+function dateStringInTimeZone(date: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
+}
+
+function observedDurations(logs: ReviewLogEntity[]): TimeBoxedPlanDurations {
+  const newCardSeconds = medianSeconds(
+    logs.filter((log) => log.stateBefore === 'New').map((log) => log.answerLatencyMs),
+    TIME_BOXED_PLAN_DEFAULTS.newCardSeconds
+  );
+  const reviewSeconds = medianSeconds(
+    logs.filter((log) => log.stateBefore !== 'New').map((log) => log.answerLatencyMs),
+    TIME_BOXED_PLAN_DEFAULTS.dueReviewSeconds
+  );
+  return {
+    dueReviewSeconds: reviewSeconds,
+    weakReviewSeconds:
+      logs.length >= TIME_BOXED_PLAN_DEFAULTS.minimumHistorySamples
+        ? reviewSeconds
+        : TIME_BOXED_PLAN_DEFAULTS.weakReviewSeconds,
+    newCardSeconds,
+    quickCheckSeconds: Math.min(reviewSeconds, TIME_BOXED_PLAN_DEFAULTS.quickCheckSeconds)
+  };
+}
+
+function medianSeconds(latenciesMs: number[], fallback: number): number {
+  if (latenciesMs.length < TIME_BOXED_PLAN_DEFAULTS.minimumHistorySamples) return fallback;
+  const values = latenciesMs.map((value) => value / 1_000).sort((left, right) => left - right);
+  const middle = Math.floor(values.length / 2);
+  const median =
+    values.length % 2 === 0
+      ? ((values[middle - 1] ?? fallback) + (values[middle] ?? fallback)) / 2
+      : (values[middle] ?? fallback);
+  return Math.round(
+    Math.min(
+      TIME_BOXED_PLAN_DEFAULTS.maximumObservedSeconds,
+      Math.max(TIME_BOXED_PLAN_DEFAULTS.minimumObservedSeconds, median)
+    )
+  );
 }
 
 function dateOnly(value: string | Date): string {

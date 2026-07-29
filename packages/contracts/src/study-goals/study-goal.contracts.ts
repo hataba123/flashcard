@@ -23,6 +23,33 @@ export interface StudyGoalDailyAvailabilityModel {
   effectiveMinutes: number;
 }
 
+export type TimeBoxedPlanSectionType = 'DUE_REVIEW' | 'WEAK_REVIEW' | 'NEW_CARD' | 'QUICK_CHECK';
+
+export interface TimeBoxedDailyPlanSection {
+  type: TimeBoxedPlanSectionType;
+  title: string;
+  allocatedMinutes: number;
+  estimatedCardCount: number;
+  reason: string;
+}
+
+export interface TimeBoxedDailyPlan {
+  studyGoalId: string;
+  date: string;
+  requestedMinutes: number;
+  effectiveMinutes: number;
+  estimatedTotalMinutes: number;
+  sections: TimeBoxedDailyPlanSection[];
+  summary: {
+    dueCardCount: number;
+    overdueCardCount: number;
+    weakCardCount: number;
+    newCardCount: number;
+    backlogRemaining: number;
+  };
+  adjustmentReason?: string;
+}
+
 export interface StudyGoalDeckModel {
   deckId: string;
   deckName: string;

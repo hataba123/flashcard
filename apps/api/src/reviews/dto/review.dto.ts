@@ -3,10 +3,12 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsDate,
+  IsDateString,
   IsIn,
   IsInt,
   IsOptional,
   IsUUID,
+  Matches,
   Max,
   Min,
   ValidateNested
@@ -36,4 +38,6 @@ export class SubmitBulkReviewDto {
 
 export class ReviewQueueQueryDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(86400) budgetSeconds?: number;
+  @IsOptional() @IsUUID() studyGoalId?: string;
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) @IsDateString({ strict: true }) date?: string;
 }

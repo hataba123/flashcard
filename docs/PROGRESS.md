@@ -406,3 +406,10 @@
 - Đã thực hiện: thêm dữ liệu ghi đè thời gian học theo user, mục tiêu và ngày; API đọc/lưu/xóa có validation 1–720 phút, ownership và giới hạn thao tác ở ngày hiện tại theo timezone của mục tiêu.
 - Quyết định quan trọng: giữ nguyên `dailyStudyMinutes` làm ngân sách mặc định; bản ghi ngày chỉ là override và API vẫn là nguồn dữ liệu chuẩn.
 - Kiểm tra: migration SQL Server local và integration test cho lưu/tải lại, ngày tiếp theo, giới hạn phút, ownership và không sửa ngân sách mặc định đều đạt; lint, typecheck và build đạt.
+
+## Milestone 26.2 — Phiên học giới hạn theo thời gian
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: Daily Plan dùng dữ liệu sống để ưu tiên thẻ FSRS đến hạn/quá hạn, retrievability thấp, leech/lapse và thẻ mới theo trọng số deck; Review Queue nhận goal/date và trả đúng danh sách của kế hoạch.
+- Quyết định quan trọng: không sửa due date FSRS, không tạo ReviewLog khi lập kế hoạch; thời gian mỗi thẻ dùng median lịch sử có chặn outlier và fallback tập trung.
+- Kiểm tra: unit test backlog cao, không có due, phiên 5 phút, hoàn thành sớm và integration test Daily Plan/Review Queue/không ghi ReviewLog đều đạt; lệnh test API loại `dist/**` để tránh chạy trùng artifact đã build.

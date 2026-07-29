@@ -86,9 +86,17 @@ function createService(card: CardEntity): ReviewsService {
       callback(manager)
   } as unknown as DataSource;
 
-  return new ReviewsService(cardRepository, deckRepository, dataSource, {
-    record: vi.fn(async () => undefined)
-  } as never);
+  return new ReviewsService(
+    cardRepository,
+    deckRepository,
+    dataSource,
+    {
+      record: vi.fn(async () => undefined)
+    } as never,
+    {
+      buildDailyPlan: vi.fn()
+    } as never
+  );
 }
 
 describe('ReviewsService', () => {

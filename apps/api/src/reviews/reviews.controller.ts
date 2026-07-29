@@ -16,7 +16,7 @@ export class ReviewsController {
 
   @Get('reviews/queue')
   queue(@CurrentUser() user: UserEntity, @Query() query: ReviewQueueQueryDto) {
-    return this.reviewsService.queue(user.id, query.budgetSeconds);
+    return this.reviewsService.queue(user.id, query.budgetSeconds, query.studyGoalId, query.date);
   }
 
   @Get('cards/:id/review-preview')

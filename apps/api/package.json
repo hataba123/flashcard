@@ -10,7 +10,7 @@
     "migration:run": "tsx src/database/run-migrations.ts",
     "seed:demo": "tsx src/database/seed-demo.ts",
     "typecheck": "tsc --noEmit --project tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run --exclude dist/**"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1092.0",

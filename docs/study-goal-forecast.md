@@ -88,8 +88,17 @@ POST   /study-goals/:id/decks
 DELETE /study-goals/:id/decks/:deckId
 POST   /study-goals/:id/forecast
 GET    /study-goals/:id/forecast/latest
-GET    /study-goals/:id/daily-plan
+PUT    /study-goals/:id/daily-availability
+GET    /study-goals/:id/daily-availability?date=YYYY-MM-DD
+DELETE /study-goals/:id/daily-availability?date=YYYY-MM-DD
+GET    /study-goals/:id/daily-plan?date=YYYY-MM-DD
 ```
+
+## Kế hoạch giới hạn theo thời gian hôm nay
+
+Ngân sách `dailyStudyMinutes` vẫn là mặc định của mục tiêu. Người dùng có thể ghi đè riêng ngày hiện tại bằng daily availability; ngày khác không kế thừa giá trị này. Daily Plan đọc dữ liệu thẻ sống thay vì snapshot forecast và phân bổ theo thứ tự thẻ FSRS đến hạn/quá hạn, nguy cơ quên, thẻ yếu hoặc leech, rồi thẻ mới theo trọng số deck. Backlog cao có thể tạm dừng thẻ mới.
+
+Ước lượng dùng trung vị `ReviewLog.answerLatencyMs` trong 60 ngày khi có ít nhất 5 mẫu và chặn outlier trong khoảng 3–60 giây. Khi thiếu dữ liệu, các fallback tập trung trong `TIME_BOXED_PLAN_DEFAULTS`. Tạo kế hoạch hoặc queue không ghi ReviewLog và không thay đổi due date FSRS.
 
 ## Cấu hình
 

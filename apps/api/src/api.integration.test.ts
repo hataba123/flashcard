@@ -4,9 +4,11 @@ import { type NestExpressApplication } from '@nestjs/platform-express';
 import { randomUUID } from 'node:crypto';
 import ExcelJS from 'exceljs';
 import request from 'supertest';
+import { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { AppModule } from './app.module.js';
+import { ReviewLogEntity } from './reviews/entities/review-log.entity.js';
 
 interface AuthResponse {
   accessToken: string;
@@ -295,6 +297,34 @@ describe('API integration', () => {
       .set('Authorization', `Bearer ${first.accessToken}`)
       .send({ deckId: deck.body.id, priorityWeight: 2 })
       .expect(201);
+    const reviewLogCountBeforePlan = await app
+      .get(DataSource)
+      .getRepository(ReviewLogEntity)
+      .count();
+    await request(app.getHttpServer())
+      .get(`/api/study-goals/${goal.body.id}/daily-plan?date=${studyDate}`)
+      .set('Authorization', `Bearer ${first.accessToken}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({
+          studyGoalId: goal.body.id,
+          date: studyDate,
+          requestedMinutes: 20,
+          effectiveMinutes: 0,
+          sections: []
+        });
+      });
+    await request(app.getHttpServer())
+      .get(`/api/reviews/queue?studyGoalId=${goal.body.id}&date=${studyDate}`)
+      .set('Authorization', `Bearer ${first.accessToken}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.cards).toEqual([]);
+        expect(body.sessionPlan.requestedMinutes).toBe(20);
+      });
+    expect(await app.get(DataSource).getRepository(ReviewLogEntity).count()).toBe(
+      reviewLogCountBeforePlan
+    );
     const firstForecast = await request(app.getHttpServer())
       .post(`/api/study-goals/${goal.body.id}/forecast`)
       .set('Authorization', `Bearer ${first.accessToken}`)

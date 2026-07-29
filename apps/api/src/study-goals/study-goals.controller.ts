@@ -69,8 +69,13 @@ export class StudyGoalsController {
   }
 
   @Get(':id/daily-plan')
-  dailyPlan(@CurrentUser() user: UserEntity, @Param('id', new ParseUUIDPipe()) id: string) {
-    return this.forecasts.dailyPlan(user.id, id);
+  @ApiOperation({ summary: 'Tạo kế hoạch học giới hạn theo thời gian hôm nay' })
+  dailyPlan(
+    @CurrentUser() user: UserEntity,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query() query: DailyAvailabilityDateQueryDto
+  ) {
+    return this.forecasts.dailyPlan(user.id, id, query.date);
   }
 
   @Put(':id/daily-availability')
