@@ -357,6 +357,63 @@ describe('API integration', () => {
     expect(goal.body.targetDate).toBe(targetDate);
   }, 30_000);
 
+  it('submits a Hard review through SQL Server', async () => {
+    const auth = await register(
+      `${suffix}-hard-review@integration.local`,
+      'IntegrationPassword123!'
+    );
+    const deck = await request(app.getHttpServer())
+      .post('/api/decks')
+      .set('Authorization', `Bearer ${auth.accessToken}`)
+      .send({ name: `Hard review deck ${suffix}` })
+      .expect(201);
+    const note = await request(app.getHttpServer())
+      .post('/api/notes')
+      .set('Authorization', `Bearer ${auth.accessToken}`)
+      .send({
+        deckId: deck.body.id,
+        noteType: 'Basic',
+        fields: { front: 'Question', back: 'Answer' },
+        tags: []
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/api/notes/${note.body.id}/generate-cards`)
+      .set('Authorization', `Bearer ${auth.accessToken}`)
+      .send({})
+      .expect(201);
+    const queue = await request(app.getHttpServer())
+      .get('/api/reviews/queue')
+      .set('Authorization', `Bearer ${auth.accessToken}`)
+      .expect(200);
+    const card = queue.body.cards[0];
+    expect(card).toBeDefined();
+    const shownAt = new Date();
+    const revealedAt = new Date(shownAt.getTime() + 100);
+    const gradedAt = new Date(shownAt.getTime() + 200);
+
+    await request(app.getHttpServer())
+      .post('/api/reviews')
+      .set('Authorization', `Bearer ${auth.accessToken}`)
+      .send({
+        clientEventId: randomUUID(),
+        cardId: card.id,
+        sessionId: randomUUID(),
+        deviceId: auth.deviceId,
+        rating: 'Hard',
+        shownAtUtc: shownAt.toISOString(),
+        revealedAtUtc: revealedAt.toISOString(),
+        gradedAtUtc: gradedAt.toISOString(),
+        reviewedAtUtc: gradedAt.toISOString(),
+        cardVersionBefore: card.version
+      })
+      .expect(201)
+      .expect(({ body }) => {
+        expect(body.reviewLog.rating).toBe('Hard');
+        expect(body.card.version).toBe(card.version + 1);
+      });
+  });
+
   async function register(email: string, password: string): Promise<AuthResponse> {
     const response = await request(app.getHttpServer())
       .post('/api/auth/register')

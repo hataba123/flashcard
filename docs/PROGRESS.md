@@ -445,3 +445,9 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: lưu snapshot thẻ và thời điểm hiển thị đáp án trước khi UI chuyển thẻ, giúp phím `1`–`4` gửi chấm điểm ổn định; phím tắt vẫn hoạt động khi focus đang nằm trên nút.
 - Kiểm tra: `pnpm --filter @flashcard/web typecheck`, `pnpm --filter @flashcard/web test` và Playwright E2E cho phím `1` đều đạt.
+
+## Milestone 41 — Sửa lỗi ghi nhật ký ôn tập
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: thêm migration đặt `NEWSEQUENTIALID()` mặc định cho khóa chính `review_logs.id`, tránh SQL Server chèn `NULL` khi ghi một lượt ôn tập.
+- Kiểm tra: integration test gửi mức `Hard` qua API và SQL Server đạt; typecheck API đạt. Toàn bộ test API còn một lỗi timeout không liên quan ở ca import Excel 500 dòng.
