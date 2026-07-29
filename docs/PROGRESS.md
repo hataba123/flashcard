@@ -433,3 +433,9 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: tăng giới hạn `maxNewCardsPerDay` của Kế hoạch học tập từ 1.000 lên 10.000 ở cả giao diện và API, phù hợp với giới hạn import hiện có.
 - Kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test` và `pnpm build` đều đạt.
+
+## Milestone 39 — Lọc nội dung đọc thẻ song ngữ
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: tách nội dung đọc theo dòng, loại dòng nghĩa tiếng Việt và phần dịch sau dấu gạch ngang; giữ dấu nháy trong từ tiếng Anh như `one's` để trình duyệt phát âm tự nhiên.
+- Kiểm tra: unit test cho mẫu thẻ `resume`, `pnpm --filter web test -- speech-control.test.ts` và `pnpm --filter web typecheck` đều đạt.

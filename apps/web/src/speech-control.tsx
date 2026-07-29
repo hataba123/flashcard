@@ -61,6 +61,8 @@ const vietnameseCharacterPattern =
 const wordPattern = /[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu;
 const pronunciationFieldKeys = new Set(['phonetic', 'phonetics', 'pronunciation', 'ipa']);
 const pronunciationLinePattern = /(?:phiên\s*âm|phien\s*am)\s*:\s*[^\r\n]*/giu;
+const exampleLinePattern = /^\s*(?:ví\s*dụ|vi\s*du)\s*:\s*/iu;
+const translationSeparatorPattern = /\s[—–]\s/u;
 
 function isVietnameseWord(word: string): boolean {
   if (vietnameseCharacterPattern.test(word)) return true;
@@ -73,8 +75,28 @@ function isVietnameseWord(word: string): boolean {
 }
 
 function getEnglishSpeechText(text: string): string {
+  return text
+    .split(/\r?\n/u)
+    .map(getEnglishSpeechLine)
+    .filter((line) => line.length > 0)
+    .join(' ');
+}
+
+function getEnglishSpeechLine(text: string): string {
   const words = text.match(wordPattern) ?? [];
   const vietnameseWordCount = words.filter(isVietnameseWord).length;
+  const vietnameseCharacterCount = words.filter((word) =>
+    vietnameseCharacterPattern.test(word)
+  ).length;
+
+  if (vietnameseCharacterCount >= 2) {
+    const lineWithoutExampleLabel = text.replace(exampleLinePattern, '');
+    const [englishBeforeTranslation] = lineWithoutExampleLabel.split(translationSeparatorPattern);
+    if (englishBeforeTranslation !== undefined && !vietnameseCharacterPattern.test(englishBeforeTranslation))
+      return getEnglishSpeechLine(englishBeforeTranslation);
+    return '';
+  }
+
   return text
     .replace(wordPattern, (word) => {
       if (vietnameseCharacterPattern.test(word)) return '';
@@ -89,7 +111,9 @@ function getEnglishSpeechText(text: string): string {
 
 function removeSpeechMarks(text: string): string {
   return text
-    .replace(/[\p{P}\p{S}\u02c8\u02cc\u02d0\u02d1]/gu, '')
+    .replace(/[\p{P}\p{S}\u02c8\u02cc\u02d0\u02d1]/gu, (mark) =>
+      mark === "'" || mark === '’' ? mark : ''
+    )
     .replace(/\s+/g, ' ')
     .trim();
 }

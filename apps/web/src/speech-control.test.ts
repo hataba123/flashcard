@@ -67,7 +67,20 @@ describe('getCardSpeechText', () => {
         },
         true
       )
-    ).toBe('to resume ones spirits');
+    ).toBe("to resume one's spirits");
+  });
+
+  it('does not read unaccented Vietnamese words surrounding an English example', () => {
+    expect(
+      getCardSpeechText(
+        {
+          front: 'resume',
+          back:
+            "lấy lại, chiếm lại, hồi phục lại; lại bắt đầu, lại tiếp tục (sau khi nghỉ, dừng); tóm tắt lại, nêu điểm chính\n\nPhiên âm: /ri'zju:m/\n\nVí dụ: to resume one's spirits — lấy lại tinh thần, lấy lại can đảm"
+        },
+        true
+      )
+    ).toBe("to resume one's spirits");
   });
 
   it('does not read pronunciation when the back has no English answer content', () => {
