@@ -79,7 +79,7 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
       }
     })
   );
-  await page.route('**/api/reviews/queue', (route) =>
+  await page.route('**/api/reviews/queue*', (route) =>
     route.fulfill({
       json: {
         cards: [
@@ -100,7 +100,30 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
           }
         ],
         totalEstimatedSeconds: 30,
-        budgetSeconds: 600
+        budgetSeconds: 1_200,
+        sessionPlan: {
+          studyGoalId: 'goal-1',
+          date: '2026-07-29',
+          requestedMinutes: 20,
+          effectiveMinutes: 20,
+          estimatedTotalMinutes: 20,
+          sections: [
+            {
+              type: 'DUE_REVIEW',
+              title: 'Ôn thẻ đến hạn',
+              allocatedMinutes: 20,
+              estimatedCardCount: 1,
+              reason: 'Ưu tiên lịch FSRS.'
+            }
+          ],
+          summary: {
+            dueCardCount: 1,
+            overdueCardCount: 1,
+            weakCardCount: 0,
+            newCardCount: 0,
+            backlogRemaining: 0
+          }
+        }
       }
     })
   );
@@ -129,9 +152,16 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
   await page.getByLabel('Email').fill('test@example.com');
   await page.getByLabel('Mật khẩu').fill('mat-khau-hople');
   await page.getByRole('button', { name: 'Đăng nhập' }).click();
-  await page.getByRole('link', { name: 'Ôn tập', exact: true }).click();
+  await page.unroute('**/api/auth/refresh');
+  await page.route('**/api/auth/refresh', (route) =>
+    route.fulfill({ json: { accessToken: 'test-token' } })
+  );
+  await page.goto('/review?studyGoalId=goal-1&date=2026-07-29');
 
   await expect(page.getByRole('heading', { name: 'Phiên ôn tập', exact: true })).toBeVisible();
+  await expect(page.getByText('Phiên học 20 phút')).toBeVisible();
+  await expect(page.getByText('Còn khoảng 20 phút')).toBeVisible();
+  await expect(page.getByText('Đã hoàn thành 0/1 lượt dự kiến')).toBeVisible();
   await expect(page.getByLabel('Phím tắt trong phiên học')).toContainText('Space');
   await page.locator('.review-options > summary').click();
   await page.getByLabel('Cỡ chữ').selectOption('large');

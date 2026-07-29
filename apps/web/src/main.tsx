@@ -8,9 +8,19 @@ import {
 import { createRoot } from 'react-dom/client';
 import { useEffect, useRef, useState, type ReactNode, type TouchEvent } from 'react';
 import { useForm } from 'react-hook-form';
-import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useNavigate } from 'react-router';
+import {
+  BrowserRouter,
+  Link,
+  Navigate,
+  NavLink,
+  Route,
+  Routes,
+  useNavigate,
+  useSearchParams
+} from 'react-router';
 import { z } from 'zod';
 import { schedulingService } from '@flashcard/scheduling';
+import type { TimeBoxedDailyPlan } from '@flashcard/contracts';
 
 import { ApiError, api } from './api.js';
 import {
@@ -21,7 +31,12 @@ import {
 } from './offline-db.js';
 import { OfflineProvider, useOffline } from './offline-provider.js';
 import { ReviewControls } from './review-controls.js';
-import { nextReviewIndex, ratingForShortcut, type ReviewRating } from './review-utils.js';
+import {
+  nextReviewIndex,
+  ratingForShortcut,
+  reviewSessionTimeProgress,
+  type ReviewRating
+} from './review-utils.js';
 import { useSession, type User } from './session.js';
 import { getCardSpeechText, SpeechControl } from './speech-control.js';
 import { NotesPage } from './notes-page.js';
@@ -72,6 +87,7 @@ interface ReviewQueue {
   cards: ReviewCard[];
   totalEstimatedSeconds: number;
   budgetSeconds: number;
+  sessionPlan?: TimeBoxedDailyPlan;
 }
 interface ReviewPreview {
   rating: ReviewRating;
@@ -755,6 +771,17 @@ function Decks() {
 
 function Review() {
   const client = useQueryClient();
+  const navigate = useNavigate();
+  const [reviewParams] = useSearchParams();
+  const studyGoalId = reviewParams.get('studyGoalId');
+  const studyDate = reviewParams.get('date');
+  const hasTimeBoxedRequest = studyGoalId !== null && studyDate !== null;
+  const reviewQueuePath = hasTimeBoxedRequest
+    ? `/reviews/queue?studyGoalId=${encodeURIComponent(studyGoalId)}&date=${encodeURIComponent(studyDate)}`
+    : '/reviews/queue';
+  const reviewQueueCacheId = hasTimeBoxedRequest
+    ? `time-boxed:${studyGoalId}:${studyDate}`
+    : 'current';
   const [index, setIndex] = useState(0);
   const [shownAt, setShownAt] = useState(() => new Date());
   const [revealedAt, setRevealedAt] = useState<Date | null>(null);
@@ -764,6 +791,10 @@ function Review() {
   const [isPaused, setIsPaused] = useState(false);
   const [pausedAt, setPausedAt] = useState<Date | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(document.fullscreenElement !== null);
+  const [sessionStartedAtMs, setSessionStartedAtMs] = useState<number | null>(null);
+  const [clockNowMs, setClockNowMs] = useState(Date.now());
+  const [extraMinutes, setExtraMinutes] = useState(0);
+  const pausedSessionMs = useRef(0);
   const { fontSize, setFontSize, cardWidth, setCardWidth } = useReviewDisplayPreferences();
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const sessionId = useState(() => crypto.randomUUID())[0];
@@ -778,23 +809,35 @@ function Review() {
     return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
   }, []);
   const queue = useQuery({
-    queryKey: ['review-queue'],
+    queryKey: ['review-queue', studyGoalId, studyDate],
     queryFn: async () => {
       try {
-        const response = await api.get<ReviewQueue>('/reviews/queue');
+        const response = await api.get<ReviewQueue>(reviewQueuePath);
         await offlineDb.reviewQueue.put({
-          id: 'current',
+          id: reviewQueueCacheId,
           ...response,
           cachedAtUtc: new Date().toISOString()
         });
         return response;
       } catch {
-        const cached = await offlineDb.reviewQueue.get('current');
+        const cached = await offlineDb.reviewQueue.get(reviewQueueCacheId);
         if (cached === undefined) throw new Error('No offline review queue is available yet.');
         return cached;
       }
     }
   });
+  useEffect(() => {
+    if (queue.data?.sessionPlan !== undefined && sessionStartedAtMs === null) {
+      const startedAt = Date.now();
+      setSessionStartedAtMs(startedAt);
+      setClockNowMs(startedAt);
+    }
+  }, [queue.data?.sessionPlan, sessionStartedAtMs]);
+  useEffect(() => {
+    if (sessionStartedAtMs === null) return;
+    const timer = window.setInterval(() => setClockNowMs(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, [sessionStartedAtMs]);
   const card = queue.data?.cards[index];
   const note = useQuery({
     queryKey: ['review-note', card?.noteId],
@@ -876,7 +919,7 @@ function Review() {
         version: card.version + 1
       };
       await offlineDb.pendingReviewEvents.put({ ...event, createdAtUtc: now.toISOString() });
-      const cachedQueue = await offlineDb.reviewQueue.get('current');
+      const cachedQueue = await offlineDb.reviewQueue.get(reviewQueueCacheId);
       if (cachedQueue !== undefined) {
         await offlineDb.reviewQueue.put({
           ...cachedQueue,
@@ -922,6 +965,7 @@ function Review() {
   const togglePause = () => {
     if (isPaused) {
       const pauseDuration = pausedAt === null ? 0 : Date.now() - pausedAt.getTime();
+      pausedSessionMs.current += pauseDuration;
       setShownAt((value) => new Date(value.getTime() + pauseDuration));
       setRevealedAt((value) => (value === null ? null : new Date(value.getTime() + pauseDuration)));
       setPausedAt(null);
@@ -1040,6 +1084,19 @@ function Review() {
   const totalCards = queue.data?.cards.length ?? 0;
   const completedCards = Math.min(index, totalCards);
   const progress = totalCards === 0 ? 0 : Math.round((completedCards / totalCards) * 100);
+  const sessionPlan = queue.data?.sessionPlan;
+  const sessionBudgetMinutes = (sessionPlan?.requestedMinutes ?? 0) + extraMinutes;
+  const currentPauseMs =
+    isPaused && pausedAt !== null ? Math.max(0, clockNowMs - pausedAt.getTime()) : 0;
+  const timeProgress =
+    sessionStartedAtMs === null || sessionPlan === undefined
+      ? null
+      : reviewSessionTimeProgress(
+          sessionStartedAtMs,
+          clockNowMs,
+          sessionBudgetMinutes,
+          pausedSessionMs.current + currentPauseMs
+        );
   return (
     <Shell focus>
       <header className="review-header">
@@ -1051,6 +1108,15 @@ function Review() {
           <h1>Phiên ôn tập</h1>
         </div>
         <div className="review-progress" aria-label="Tiến độ phiên ôn tập">
+          {sessionPlan !== undefined && timeProgress !== null && (
+            <div className="review-session-progress">
+              <strong>Phiên học {sessionBudgetMinutes} phút</strong>
+              <span>Còn khoảng {timeProgress.remainingMinutes} phút</span>
+              <span>
+                Đã hoàn thành {completedCards}/{totalCards} lượt dự kiến
+              </span>
+            </div>
+          )}
           <div className="review-progress-copy">
             <span>
               Thẻ {index + 1} / {totalCards}
@@ -1079,6 +1145,26 @@ function Review() {
           )}
         </div>
       </header>
+      {timeProgress?.budgetReached === true && (
+        <section className="review-budget-notice" aria-live="polite">
+          <div>
+            <strong>Bạn đã đạt ngân sách học hôm nay.</strong>
+            <p>Hoàn tất câu trả lời đang làm, rồi kết thúc hoặc học thêm nếu bạn vẫn còn sức.</p>
+          </div>
+          <div>
+            <button type="button" onClick={() => navigate('/study-plan')}>
+              Kết thúc phiên
+            </button>
+            <button
+              className="secondary"
+              type="button"
+              onClick={() => setExtraMinutes((value) => value + 5)}
+            >
+              Học thêm 5 phút
+            </button>
+          </div>
+        </section>
+      )}
       <details className="review-options">
         <summary>Tùy chỉnh phiên học</summary>
         <section className="review-toolbar" aria-label="Tùy chỉnh phiên học">

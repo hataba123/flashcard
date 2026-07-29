@@ -420,3 +420,10 @@
 - Đã thực hiện: trang Kế hoạch học tập có lựa chọn nhanh 5/10/20/30 phút, nhập tùy chỉnh, validation 1–720, lưu/xóa override, loading/error/offline/success state và hiển thị kế hoạch bằng thước thời gian phân đoạn.
 - Quyết định quan trọng: API vẫn là nguồn dữ liệu chuẩn; nút bắt đầu truyền goal/date sang trang Ôn tập và mọi mutation bị khóa khi offline hoặc đang xử lý.
 - Kiểm tra: unit test validation, Vitest web, lint, typecheck, production build và Playwright E2E cho lưu 20 phút cùng kiểm tra không tràn ngang ở 320/375/414/768px đều đạt.
+
+## Milestone 26.4 — Theo dõi phiên học theo ngân sách
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: trang Ôn tập nhận kế hoạch goal/date, dùng queue riêng có cache offline, hiển thị thời lượng phiên, số phút còn lại và tiến độ lượt dự kiến; khi hết ngân sách cho phép kết thúc hoặc chủ động học thêm từng 5 phút.
+- Quyết định quan trọng: đồng hồ không tính thời gian pause và không tự ngắt câu trả lời đang làm; ngày học trên giao diện được tính theo timezone của mục tiêu để đồng nhất với API.
+- Kiểm tra: unit test đồng hồ phiên học, Vitest web (22/22) và Playwright E2E (5/5) gồm viewport mobile đều đạt.

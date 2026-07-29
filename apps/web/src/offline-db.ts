@@ -1,4 +1,5 @@
 import { Dexie, type EntityTable } from 'dexie';
+import type { TimeBoxedDailyPlan } from '@flashcard/contracts';
 
 export interface CachedReviewCard {
   id: string;
@@ -17,10 +18,11 @@ export interface CachedReviewCard {
 }
 
 export interface CachedReviewQueue {
-  id: 'current';
+  id: string;
   cards: CachedReviewCard[];
   totalEstimatedSeconds: number;
   budgetSeconds: number;
+  sessionPlan?: TimeBoxedDailyPlan;
   cachedAtUtc: string;
 }
 

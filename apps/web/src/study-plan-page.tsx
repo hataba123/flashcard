@@ -255,7 +255,7 @@ function ForecastDashboard({ goal }: { goal: StudyGoal }) {
 function DailyAvailabilityPanel({ goal }: { goal: StudyGoal }) {
   const client = useQueryClient();
   const offline = useOffline();
-  const studyDate = today();
+  const studyDate = dateInTimeZone(goal.timeZone);
   const [minutes, setMinutes] = useState(String(goal.dailyStudyMinutes));
   const [validationError, setValidationError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -1133,6 +1133,19 @@ function today() {
   const day = String(value.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+function dateInTimeZone(timeZone: string) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date());
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((item) => item.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
 function addDays(date: string, days: number) {
   return new Date(new Date(`${date}T00:00:00Z`).getTime() + days * 86_400_000)
     .toISOString()
