@@ -2395,3 +2395,134 @@ audio {
     padding-block-start: var(--space-lg);
   }
 }
+
+/* Study Stage motion polish: one quiet arrival, then a clear reveal. */
+.review-card,
+.review-card-face,
+.review-card-back,
+.reveal,
+.rating,
+.rating-mark,
+.reveal kbd {
+  transform-origin: center;
+}
+
+.review-card-face {
+  transition:
+    opacity var(--dur-short) var(--ease-in-out),
+    transform var(--dur-short) var(--ease-out),
+    visibility 0s linear var(--dur-short);
+}
+
+.review-card-back {
+  transform: translateY(var(--space-xs)) scale(0.985);
+}
+
+.review-card.is-revealed .review-card-front {
+  transform: translateY(calc(var(--space-2xs) * -1)) scale(0.99);
+}
+
+.review-card.is-revealed .review-card-back {
+  transform: translateY(0) scale(1);
+}
+
+.reveal kbd,
+.rating-mark {
+  transition: transform var(--dur-micro) var(--ease-out);
+}
+
+.reveal:active:not(:disabled),
+.rating:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+}
+
+.rating:focus-visible {
+  position: relative;
+  z-index: var(--z-raised);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .reveal:hover kbd {
+    transform: translateX(var(--space-2xs));
+  }
+
+  .rating:hover:not(:disabled) .rating-mark {
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .review-card {
+    animation: review-card-arrive var(--dur-long) var(--ease-out) both;
+  }
+
+  .review-card.is-revealed .review-answer-mark {
+    animation: review-mark-pop var(--dur-short) var(--ease-out) both;
+  }
+
+  .review-card.is-revealed .review-recall {
+    animation: review-content-settle var(--dur-short) var(--ease-out) var(--dur-micro) both;
+  }
+
+  .review-card.is-revealed .answer {
+    animation: review-content-settle var(--dur-long) var(--ease-out) var(--dur-short) both;
+  }
+}
+
+@keyframes review-card-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-sm)) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes review-content-settle {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-2xs));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes review-mark-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+
+  70% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .review-card,
+  .review-card-face,
+  .review-card-back,
+  .reveal,
+  .rating,
+  .rating-mark,
+  .reveal kbd {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .review-card-face {
+    transition: opacity 150ms linear;
+  }
+}

@@ -1,5 +1,12 @@
 # Tiến độ triển khai
 
+## Milestone 43 — Nâng cấp motion Study Stage
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: thêm nhịp xuất hiện một lần cho thẻ mới, chuyển mặt đáp án bằng `transform`/`opacity`, stagger nhẹ cho nội dung đáp án và phản hồi nhấn/hover cho nút lật/chấm điểm; không thay đổi API hay luồng chấm điểm.
+- Khả năng truy cập: motion mới chỉ bật khi `prefers-reduced-motion: no-preference`; chế độ giảm chuyển động giữ crossfade ngắn và loại bỏ transform/animation.
+- Kiểm tra: `pnpm --filter @flashcard/web test`, `pnpm --filter @flashcard/web typecheck`, `pnpm --filter @flashcard/web build`, Prettier và `git diff --check` đều đạt.
+
 ## Milestone 37 — Ưu tiên ví dụ tiếng Anh khi đọc mặt sau
 
 - Trạng thái: Hoàn thành.
