@@ -130,3 +130,30 @@ export async function setDeviceId(deviceId: string): Promise<void> {
     deviceId
   });
 }
+
+export async function resetAfterDataTransfer(syncCursor: number): Promise<void> {
+  await offlineDb.transaction(
+    'rw',
+    [
+      offlineDb.reviewQueue,
+      offlineDb.notes,
+      offlineDb.syncState,
+      offlineDb.studyGoals,
+      offlineDb.studyGoalForecasts,
+      offlineDb.studyGoalDailyPlans
+    ],
+    async () => {
+      await offlineDb.reviewQueue.clear();
+      await offlineDb.notes.clear();
+      await offlineDb.studyGoals.clear();
+      await offlineDb.studyGoalForecasts.clear();
+      await offlineDb.studyGoalDailyPlans.clear();
+      const state = await offlineDb.syncState.get('state');
+      await offlineDb.syncState.put({
+        id: 'state',
+        cursor: syncCursor,
+        deviceId: state?.deviceId ?? crypto.randomUUID()
+      });
+    }
+  );
+}

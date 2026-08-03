@@ -1,5 +1,13 @@
 # Tiến độ triển khai
 
+## Milestone 44 — Xuất/nhập snapshot dữ liệu học tập
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: contract snapshot JSON version 1; API export/import có giới hạn tệp 50 MB, kiểm tra schema/ID/quan hệ, hợp nhất theo version và tombstone, giữ review log append-only/idempotent, ánh xạ device khi nhập khác tài khoản, cảnh báo media thiếu và ghi sync event `data-transfer` trong transaction.
+- Giao diện: thêm `Xuất dữ liệu học tập` và `Nhập dữ liệu học tập` vào account dropdown; yêu cầu online, tự đồng bộ review pending, chặn pending/conflict, xác nhận import, tải JSON, multipart upload, áp dụng lại tùy chọn giao diện và xóa/làm mới cache offline/React Query.
+- Bảo mật: không xuất mật khẩu, session, token, thiết bị xác thực, sync event hoặc import batch; email tài khoản đích được giữ nguyên.
+- Kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, kiểm thử API tích hợp cross-account/idempotent/undo/media/rollback và Playwright E2E account dropdown đều đạt.
+
 ## Milestone 43 — Nâng cấp motion Study Stage
 
 - Trạng thái: Hoàn thành.

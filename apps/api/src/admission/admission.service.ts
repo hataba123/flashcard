@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { IsNull, LessThanOrEqual, Repository } from 'typeorm';
 
 import { CardEntity } from '../cards/entities/card.entity.js';
@@ -32,6 +32,7 @@ export class AdmissionService {
     if (existing !== null) return existing;
     return this.rawInputs.save(
       this.rawInputs.create({
+        id: randomUUID(),
         userId,
         contentRaw,
         sourceType: input.sourceType,

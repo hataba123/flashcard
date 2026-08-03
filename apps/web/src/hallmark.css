@@ -198,7 +198,7 @@ body {
   top: calc(100% + var(--space-2xs));
   right: 0;
   display: grid;
-  min-width: 10rem;
+  min-width: min(20rem, calc(100vw - 2rem));
   border: var(--rule-hair) solid var(--color-rule);
   border-radius: var(--radius-input);
   padding: var(--space-2xs);
@@ -252,6 +252,36 @@ body {
 
 .app-topbar .account-menu-item:hover {
   background: var(--color-error-soft);
+}
+
+.app-topbar .account-menu-item.account-menu-transfer {
+  color: var(--color-ink);
+}
+
+.app-topbar .account-menu-item.account-menu-transfer:hover {
+  background: var(--color-paper-2);
+}
+
+.app-topbar .account-menu-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.app-topbar .account-transfer-notice {
+  display: block;
+  max-width: 18rem;
+  padding: var(--space-xs);
+  color: var(--color-ink);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+
+.app-topbar .account-transfer-notice.error {
+  color: var(--color-error);
+}
+
+.app-topbar .account-transfer-notice.success {
+  color: var(--color-success);
 }
 
 .app-topbar .account-menu-item:focus-visible {

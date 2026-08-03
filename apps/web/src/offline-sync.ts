@@ -1,13 +1,30 @@
 import { io, type Socket } from 'socket.io-client';
 
 import { ApiError, api } from './api.js';
-import { offlineDb, type CachedNote, type CachedReviewQueue, type PendingReviewEvent } from './offline-db.js';
+import {
+  offlineDb,
+  type CachedNote,
+  type CachedReviewQueue,
+  type PendingReviewEvent
+} from './offline-db.js';
 
 export interface SyncSnapshot {
   online: boolean;
   pendingCount: number;
   conflictCount: number;
   syncing: boolean;
+}
+
+export async function prepareForDataTransfer(): Promise<void> {
+  if (!navigator.onLine) throw new Error('Cần kết nối mạng để xuất hoặc nhập dữ liệu.');
+  await synchronizePendingReviews();
+  const snapshot = await syncSnapshot(true);
+  if (snapshot.pendingCount > 0) {
+    throw new Error('Vẫn còn dữ liệu ôn tập chờ đồng bộ. Vui lòng thử lại sau.');
+  }
+  if (snapshot.conflictCount > 0) {
+    throw new Error('Có xung đột ôn tập chưa xử lý. Vui lòng xử lý trước khi chuyển dữ liệu.');
+  }
 }
 
 const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
@@ -64,9 +81,11 @@ async function pullEvents(): Promise<void> {
   let cursor = state?.cursor ?? 0;
   let hasMore = true;
   while (hasMore) {
-    const page = await api.get<{ nextCursor: number; hasMore: boolean; events: Array<{ entityType: string }> }>(
-      `/sync/pull?cursor=${cursor}&limit=500`
-    );
+    const page = await api.get<{
+      nextCursor: number;
+      hasMore: boolean;
+      events: Array<{ entityType: string }>;
+    }>(`/sync/pull?cursor=${cursor}&limit=500`);
     await applyEvents(page.events);
     cursor = page.nextCursor;
     hasMore = page.hasMore;
@@ -77,8 +96,10 @@ async function pullEvents(): Promise<void> {
 async function applyEvents(events: Array<{ entityType: string }>): Promise<void> {
   if (events.length === 0) return;
   const entityTypes = new Set(events.map((event) => event.entityType));
-  const refreshNotes = entityTypes.has('note') || entityTypes.has('deck');
-  const refreshQueue = entityTypes.has('card') || entityTypes.has('deck') || entityTypes.has('note');
+  const refreshAll = entityTypes.has('data-transfer');
+  const refreshNotes = refreshAll || entityTypes.has('note') || entityTypes.has('deck');
+  const refreshQueue =
+    refreshAll || entityTypes.has('card') || entityTypes.has('deck') || entityTypes.has('note');
   if (refreshNotes) {
     const notes = await api.get<CachedNote[]>('/notes');
     await offlineDb.transaction('rw', offlineDb.notes, async () => {
@@ -88,7 +109,18 @@ async function applyEvents(events: Array<{ entityType: string }>): Promise<void>
   }
   if (refreshQueue) {
     const queue = await api.get<Omit<CachedReviewQueue, 'id' | 'cachedAtUtc'>>('/reviews/queue');
-    await offlineDb.reviewQueue.put({ id: 'current', ...queue, cachedAtUtc: new Date().toISOString() });
+    await offlineDb.reviewQueue.put({
+      id: 'current',
+      ...queue,
+      cachedAtUtc: new Date().toISOString()
+    });
+  }
+  if (refreshAll) {
+    await Promise.all([
+      offlineDb.studyGoals.clear(),
+      offlineDb.studyGoalForecasts.clear(),
+      offlineDb.studyGoalDailyPlans.clear()
+    ]);
   }
   window.dispatchEvent(new Event('flashcard-sync-applied'));
 }

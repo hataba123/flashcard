@@ -15,6 +15,7 @@ import { ReviewsModule } from './reviews/reviews.module.js';
 import { MediaModule } from './media/media.module.js';
 import { SyncModule } from './sync/sync.module.js';
 import { StudyGoalsModule } from './study-goals/study-goals.module.js';
+import { DataTransferModule } from './data-transfer/data-transfer.module.js';
 
 @Module({
   imports: [
@@ -55,7 +56,8 @@ import { StudyGoalsModule } from './study-goals/study-goals.module.js';
     MediaModule,
     ReviewsModule,
     StudyGoalsModule,
-    SyncModule
+    SyncModule,
+    DataTransferModule
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }]

@@ -27,6 +27,22 @@ test('restores an authenticated session after login', async ({ page }) => {
   );
   await page.route('**/api/decks', (route) => route.fulfill({ json: [] }));
   await page.route('**/api/notes', (route) => route.fulfill({ json: [] }));
+  await page.route('**/api/sync/pull*', (route) =>
+    route.fulfill({ json: { nextCursor: 0, hasMore: false, events: [] } })
+  );
+  await page.route('**/api/data-transfer/export', (route) =>
+    route.fulfill({
+      json: {
+        kind: 'flashcard-data-export',
+        schemaVersion: 1,
+        displayPreferences: {
+          theme: 'light',
+          reviewFontSize: 'medium',
+          reviewCardWidth: 'balanced'
+        }
+      }
+    })
+  );
   await page.goto('/login');
   await page.getByLabel('Email').fill('test@example.com');
   await page.getByLabel('Mật khẩu').fill('mat-khau-hople');
@@ -35,6 +51,42 @@ test('restores an authenticated session after login', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Học có chủ đích.' })).toBeVisible();
   await page.getByRole('button', { name: 'Mở menu tài khoản' }).click();
   await expect(page.getByRole('button', { name: 'Đăng xuất' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Xuất dữ liệu học tập' })).toBeVisible();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Xuất dữ liệu học tập' }).click();
+  await expect(page.getByRole('status')).toContainText('Đã tải tệp dữ liệu học tập xuống.');
+  await expect((await downloadPromise).suggestedFilename()).toMatch(/^flashcard-data-.*\.json$/u);
+
+  let importContentType = '';
+  await page.route('**/api/data-transfer/import', async (route) => {
+    importContentType = route.request().headers()['content-type'] ?? '';
+    await route.fulfill({
+      json: {
+        sourceUserId: 'd2d6978b-8a61-4d49-b9a1-268f37a4a560',
+        displayPreferences: {
+          theme: 'dark',
+          reviewFontSize: 'large',
+          reviewCardWidth: 'wide'
+        },
+        imported: { decks: 1 },
+        updated: {},
+        skipped: {},
+        missingMediaIds: [],
+        settingsApplied: false,
+        syncCursor: 1
+      }
+    });
+  });
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.getByRole('button', { name: 'Nhập dữ liệu học tập' }).click();
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'flashcard-data.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('{"kind":"flashcard-data-export","schemaVersion":1}')
+  });
+  await expect(page.getByRole('status')).toContainText('Đã nhập dữ liệu');
+  expect(importContentType).toMatch(/^multipart\/form-data;/u);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });
 
 test('navigates to a destination from the mobile topbar', async ({ page }) => {

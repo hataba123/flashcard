@@ -8,7 +8,9 @@ import { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { AppModule } from './app.module.js';
+import { UserEntity } from './auth/entities/user.entity.js';
 import { ReviewLogEntity } from './reviews/entities/review-log.entity.js';
+import { StudyGoalDailyAvailabilityEntity } from './study-goals/entities/study-goal-daily-availability.entity.js';
 
 interface AuthResponse {
   accessToken: string;
@@ -467,6 +469,234 @@ describe('API integration', () => {
         expect(body.card.version).toBe(card.version + 1);
       });
   });
+
+  it('exports and imports a complete learning snapshot without changing target credentials', async () => {
+    const source = await register(
+      `${suffix}-transfer-source@integration.local`,
+      'IntegrationPassword123!'
+    );
+    const sourceMe = await request(app.getHttpServer())
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${source.accessToken}`)
+      .expect(200);
+    await app.get(DataSource).getRepository(UserEntity).update(sourceMe.body.id, {
+      timezone: 'Asia/Bangkok',
+      dailyBudgetSeconds: 3600,
+      defaultDesiredRetention: 0.91
+    });
+    const rawInput = await request(app.getHttpServer())
+      .post('/api/raw-inputs')
+      .set('Authorization', `Bearer ${source.accessToken}`)
+      .send({
+        contentRaw: `Transfer raw input ${suffix}`,
+        sourceType: 'manual',
+        sourceMetadata: { origin: 'integration' }
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/api/raw-inputs/${rawInput.body.id}/evaluate`)
+      .set('Authorization', `Bearer ${source.accessToken}`)
+      .expect(201);
+    const deck = await request(app.getHttpServer())
+      .post('/api/decks')
+      .set('Authorization', `Bearer ${source.accessToken}`)
+      .send({ name: `Transfer deck ${suffix}`, description: 'Portable learning data' })
+      .expect(201);
+    const note = await request(app.getHttpServer())
+      .post('/api/notes')
+      .set('Authorization', `Bearer ${source.accessToken}`)
+      .send({
+        deckId: deck.body.id,
+        noteType: 'Basic',
+        fields: { front: 'Transfer question', back: 'Transfer answer' },
+        tags: ['transfer']
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/api/notes/${note.body.id}/generate-cards`)
+      .set('Authorization', `Bearer ${source.accessToken}`)
+      .send({})
+      .expect(201);
+    const goal = await request(app.getHttpServer())
+      .post('/api/study-goals')
+      .set('Authorization', `Bearer ${source.accessToken}`)
+      .send({
+        name: `Transfer goal ${suffix}`,
+        goalType: 'Custom',
+        targetDate: new Date(Date.now() + 60 * 86_400_000).toISOString().slice(0, 10),
+        dailyStudyMinutes: 30,
+        studyDaysOfWeek: [1, 3, 5],
+        desiredRetention: 0.9,
+        finalReviewDays: 7,
+        maxNewCardsPerDay: 20,
+        timeZone: 'UTC',
+        decks: []
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/api/study-goals/${goal.body.id}/decks`)
+      .set('Authorization', `Bearer ${source.accessToken}`)
+      .send({ deckId: deck.body.id, priorityWeight: 1.5 })
+      .expect(201);
+    await request(app.getHttpServer())
+      .put(`/api/study-goals/${goal.body.id}/daily-availability`)
+      .set('Authorization', `Bearer ${source.accessToken}`)
+      .send({ date: new Date().toISOString().slice(0, 10), availableMinutes: 30 })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/api/study-goals/${goal.body.id}/forecast`)
+      .set('Authorization', `Bearer ${source.accessToken}`)
+      .send({ seed: 456 })
+      .expect(201);
+
+    const queue = await request(app.getHttpServer())
+      .get('/api/reviews/queue')
+      .set('Authorization', `Bearer ${source.accessToken}`)
+      .expect(200);
+    const card = queue.body.cards[0] as { id: string; version: number };
+    const shownAt = new Date();
+    const revealedAt = new Date(shownAt.getTime() + 100);
+    const gradedAt = new Date(shownAt.getTime() + 200);
+    const submittedReview = await request(app.getHttpServer())
+      .post('/api/reviews')
+      .set('Authorization', `Bearer ${source.accessToken}`)
+      .send({
+        clientEventId: randomUUID(),
+        cardId: card.id,
+        sessionId: randomUUID(),
+        deviceId: source.deviceId,
+        rating: 'Good',
+        shownAtUtc: shownAt.toISOString(),
+        revealedAtUtc: revealedAt.toISOString(),
+        gradedAtUtc: gradedAt.toISOString(),
+        reviewedAtUtc: gradedAt.toISOString(),
+        cardVersionBefore: card.version
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/api/reviews/${submittedReview.body.reviewLog.id}/undo`)
+      .set('Authorization', `Bearer ${source.accessToken}`)
+      .expect(201);
+
+    const exported = await request(app.getHttpServer())
+      .post('/api/data-transfer/export')
+      .set('Authorization', `Bearer ${source.accessToken}`)
+      .send({
+        displayPreferences: {
+          theme: 'dark',
+          reviewFontSize: 'large',
+          reviewCardWidth: 'compact'
+        }
+      })
+      .expect(200);
+    expect(exported.body).toMatchObject({
+      kind: 'flashcard-data-export',
+      schemaVersion: 1,
+      source: { userId: expect.any(String) },
+      displayPreferences: { theme: 'dark' }
+    });
+    expect(exported.body).not.toHaveProperty('passwordHash');
+    expect(exported.body.data.decks).toHaveLength(1);
+    expect(exported.body.data.notes).toHaveLength(1);
+    expect(exported.body.data.cards).toHaveLength(1);
+    expect(exported.body.data.reviewLogs).toHaveLength(2);
+    expect(exported.body.data.studyGoals).toHaveLength(1);
+    expect(exported.body.data.dailyAvailabilities).toHaveLength(1);
+    expect(exported.body.data.rawInputs).toHaveLength(1);
+    expect(exported.body.data.candidateScores).toHaveLength(1);
+    expect(exported.body.data.forecastSnapshots).toHaveLength(1);
+    const missingMediaId = randomUUID();
+    exported.body.data.mediaReferences.push({
+      userId: exported.body.source.userId,
+      id: missingMediaId,
+      originalFileName: 'transfer-audio.mp3',
+      contentType: 'audio/mpeg',
+      sizeBytes: '12',
+      sha256Hash: 'a'.repeat(64),
+      createdAtUtc: new Date().toISOString(),
+      deletedAtUtc: null
+    });
+
+    const target = await register(
+      `${suffix}-transfer-target@integration.local`,
+      'IntegrationPassword123!'
+    );
+    await request(app.getHttpServer())
+      .post('/api/raw-inputs')
+      .set('Authorization', `Bearer ${target.accessToken}`)
+      .send({
+        contentRaw: `Transfer raw input ${suffix}`,
+        sourceType: 'manual'
+      })
+      .expect(201);
+    const snapshotFile = Buffer.from(JSON.stringify(exported.body));
+    const imported = await request(app.getHttpServer())
+      .post('/api/data-transfer/import')
+      .set('Authorization', `Bearer ${target.accessToken}`)
+      .attach('file', snapshotFile, 'flashcard-data.json')
+      .expect(200);
+    expect(imported.body).toMatchObject({
+      sourceUserId: exported.body.source.userId,
+      displayPreferences: exported.body.displayPreferences,
+      settingsApplied: true
+    });
+    expect(imported.body.imported).toMatchObject({
+      decks: 1,
+      notes: 1,
+      cards: 1,
+      reviewLogs: 2,
+      studyGoals: 1,
+      studyGoalDecks: 1,
+      dailyAvailabilities: 1,
+      candidateScores: 1
+    });
+    expect(imported.body.updated).toMatchObject({
+      rawInputs: 1
+    });
+    expect(imported.body.missingMediaIds).toContain(missingMediaId);
+
+    await request(app.getHttpServer())
+      .get('/api/decks')
+      .set('Authorization', `Bearer ${target.accessToken}`)
+      .expect(200)
+      .expect(({ body }) => expect(body[0].name).toBe(`Transfer deck ${suffix}`));
+    const targetMe = await request(app.getHttpServer())
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${target.accessToken}`)
+      .expect(200);
+    expect(targetMe.body.email).toBe(`${suffix}-transfer-target@integration.local`);
+    expect(
+      await app
+        .get(DataSource)
+        .getRepository(StudyGoalDailyAvailabilityEntity)
+        .count({ where: { userId: targetMe.body.id } })
+    ).toBe(1);
+
+    const importedAgain = await request(app.getHttpServer())
+      .post('/api/data-transfer/import')
+      .set('Authorization', `Bearer ${target.accessToken}`)
+      .attach('file', snapshotFile, 'flashcard-data.json')
+      .expect(200);
+    expect(importedAgain.body.imported).toEqual({});
+    expect(importedAgain.body.skipped.decks).toBe(1);
+    expect(importedAgain.body.skipped.dailyAvailabilities).toBe(1);
+    expect(importedAgain.body.skipped.reviewLogs).toBe(2);
+
+    const conflictingSnapshot = JSON.parse(JSON.stringify(exported.body)) as typeof exported.body;
+    conflictingSnapshot.data.decks[0].version += 1;
+    conflictingSnapshot.data.decks[0].name = `Should roll back ${suffix}`;
+    conflictingSnapshot.data.reviewLogs[0].rating = 'Again';
+    await request(app.getHttpServer())
+      .post('/api/data-transfer/import')
+      .set('Authorization', `Bearer ${target.accessToken}`)
+      .attach('file', Buffer.from(JSON.stringify(conflictingSnapshot)), 'conflict.json')
+      .expect(409);
+    await request(app.getHttpServer())
+      .get('/api/decks')
+      .set('Authorization', `Bearer ${target.accessToken}`)
+      .expect(200)
+      .expect(({ body }) => expect(body[0].name).toBe(`Transfer deck ${suffix}`));
+  }, 30_000);
 
   async function register(email: string, password: string): Promise<AuthResponse> {
     const response = await request(app.getHttpServer())

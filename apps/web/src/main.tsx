@@ -6,7 +6,14 @@ import {
   useQueryClient
 } from '@tanstack/react-query';
 import { createRoot } from 'react-dom/client';
-import { useEffect, useRef, useState, type ReactNode, type TouchEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+  type TouchEvent
+} from 'react';
 import { useForm } from 'react-hook-form';
 import {
   BrowserRouter,
@@ -20,16 +27,22 @@ import {
 } from 'react-router';
 import { z } from 'zod';
 import { schedulingService } from '@flashcard/scheduling';
-import type { TimeBoxedDailyPlan } from '@flashcard/contracts';
+import type {
+  DataTransferExport,
+  DataTransferImportSummary,
+  TimeBoxedDailyPlan
+} from '@flashcard/contracts';
 
 import { ApiError, api } from './api.js';
 import {
   offlineDb,
   getDeviceId,
+  resetAfterDataTransfer,
   setDeviceId as persistDeviceId,
   type CachedReviewCard
 } from './offline-db.js';
 import { OfflineProvider, useOffline } from './offline-provider.js';
+import { prepareForDataTransfer } from './offline-sync.js';
 import { ReviewControls } from './review-controls.js';
 import {
   nextReviewIndex,
@@ -44,6 +57,8 @@ import { StudyPlanPage } from './study-plan-page.js';
 import { WeaknessAnalysis, type WeaknessAnalysisData } from './weakness-analysis.js';
 import {
   ThemeToggle,
+  applyDisplayPreferences,
+  readDisplayPreferences,
   useReviewDisplayPreferences,
   type ReviewCardWidth,
   type ReviewFontSize
@@ -149,6 +164,24 @@ const errorMessage = (error: unknown) =>
     : error instanceof z.ZodError
       ? (error.issues[0]?.message ?? 'Dữ liệu không hợp lệ.')
       : 'Đã xảy ra lỗi. Vui lòng thử lại.';
+
+function transferErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : errorMessage(error);
+}
+
+function downloadDataTransfer(snapshot: DataTransferExport): void {
+  const blob = new Blob([JSON.stringify(snapshot, null, 2)], {
+    type: 'application/json;charset=utf-8'
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `flashcard-data-${new Date().toISOString().replace(/[:.]/gu, '-')}.json`;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
 
 const authErrorMessage = (error: unknown) =>
   error instanceof ApiError && error.status === 401
@@ -345,9 +378,15 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
   const user = useSession((state) => state.user);
   const setSession = useSession((state) => state.setSession);
   const offline = useOffline();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [transferNotice, setTransferNotice] = useState<{
+    tone: 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const accountInitial = user?.email.charAt(0).toUpperCase() ?? '?';
   const syncLabel = !offline.online
     ? 'Ngoại tuyến'
@@ -356,6 +395,62 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
       : offline.pendingCount > 0
         ? `Chờ đồng bộ ${offline.pendingCount} mục`
         : 'Đã đồng bộ';
+  const exportData = useMutation({
+    mutationFn: async () => {
+      await prepareForDataTransfer();
+      return api.post<DataTransferExport>('/data-transfer/export', {
+        displayPreferences: readDisplayPreferences()
+      });
+    },
+    onSuccess: (snapshot) => {
+      downloadDataTransfer(snapshot);
+      setTransferNotice({ tone: 'success', message: 'Đã tải tệp dữ liệu học tập xuống.' });
+    },
+    onError: (error) => setTransferNotice({ tone: 'error', message: transferErrorMessage(error) })
+  });
+  const importData = useMutation({
+    mutationFn: async (file: File) => {
+      await prepareForDataTransfer();
+      const form = new FormData();
+      form.append('file', file, file.name);
+      return api.postForm<DataTransferImportSummary>('/data-transfer/import', form);
+    },
+    onSuccess: async (summary) => {
+      await resetAfterDataTransfer(summary.syncCursor);
+      applyDisplayPreferences(summary.displayPreferences);
+      await queryClient.invalidateQueries();
+      window.dispatchEvent(new Event('flashcard-sync-applied'));
+      const imported = Object.values(summary.imported).reduce((sum, value) => sum + value, 0);
+      const updated = Object.values(summary.updated).reduce((sum, value) => sum + value, 0);
+      const skipped = Object.values(summary.skipped).reduce((sum, value) => sum + value, 0);
+      const mediaNotice =
+        summary.missingMediaIds.length === 0
+          ? ''
+          : ` Thiếu ${summary.missingMediaIds.length} media tham chiếu.`;
+      setTransferNotice({
+        tone: 'success',
+        message: `Đã nhập dữ liệu: thêm ${imported}, cập nhật ${updated}, bỏ qua ${skipped}.${mediaNotice}`
+      });
+    },
+    onError: (error) => setTransferNotice({ tone: 'error', message: transferErrorMessage(error) })
+  });
+  const selectImportFile = () => {
+    setTransferNotice(null);
+    importInputRef.current?.click();
+  };
+  const onImportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (file === undefined) return;
+    if (
+      !window.confirm(
+        'Tệp sẽ được hợp nhất vào tài khoản hiện tại. Dữ liệu học tập và cài đặt tài khoản có thể được cập nhật. Bạn có muốn tiếp tục không?'
+      )
+    ) {
+      return;
+    }
+    importData.mutate(file);
+  };
   const logout = async () => {
     try {
       await api.post('/auth/logout', {});
@@ -440,9 +535,43 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
                     {syncLabel}
                   </span>
                 </div>
+                {transferNotice !== null && (
+                  <span
+                    className={`account-transfer-notice ${transferNotice.tone}`}
+                    role={transferNotice.tone === 'error' ? 'alert' : 'status'}
+                  >
+                    {transferNotice.message}
+                  </span>
+                )}
+                <button
+                  className="account-menu-item account-menu-transfer"
+                  type="button"
+                  disabled={exportData.isPending || !offline.online}
+                  aria-busy={exportData.isPending}
+                  onClick={() => exportData.mutate()}
+                >
+                  <ButtonContent loading={exportData.isPending}>Xuất dữ liệu học tập</ButtonContent>
+                </button>
+                <button
+                  className="account-menu-item account-menu-transfer"
+                  type="button"
+                  disabled={importData.isPending || !offline.online}
+                  aria-busy={importData.isPending}
+                  onClick={selectImportFile}
+                >
+                  <ButtonContent loading={importData.isPending}>Nhập dữ liệu học tập</ButtonContent>
+                </button>
+                <input
+                  ref={importInputRef}
+                  className="sr-only"
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={onImportFileChange}
+                />
                 <button
                   className="account-menu-item"
                   type="button"
+                  disabled={exportData.isPending || importData.isPending}
                   onClick={() => {
                     setAccountMenuOpen(false);
                     void logout();
@@ -1088,9 +1217,7 @@ function Review() {
   const currentNote = note.data?.id === card.noteId ? note.data : undefined;
   const hasCurrentNote = currentNote !== undefined;
   const fields =
-    currentNote === undefined
-      ? {}
-      : parseJson<Record<string, string>>(currentNote.fieldsJson, {});
+    currentNote === undefined ? {} : parseJson<Record<string, string>>(currentNote.fieldsJson, {});
   const front = fields.front ?? fields.text ?? 'Đang tải nội dung…';
   const back = fields.back ?? '';
   const revealed = revealedAt !== null;
