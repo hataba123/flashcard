@@ -470,3 +470,9 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: `run-web.bat` tự chờ SQL Server sẵn sàng, tạo database theo `DB_NAME`, tạo hoặc cập nhật SQL login `DB_USER` và cấp quyền cần thiết trước khi chạy migration.
 - Kiểm tra: chạy lại launcher thành công; API liveness/readiness và web đều trả HTTP 200; lint, typecheck, test và build đều đạt.
+
+## Sửa lỗi phiên đăng nhập hết hạn
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: web tự động xoay refresh token và thử lại request khi access token hết hạn; lỗi `401` từ `/auth/login` hiển thị đúng là email hoặc mật khẩu không đúng; API trả `401` rõ ràng khi thiếu refresh token.
+- Kiểm tra: test API client, Vitest web (25/25), API test (40/40), typecheck và build đều đạt.

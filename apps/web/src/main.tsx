@@ -150,6 +150,11 @@ const errorMessage = (error: unknown) =>
       ? (error.issues[0]?.message ?? 'Dữ liệu không hợp lệ.')
       : 'Đã xảy ra lỗi. Vui lòng thử lại.';
 
+const authErrorMessage = (error: unknown) =>
+  error instanceof ApiError && error.status === 401
+    ? 'Email hoặc mật khẩu không đúng.'
+    : errorMessage(error);
+
 function ButtonContent({ loading, children }: { loading: boolean; children: ReactNode }) {
   return (
     <>
@@ -278,7 +283,7 @@ function AuthPage({ mode }: { mode: 'login' | 'register' }) {
       setSession(accessToken, user);
       navigate('/');
     },
-    onError: (error) => setSubmitError(errorMessage(error))
+    onError: (error) => setSubmitError(authErrorMessage(error))
   });
   return (
     <main className="auth">

@@ -62,7 +62,11 @@ export class AuthService {
     return this.createSession(user, input);
   }
 
-  async refresh(refreshToken: string): Promise<AuthResult> {
+  async refresh(refreshToken: string | undefined): Promise<AuthResult> {
+    if (refreshToken === undefined) {
+      throw new UnauthorizedException('Missing refresh token.');
+    }
+
     const [sessionId, secret] = refreshToken.split('.');
     if (sessionId === undefined || secret === undefined) {
       throw new UnauthorizedException('Invalid refresh token.');

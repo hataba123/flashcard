@@ -43,7 +43,7 @@ export class AuthController {
   ): Promise<AuthResult> {
     return this.sendAuthResult(
       response,
-      await this.authService.refresh(request.cookies[REFRESH_COOKIE] as string)
+      await this.authService.refresh(request.cookies[REFRESH_COOKIE] as string | undefined)
     );
   }
 
