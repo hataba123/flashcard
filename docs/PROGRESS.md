@@ -464,3 +464,9 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: chỉ render nội dung note khi `note.id` khớp với `noteId` của thẻ hiện tại; trong lúc note kế tiếp đang tải, giao diện hiển thị skeleton thay vì tái sử dụng front của thẻ trước.
 - Kiểm tra: typecheck web, Vitest web (23/23) và Playwright E2E mô phỏng note kế tiếp tải chậm sau khi chấm `Hard` đều đạt.
+
+## Sửa launcher SQL Server local
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: `run-web.bat` tự chờ SQL Server sẵn sàng, tạo database theo `DB_NAME`, tạo hoặc cập nhật SQL login `DB_USER` và cấp quyền cần thiết trước khi chạy migration.
+- Kiểm tra: chạy lại launcher thành công; API liveness/readiness và web đều trả HTTP 200; lint, typecheck, test và build đều đạt.

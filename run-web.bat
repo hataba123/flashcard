@@ -21,6 +21,14 @@ if %ERRORLEVEL% EQU 0 (
         exit /b 1
     )
     timeout /t 20 /nobreak >nul
+
+    echo Dang tao database va tai khoan SQL Server...
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\ensure-local-database.ps1"
+    if errorlevel 1 (
+        echo Khong the tao database hoac tai khoan SQL Server.
+        pause
+        exit /b 1
+    )
 )
 
 echo Dang chay migration...
