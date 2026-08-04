@@ -171,6 +171,7 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
             lapseCount: 0
           }
         ],
+        totalDueCards: 2,
         totalEstimatedSeconds: 30,
         budgetSeconds: 1_200,
         sessionPlan: {
@@ -256,6 +257,7 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
   await expect(page.getByText('Phiên học 20 phút')).toBeVisible();
   await expect(page.getByText('Còn khoảng 20 phút')).toBeVisible();
   await expect(page.getByText('Đã hoàn thành 0/2 lượt dự kiến')).toBeVisible();
+  await expect(page.locator('.review-progress-copy')).toContainText('Thẻ 1 / 2');
   await expect(page.getByLabel('Phím tắt trong phiên học')).toContainText('Space');
   await page.locator('.review-options > summary').click();
   await page.getByLabel('Cỡ chữ').selectOption('large');

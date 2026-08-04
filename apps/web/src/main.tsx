@@ -101,6 +101,7 @@ interface ReviewCard {
 }
 interface ReviewQueue {
   cards: ReviewCard[];
+  totalDueCards: number;
   totalEstimatedSeconds: number;
   budgetSeconds: number;
   sessionPlan?: TimeBoxedDailyPlan;
@@ -959,7 +960,7 @@ function Review() {
       } catch {
         const cached = await offlineDb.reviewQueue.get(reviewQueueCacheId);
         if (cached === undefined) throw new Error('No offline review queue is available yet.');
-        return cached;
+        return { ...cached, totalDueCards: cached.totalDueCards ?? cached.cards.length };
       }
     }
   });
@@ -1265,7 +1266,7 @@ function Review() {
     else if (dx > 60 && Math.abs(dx) > Math.abs(dy)) submitGrade('Good');
   };
   const speechText = getCardSpeechText(fields, revealed);
-  const totalCards = queue.data?.cards.length ?? 0;
+  const totalCards = queue.data?.totalDueCards ?? queue.data?.cards.length ?? 0;
   const completedCards = Math.min(index, totalCards);
   const progress = totalCards === 0 ? 0 : Math.round((completedCards / totalCards) * 100);
   const sessionPlan = queue.data?.sessionPlan;

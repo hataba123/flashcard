@@ -25,6 +25,7 @@ export interface ReviewSubmission {
 
 export interface ReviewQueue {
   cards: CardEntity[];
+  totalDueCards: number;
   totalEstimatedSeconds: number;
   budgetSeconds: number;
   sessionPlan?: TimeBoxedDailyPlan;
@@ -63,6 +64,7 @@ export class ReviewsService {
         .filter((card): card is CardEntity => card !== undefined);
       return {
         cards,
+        totalDueCards: cards.length,
         totalEstimatedSeconds: cards.reduce(
           (total, card) => total + card.estimatedReviewSeconds,
           0
@@ -88,7 +90,7 @@ export class ReviewsService {
       cards.push(card);
       totalEstimatedSeconds += card.estimatedReviewSeconds;
     }
-    return { cards, totalEstimatedSeconds, budgetSeconds };
+    return { cards, totalDueCards: dueCards.length, totalEstimatedSeconds, budgetSeconds };
   }
 
   async preview(userId: string, cardId: string): Promise<ReviewPreview[]> {

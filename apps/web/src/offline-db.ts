@@ -20,6 +20,7 @@ export interface CachedReviewCard {
 export interface CachedReviewQueue {
   id: string;
   cards: CachedReviewCard[];
+  totalDueCards?: number;
   totalEstimatedSeconds: number;
   budgetSeconds: number;
   sessionPlan?: TimeBoxedDailyPlan;

@@ -38,7 +38,7 @@ function createCard(): CardEntity {
   };
 }
 
-function createService(card: CardEntity): ReviewsService {
+function createService(card: CardEntity, dueCards = [card]): ReviewsService {
   const deck: DeckEntity = {
     id: card.deckId,
     userId: card.userId,
@@ -57,7 +57,7 @@ function createService(card: CardEntity): ReviewsService {
   const reviewLogs: ReviewLogEntity[] = [];
   const cardRepository = {
     findOne: vi.fn(async () => card),
-    find: vi.fn(async () => [card]),
+    find: vi.fn(async () => dueCards),
     save: vi.fn(async (value: CardEntity) => value)
   } as unknown as Repository<CardEntity>;
   const deckRepository = {
@@ -100,6 +100,17 @@ function createService(card: CardEntity): ReviewsService {
 }
 
 describe('ReviewsService', () => {
+  it('reports all due cards even when the session queue is limited by time budget', async () => {
+    const card = createCard();
+    const secondCard = { ...card, id: 'c4b6a9e1-8f43-4b6a-a7f6-5d0b2e1c9a88' };
+    const service = createService(card, [card, secondCard]);
+
+    const queue = await service.queue(card.userId, 12);
+
+    expect(queue.totalDueCards).toBe(2);
+    expect(queue.cards).toHaveLength(1);
+  });
+
   it('writes one append-only log and returns the original result for a duplicate client event', async () => {
     const card = createCard();
     const service = createService(card);
