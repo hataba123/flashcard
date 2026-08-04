@@ -1,5 +1,13 @@
 # Tiến độ triển khai
 
+## Milestone 47 — Dashboard theo dõi nhịp học
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: thay dashboard bằng bố cục “phòng điều khiển học tập”, ưu tiên khối lượng thẻ đến hạn hôm nay, thời lượng ước tính, thời gian đã học thực tế và số bộ thẻ đang dùng.
+- Theo dõi tiến độ: thêm biểu đồ 14 ngày, số ngày có học, tổng lượt ôn, mức ghi nhớ tích lũy, tỷ lệ Again, trạng thái đồng bộ và phân bổ hàng đợi nội dung; giữ phần phân tích nhóm thẻ yếu và các lối tắt sang ôn tập/kế hoạch/bộ thẻ.
+- Responsive: bố cục tự chuyển cột theo màn hình, kiểm tra không tràn ngang ở các viewport desktop/mobile hiện có.
+- Kiểm tra: `pnpm --filter @flashcard/web typecheck`, `pnpm --filter @flashcard/web test`, `pnpm --filter @flashcard/web build`, Playwright E2E dashboard/auth, Prettier và `git diff --check` đều đạt.
+
 ## Milestone 46 — Hiển thị tổng số thẻ đến hạn thật
 
 - Trạng thái: Hoàn thành.

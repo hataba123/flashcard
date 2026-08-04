@@ -27,6 +27,30 @@ test('restores an authenticated session after login', async ({ page }) => {
   );
   await page.route('**/api/decks', (route) => route.fulfill({ json: [] }));
   await page.route('**/api/notes', (route) => route.fulfill({ json: [] }));
+  await page.route('**/api/dashboard/today', (route) =>
+    route.fulfill({
+      json: {
+        dueCount: 3,
+        estimatedReviewSeconds: 180,
+        remainingBudgetSeconds: 7020,
+        reviewTimeSeconds: 120
+      }
+    })
+  );
+  await page.route('**/api/dashboard/retention', (route) =>
+    route.fulfill({ json: { reviewCount: 24, averageRetrievability: 0.86, lapseCount: 3 } })
+  );
+  await page.route('**/api/dashboard/backlog', (route) => route.fulfill({ json: [] }));
+  await page.route('**/api/dashboard/activity', (route) => route.fulfill({ json: [] }));
+  await page.route('**/api/dashboard/weaknesses', (route) =>
+    route.fulfill({
+      json: {
+        generatedAtUtc: '2026-08-04T00:00:00.000Z',
+        overall: null,
+        groups: []
+      }
+    })
+  );
   await page.route('**/api/sync/pull*', (route) =>
     route.fulfill({ json: { nextCursor: 0, hasMore: false, events: [] } })
   );
@@ -48,7 +72,21 @@ test('restores an authenticated session after login', async ({ page }) => {
   await page.getByLabel('Mật khẩu').fill('mat-khau-hople');
   await page.getByRole('button', { name: 'Đăng nhập' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Học có chủ đích.' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Nhìn thấy nhịp học, biết học gì tiếp.' })
+  ).toBeVisible();
+  await expect(page.getByRole('complementary', { name: 'Tóm tắt học tập hôm nay' })).toContainText(
+    '3'
+  );
+  for (const width of [320, 375, 414, 768, 1280]) {
+    await page.setViewportSize({ width, height: width === 1280 ? 720 : 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth
+      )
+    ).toBe(true);
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.getByRole('button', { name: 'Mở menu tài khoản' }).click();
   await expect(page.getByRole('button', { name: 'Đăng xuất' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Xuất dữ liệu học tập' })).toBeVisible();

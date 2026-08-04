@@ -590,12 +590,67 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
     </div>
   );
 }
-const Metric = ({ label, value }: { label: string; value: string | number }) => (
-  <article className="metric">
-    <strong>{value}</strong>
-    <span>{label}</span>
-  </article>
-);
+function formatDashboardCount(value: number): string {
+  return value.toLocaleString('vi-VN');
+}
+
+function formatDashboardDuration(seconds: number): string {
+  if (seconds <= 0) return '0 phút';
+  const minutes = Math.round(seconds / 60);
+  return minutes === 0 ? '<1 phút' : `${minutes} phút`;
+}
+
+function dashboardActivityWindow(rows: DashboardActivity[]): DashboardActivity[] {
+  const byDay = new Map(rows.map((row) => [row.day, row.reviews]));
+  const now = new Date();
+  return Array.from({ length: 14 }, (_, index) => {
+    const date = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - (13 - index), 12)
+    );
+    const day = date.toISOString().slice(0, 10);
+    return { day, reviews: byDay.get(day) ?? 0 };
+  });
+}
+
+function dashboardDayLabel(day: string): string {
+  return new Intl.DateTimeFormat('vi-VN', { weekday: 'short' })
+    .format(new Date(`${day}T12:00:00Z`))
+    .replace('.', '');
+}
+
+function dashboardBacklogLabel(status: string): string {
+  switch (status) {
+    case 'Pending':
+      return 'Đang chờ';
+    case 'Candidate':
+      return 'Ứng viên';
+    case 'Backlog':
+      return 'Tồn đọng';
+    default:
+      return status;
+  }
+}
+
+function DashboardStat({
+  label,
+  value,
+  note,
+  tone
+}: {
+  label: string;
+  value: string;
+  note: string;
+  tone: 'accent' | 'blue' | 'green' | 'coral';
+}) {
+  return (
+    <article className={`dashboard-stat dashboard-stat-${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{note}</small>
+    </article>
+  );
+}
+
 function Dashboard() {
   const decks = useQuery({ queryKey: ['decks'], queryFn: () => api.get<Deck[]>('/decks') });
   const notes = useQuery({ queryKey: ['notes'], queryFn: () => api.get<Note[]>('/notes') });
@@ -623,20 +678,87 @@ function Dashboard() {
   const queries = [decks, notes, today, retention, backlog, activity, weaknesses];
   const isLoading = queries.some((query) => query.isLoading);
   const hasError = queries.some((query) => query.isError);
+  const hasTodayData = today.data !== undefined;
   const retry = () => {
     void Promise.all(queries.map((query) => query.refetch()));
   };
+  const activeDecks = decks.data?.filter((deck) => !deck.isArchived) ?? [];
+  const dueCount = today.data?.dueCount ?? 0;
+  const estimatedReviewSeconds = today.data?.estimatedReviewSeconds ?? 0;
+  const remainingBudgetSeconds = today.data?.remainingBudgetSeconds ?? 0;
+  const reviewTimeSeconds = today.data?.reviewTimeSeconds ?? 0;
+  const budgetBaseSeconds = estimatedReviewSeconds + remainingBudgetSeconds;
+  const workloadPercent =
+    budgetBaseSeconds === 0
+      ? 0
+      : Math.min(100, Math.round((estimatedReviewSeconds / budgetBaseSeconds) * 100));
+  const retentionPercent =
+    retention.data === undefined ? null : Math.round(retention.data.averageRetrievability * 100);
+  const lapseRate =
+    retention.data === undefined || retention.data.reviewCount === 0
+      ? null
+      : Math.round((retention.data.lapseCount / retention.data.reviewCount) * 100);
+  const activityDays = dashboardActivityWindow(activity.data ?? []);
+  const activityTotal = activityDays.reduce((total, item) => total + item.reviews, 0);
+  const activityPeak = Math.max(0, ...activityDays.map((item) => item.reviews));
+  const activeActivityDays = activityDays.filter((item) => item.reviews > 0).length;
+  const backlogRows = [...(backlog.data ?? [])].sort((left, right) => right.count - left.count);
+  const backlogTotal = backlogRows.reduce((total, item) => total + item.count, 0);
+  const backlogPeak = Math.max(0, ...backlogRows.map((item) => item.count));
   return (
     <Shell>
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">Tổng quan</p>
-          <h1>Học có chủ đích.</h1>
-          <p className="muted">Theo dõi tiến độ và tiếp tục nhịp học của bạn.</p>
+      <header className="dashboard-hero">
+        <div className="dashboard-hero-copy">
+          <p className="eyebrow">Phòng điều khiển học tập</p>
+          <h1>Nhìn thấy nhịp học, biết học gì tiếp.</h1>
+          <p>
+            Một cái nhìn nhanh về khối lượng hôm nay, độ ghi nhớ và những nhóm thẻ đang cần bạn quay
+            lại.
+          </p>
+          <div className="dashboard-hero-actions">
+            <Link className="button" to="/review">
+              Ôn tập ngay <span aria-hidden="true">↗</span>
+            </Link>
+            <Link className="button secondary" to="/study-plan">
+              Xem kế hoạch
+            </Link>
+          </div>
         </div>
-        <Link className="button" to="/review">
-          Ôn tập ngay
-        </Link>
+        <aside className="dashboard-today-card" aria-label="Tóm tắt học tập hôm nay">
+          <div className="dashboard-today-header">
+            <span>Hôm nay</span>
+            <span
+              className={`dashboard-today-status${hasTodayData && dueCount === 0 ? ' is-clear' : ''}`}
+            >
+              {!hasTodayData ? 'Đang tải' : dueCount === 0 ? 'Đã nhẹ' : 'Có việc'}
+            </span>
+          </div>
+          <div className="dashboard-today-count">
+            <strong>{hasTodayData ? formatDashboardCount(dueCount) : '—'}</strong>
+            <span>thẻ cần ôn</span>
+          </div>
+          <div className="dashboard-today-meta">
+            <span>Khối lượng ước tính</span>
+            <strong>{hasTodayData ? formatDashboardDuration(estimatedReviewSeconds) : '—'}</strong>
+          </div>
+          <div
+            className="dashboard-workload-track"
+            role="progressbar"
+            aria-label="Khối lượng ôn tập so với ngân sách hôm nay"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={hasTodayData ? workloadPercent : undefined}
+          >
+            <span style={{ width: `${hasTodayData ? workloadPercent : 0}%` }} />
+          </div>
+          <p>
+            {!hasTodayData
+              ? 'Đang cập nhật lịch ôn hôm nay.'
+              : dueCount === 0
+                ? 'Không còn thẻ đến hạn trong hàng đợi hiện tại.'
+                : `Còn ${formatDashboardDuration(remainingBudgetSeconds)} ngân sách dự phòng.`}
+          </p>
+        </aside>
       </header>
       {isLoading ? (
         <ListSkeleton />
@@ -644,68 +766,244 @@ function Dashboard() {
         <QueryError title="Không thể tải tổng quan." onRetry={retry} />
       ) : (
         <>
-          <div className="metric-grid">
-            <Metric
+          <section className="dashboard-stat-grid" aria-label="Các chỉ số chính">
+            <DashboardStat
+              label="Cần ôn hôm nay"
+              value={formatDashboardCount(dueCount)}
+              note={dueCount === 0 ? 'Hàng đợi đang trống' : 'Thẻ đang chờ bạn'}
+              tone="accent"
+            />
+            <DashboardStat
+              label="Thời lượng còn lại"
+              value={formatDashboardDuration(estimatedReviewSeconds)}
+              note="Ước tính cho thẻ đến hạn"
+              tone="blue"
+            />
+            <DashboardStat
+              label="Đã học hôm nay"
+              value={formatDashboardDuration(reviewTimeSeconds)}
+              note="Thời gian trả lời thực tế"
+              tone="green"
+            />
+            <DashboardStat
               label="Bộ thẻ đang dùng"
-              value={decks.data?.filter((deck) => !deck.isArchived).length ?? '—'}
+              value={formatDashboardCount(activeDecks.length)}
+              note={`${formatDashboardCount(notes.data?.length ?? 0)} thẻ trong kho`}
+              tone="coral"
             />
-            <Metric label="Thẻ" value={notes.data?.length ?? '—'} />
-            <Metric label="Cần ôn hôm nay" value={today.data?.dueCount ?? '—'} />
-            <Metric
-              label="Thời gian ôn"
-              value={
-                today.data?.reviewTimeSeconds === undefined
-                  ? '—'
-                  : `${Math.ceil(today.data.reviewTimeSeconds / 60)} phút`
-              }
-            />
-          </div>
-          <section className="panel dashboard-details">
-            <Metric
-              label="Khả năng ghi nhớ"
-              value={
-                retention.data === undefined
-                  ? '—'
-                  : `${Math.round(retention.data.averageRetrievability * 100)}%`
-              }
-            />
-            <Metric
-              label="Sync"
-              value={offline.pendingCount === 0 ? 'Ready' : `${offline.pendingCount} pending`}
-            />
-            <div>
-              <h3>Hàng đợi nhập liệu</h3>
-              <p>
-                {backlog.data?.map((item) => `${item.status}: ${item.count}`).join(' · ') ||
-                  'Không có dữ liệu tồn đọng.'}
-              </p>
-            </div>
-            <div>
-              <h3>Hoạt động 14 ngày</h3>
-              <p>
-                {activity.data?.map((item) => `${item.day}: ${item.reviews}`).join(' · ') ||
-                  'Chưa có lượt ôn nào.'}
-              </p>
-            </div>
           </section>
+          <section className="dashboard-main-grid">
+            <section
+              className="dashboard-panel dashboard-activity-panel"
+              aria-labelledby="activity-title"
+            >
+              <header className="dashboard-panel-header">
+                <div>
+                  <p className="eyebrow">14 ngày gần nhất</p>
+                  <h2 id="activity-title">Nhịp học của bạn</h2>
+                </div>
+                <strong className="dashboard-panel-badge">{activeActivityDays}/14 ngày</strong>
+              </header>
+              <p className="dashboard-panel-intro">
+                {activityTotal === 0
+                  ? 'Chưa có lượt ôn nào để vẽ nhịp học.'
+                  : `${formatDashboardCount(activityTotal)} lượt ôn — đều đặn quan trọng hơn một ngày học quá sức.`}
+              </p>
+              {activityTotal === 0 ? (
+                <div className="dashboard-empty-chart">
+                  Bắt đầu một phiên để tạo dấu mốc đầu tiên.
+                </div>
+              ) : (
+                <div
+                  className="dashboard-activity-chart"
+                  role="img"
+                  aria-label="Biểu đồ lượt ôn trong 14 ngày"
+                >
+                  {activityDays.map((item) => (
+                    <div
+                      className="dashboard-activity-day"
+                      key={item.day}
+                      aria-label={`${item.day}: ${item.reviews} lượt ôn`}
+                    >
+                      <span className="dashboard-activity-value">
+                        {item.reviews === 0 ? '' : item.reviews}
+                      </span>
+                      <div className="dashboard-activity-track">
+                        <span
+                          className="dashboard-activity-bar"
+                          style={{
+                            height: `${Math.max(8, (item.reviews / Math.max(1, activityPeak)) * 100)}%`
+                          }}
+                        />
+                      </div>
+                      <span className="dashboard-activity-label">
+                        {dashboardDayLabel(item.day)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="dashboard-activity-footer">
+                <span>{formatDashboardCount(activityPeak)} lượt là mức cao nhất/ngày</span>
+                <span>{formatDashboardCount(activeDecks.length)} bộ thẻ đang hoạt động</span>
+              </div>
+            </section>
+            <section
+              className="dashboard-panel dashboard-retention-panel"
+              aria-labelledby="retention-title"
+            >
+              <header className="dashboard-panel-header">
+                <div>
+                  <p className="eyebrow">Sức khỏe ghi nhớ</p>
+                  <h2 id="retention-title">Bạn đang nhớ đến đâu?</h2>
+                </div>
+                <span className="dashboard-panel-caption">Tích lũy</span>
+              </header>
+              <div className="dashboard-retention-layout">
+                <div
+                  className="dashboard-retention-ring"
+                  style={{
+                    background: `conic-gradient(var(--color-accent-2) ${retentionPercent ?? 0}%, var(--color-paper-3) 0)`
+                  }}
+                >
+                  <div>
+                    <strong>{retentionPercent === null ? '—' : `${retentionPercent}%`}</strong>
+                    <span>ghi nhớ</span>
+                  </div>
+                </div>
+                <dl className="dashboard-retention-list">
+                  <div>
+                    <dt>Lượt ôn</dt>
+                    <dd>{formatDashboardCount(retention.data?.reviewCount ?? 0)}</dd>
+                  </div>
+                  <div>
+                    <dt>Tỷ lệ Again</dt>
+                    <dd>{lapseRate === null ? '—' : `${lapseRate}%`}</dd>
+                  </div>
+                  <div>
+                    <dt>Đồng bộ</dt>
+                    <dd>{offline.pendingCount === 0 ? 'Ổn' : `${offline.pendingCount} chờ`}</dd>
+                  </div>
+                </dl>
+              </div>
+              <p className="dashboard-panel-footnote">
+                Tỷ lệ Again cao là tín hiệu nên viết lại câu hỏi hoặc giảm thẻ mới.
+              </p>
+            </section>
+          </section>
+
+          <section className="dashboard-secondary-grid">
+            <section className="dashboard-panel dashboard-next-panel" aria-labelledby="next-title">
+              <header className="dashboard-panel-header">
+                <div>
+                  <p className="eyebrow">Bước tiếp theo</p>
+                  <h2 id="next-title">Giữ nhịp học đơn giản</h2>
+                </div>
+              </header>
+              <div className="dashboard-next-list">
+                <Link className="dashboard-next-item" to="/review">
+                  <span className="dashboard-next-icon" aria-hidden="true">
+                    →
+                  </span>
+                  <span>
+                    <strong>{dueCount === 0 ? 'Kiểm tra hàng đợi' : 'Ôn thẻ đến hạn'}</strong>
+                    <small>
+                      {dueCount === 0
+                        ? 'Xem lại khi có thẻ mới đến hạn.'
+                        : `${formatDashboardCount(dueCount)} thẻ đang chờ.`}
+                    </small>
+                  </span>
+                  <span className="dashboard-next-arrow" aria-hidden="true">
+                    ↗
+                  </span>
+                </Link>
+                <Link className="dashboard-next-item" to="/study-plan">
+                  <span className="dashboard-next-icon" aria-hidden="true">
+                    ◷
+                  </span>
+                  <span>
+                    <strong>Mở kế hoạch hôm nay</strong>
+                    <small>Phân bổ thời gian giữa thẻ đến hạn, thẻ yếu và thẻ mới.</small>
+                  </span>
+                  <span className="dashboard-next-arrow" aria-hidden="true">
+                    ↗
+                  </span>
+                </Link>
+                <Link className="dashboard-next-item" to="/decks">
+                  <span className="dashboard-next-icon" aria-hidden="true">
+                    +
+                  </span>
+                  <span>
+                    <strong>Chỉnh lại bộ thẻ</strong>
+                    <small>Giữ câu hỏi rõ và nhịp thẻ mới vừa sức.</small>
+                  </span>
+                  <span className="dashboard-next-arrow" aria-hidden="true">
+                    ↗
+                  </span>
+                </Link>
+              </div>
+            </section>
+            <section
+              className="dashboard-panel dashboard-backlog-panel"
+              aria-labelledby="backlog-title"
+            >
+              <header className="dashboard-panel-header">
+                <div>
+                  <p className="eyebrow">Nguồn học</p>
+                  <h2 id="backlog-title">Hàng đợi nội dung</h2>
+                </div>
+                <strong className="dashboard-panel-badge">
+                  {formatDashboardCount(backlogTotal)}
+                </strong>
+              </header>
+              {backlogRows.length === 0 ? (
+                <div className="dashboard-backlog-empty">Không có nguồn nội dung tồn đọng.</div>
+              ) : (
+                <div className="dashboard-backlog-list">
+                  {backlogRows.map((item) => (
+                    <div className="dashboard-backlog-row" key={item.status}>
+                      <div>
+                        <span>{dashboardBacklogLabel(item.status)}</span>
+                        <strong>{formatDashboardCount(item.count)}</strong>
+                      </div>
+                      <div className="dashboard-backlog-track">
+                        <span
+                          style={{
+                            width: `${Math.max(4, (item.count / Math.max(1, backlogPeak)) * 100)}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </section>
+
           {weaknesses.data !== undefined && <WeaknessAnalysis data={weaknesses.data} />}
-          <section className="panel study-callout">
-            <div>
-              <h2>Tiếp tục học</h2>
-              <p>Hàng đợi ôn tập của bạn được sắp xếp theo lịch học hiện tại.</p>
-            </div>
-            <Link className="button" to="/review">
-              Bắt đầu ôn tập
-            </Link>
-          </section>
-          {decks.data !== undefined && decks.data.length > 0 && (
-            <section>
-              <h2 className="section-title">Bộ thẻ gần đây</h2>
+          {activeDecks.length > 0 && (
+            <section className="dashboard-decks-section" aria-labelledby="decks-title">
+              <header className="dashboard-section-heading">
+                <div>
+                  <p className="eyebrow">Kho học tập</p>
+                  <h2 id="decks-title">Bộ thẻ đang dùng</h2>
+                </div>
+                <Link className="button-link" to="/decks">
+                  Quản lý bộ thẻ ↗
+                </Link>
+              </header>
               <div className="dashboard-deck-grid">
-                {decks.data.slice(0, 3).map((deck) => (
+                {activeDecks.slice(0, 3).map((deck) => (
                   <Link className="dashboard-deck" to="/decks" key={deck.id}>
+                    <span className="dashboard-deck-marker" aria-hidden="true">
+                      {deck.isCore ? 'CORE' : 'DECK'}
+                    </span>
                     <h3>{deck.name}</h3>
                     <p>{deck.description || 'Chưa có mô tả.'}</p>
+                    <small>
+                      Giữ nhớ {Math.round(deck.desiredRetention * 100)}% · {deck.dailyNewCardLimit}{' '}
+                      thẻ mới/ngày
+                    </small>
                   </Link>
                 ))}
               </div>
