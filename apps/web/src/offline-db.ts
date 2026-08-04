@@ -34,6 +34,14 @@ export interface CachedNote {
   tagsJson: string;
 }
 
+export interface CachedMedia {
+  id: string;
+  userId: string;
+  mediaId: string;
+  blob: Blob;
+  cachedAtUtc: string;
+}
+
 export interface PendingReviewEvent {
   clientEventId: string;
   cardId: string;
@@ -82,6 +90,7 @@ export interface CachedStudyGoalDailyPlan {
 class FlashcardOfflineDatabase extends Dexie {
   reviewQueue!: EntityTable<CachedReviewQueue, 'id'>;
   notes!: EntityTable<CachedNote, 'id'>;
+  mediaCache!: EntityTable<CachedMedia, 'id'>;
   pendingReviewEvents!: EntityTable<PendingReviewEvent, 'clientEventId'>;
   syncState!: EntityTable<SyncState, 'id'>;
   conflicts!: EntityTable<SyncConflict, 'id'>;
@@ -101,6 +110,17 @@ class FlashcardOfflineDatabase extends Dexie {
     this.version(2).stores({
       reviewQueue: 'id, cachedAtUtc',
       notes: 'id, deckId',
+      pendingReviewEvents: 'clientEventId, createdAtUtc',
+      syncState: 'id',
+      conflicts: '++id, clientEventId, createdAtUtc',
+      studyGoals: 'id, cachedAtUtc',
+      studyGoalForecasts: 'studyGoalId, cachedAtUtc',
+      studyGoalDailyPlans: 'studyGoalId, cachedAtUtc'
+    });
+    this.version(3).stores({
+      reviewQueue: 'id, cachedAtUtc',
+      notes: 'id, deckId',
+      mediaCache: 'id, userId, mediaId, cachedAtUtc',
       pendingReviewEvents: 'clientEventId, createdAtUtc',
       syncState: 'id',
       conflicts: '++id, clientEventId, createdAtUtc',
@@ -137,6 +157,7 @@ export async function resetAfterDataTransfer(syncCursor: number): Promise<void> 
     [
       offlineDb.reviewQueue,
       offlineDb.notes,
+      offlineDb.mediaCache,
       offlineDb.syncState,
       offlineDb.studyGoals,
       offlineDb.studyGoalForecasts,
@@ -145,6 +166,7 @@ export async function resetAfterDataTransfer(syncCursor: number): Promise<void> 
     async () => {
       await offlineDb.reviewQueue.clear();
       await offlineDb.notes.clear();
+      await offlineDb.mediaCache.clear();
       await offlineDb.studyGoals.clear();
       await offlineDb.studyGoalForecasts.clear();
       await offlineDb.studyGoalDailyPlans.clear();

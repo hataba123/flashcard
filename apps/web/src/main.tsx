@@ -43,6 +43,7 @@ import {
 } from './offline-db.js';
 import { OfflineProvider, useOffline } from './offline-provider.js';
 import { prepareForDataTransfer } from './offline-sync.js';
+import { loadMediaBlob, mediaQueryKey, mediaQueryStaleTimeMs } from './media-cache.js';
 import { ReviewControls } from './review-controls.js';
 import {
   nextReviewIndex,
@@ -906,6 +907,7 @@ function Decks() {
 function Review() {
   const client = useQueryClient();
   const navigate = useNavigate();
+  const userId = useSession((state) => state.user?.id);
   const [reviewParams] = useSearchParams();
   const studyGoalId = reviewParams.get('studyGoalId');
   const studyDate = reviewParams.get('date');
@@ -1001,22 +1003,44 @@ function Review() {
     enabled: card !== undefined && revealedAt !== null
   });
   useEffect(() => {
-    const nextCard = queue.data?.cards[index + 1];
-    if (nextCard !== undefined) {
-      const nextNote = client.fetchQuery({
-        queryKey: ['review-note', nextCard.noteId],
-        queryFn: () => api.get<Note>(`/notes/${nextCard.noteId}`)
-      });
-      void nextNote.then((note) => {
-        const fields = parseJson<Record<string, string>>(note.fieldsJson, {});
-        if (fields.audioMediaId !== undefined)
-          void client.prefetchQuery({
-            queryKey: ['media', fields.audioMediaId],
-            queryFn: () => api.getBlob(`/media/${fields.audioMediaId}`)
+    const cards = queue.data?.cards;
+    if (cards === undefined || userId === undefined || !offline.online) return;
+    let cancelled = false;
+    const preload = async () => {
+      for (const queuedCard of cards) {
+        if (cancelled) return;
+        let note: Note;
+        try {
+          note = await client.fetchQuery({
+            queryKey: ['review-note', queuedCard.noteId],
+            queryFn: () => api.get<Note>(`/notes/${queuedCard.noteId}`),
+            staleTime: 5 * 60 * 1_000
           });
-      });
-    }
-  }, [client, index, queue.data]);
+          await offlineDb.notes.put(note);
+        } catch (error) {
+          if (!cancelled) console.warn('Không thể tải trước nội dung thẻ.', error);
+          continue;
+        }
+        const fields = parseJson<Record<string, string>>(note.fieldsJson, {});
+        const mediaId = fields.audioMediaId;
+        if (mediaId === undefined) continue;
+        try {
+          await client.prefetchQuery({
+            queryKey: mediaQueryKey(userId, mediaId),
+            queryFn: () => loadMediaBlob(userId, mediaId),
+            staleTime: mediaQueryStaleTimeMs
+          });
+        } catch (error) {
+          if (!cancelled) console.warn('Không thể tải trước âm thanh offline.', error);
+        }
+      }
+    };
+    const timer = window.setTimeout(() => void preload(), 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [client, offline.online, queue.data, userId]);
   const grade = useMutation({
     mutationFn: async ({
       card,
@@ -1510,24 +1534,27 @@ function Review() {
   );
 }
 function AudioControl({ mediaId }: { mediaId: string | undefined }) {
+  const userId = useSession((state) => state.user?.id);
   const media = useQuery({
-    queryKey: ['media', mediaId],
-    queryFn: () => api.getBlob(`/media/${mediaId!}`),
-    enabled: mediaId !== undefined
+    queryKey: ['media', userId, mediaId],
+    queryFn: () => loadMediaBlob(userId!, mediaId!),
+    enabled: userId !== undefined && mediaId !== undefined,
+    staleTime: mediaQueryStaleTimeMs
   });
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
+    setUrl(null);
     if (media.data === undefined) return;
     const objectUrl = URL.createObjectURL(media.data);
     setUrl(objectUrl);
     return () => URL.revokeObjectURL(objectUrl);
-  }, [media.data]);
-  if (mediaId === undefined) return null;
+  }, [media.data, mediaId, userId]);
+  if (userId === undefined || mediaId === undefined) return null;
   if (media.isError) return <p className="form-error">Không thể tải âm thanh của thẻ.</p>;
   return url === null ? (
     <p className="muted">Đang tải âm thanh…</p>
   ) : (
-    <audio controls preload="auto" src={url} />
+    <audio key={`${userId}:${mediaId}`} controls preload="auto" src={url} />
   );
 }
 function App() {

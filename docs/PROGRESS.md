@@ -1,5 +1,20 @@
 # Tiến độ triển khai
 
+## Milestone 46 — Hiển thị tổng số thẻ đến hạn thật
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: API `/reviews/queue` trả `totalDueCards` dựa trên toàn bộ thẻ đang đến hạn; giao diện dùng trường này làm mẫu số thanh tiến độ và cache offline cũ có fallback tương thích.
+- Tương thích: vẫn giữ giới hạn ngân sách của phiên học; `totalDueCards` cho biết tổng thẻ đến hạn, còn `cards` là các thẻ được nạp vào phiên hiện tại.
+- Kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, E2E review và `git diff --check` đều đạt.
+
+## Milestone 45 — Cache audio offline theo tài khoản
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: thêm `mediaCache` vào IndexedDB; lưu Blob theo khóa `userId + mediaId`; đọc cache trước khi gọi API; prefetch tuần tự nội dung và audio của hàng đợi ôn tập ở nền; sửa URL object khi chuyển thẻ.
+- Bảo mật: React Query và IndexedDB đều phân vùng media theo tài khoản hiện tại; import snapshot xóa cache media cũ để tránh giữ tham chiếu không còn phù hợp.
+- Giới hạn: tải nền chạy khi trang ôn tập đang mở; trình duyệt có thể tạm dừng JavaScript khi đóng tab hoặc hệ thống thu hồi bộ nhớ.
+- Kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+
 ## Milestone 44 — Xuất/nhập snapshot dữ liệu học tập
 
 - Trạng thái: Hoàn thành.
