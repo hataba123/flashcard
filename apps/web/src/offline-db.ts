@@ -94,6 +94,20 @@ export interface CachedStudyGoalDailyPlan {
   cachedAtUtc: string;
 }
 
+export interface ActiveTimeBoxedStudySession {
+  id: string;
+  userId: string;
+  studyGoalId: string;
+  studyDate: string;
+  sessionId: string;
+  queue: CachedReviewQueue;
+  startedAtMs: number;
+  pausedDurationMs: number;
+  pausedAtMs: number | null;
+  extraMinutes: number;
+  completedCardIds: string[];
+}
+
 export interface DailyBrowseExposure {
   id: string;
   userId: string;
@@ -131,6 +145,7 @@ class FlashcardOfflineDatabase extends Dexie {
   studyGoals!: EntityTable<CachedStudyGoals, 'id'>;
   studyGoalForecasts!: EntityTable<CachedStudyGoalForecast, 'studyGoalId'>;
   studyGoalDailyPlans!: EntityTable<CachedStudyGoalDailyPlan, 'studyGoalId'>;
+  activeTimeBoxedStudySessions!: EntityTable<ActiveTimeBoxedStudySession, 'id'>;
   dailyBrowseExposures!: EntityTable<DailyBrowseExposure, 'id'>;
   dailyBrowse!: EntityTable<CachedDailyBrowse, 'id'>;
   dailyBrowseCompletions!: EntityTable<DailyBrowseCompletion, 'id'>;
@@ -179,6 +194,21 @@ class FlashcardOfflineDatabase extends Dexie {
       dailyBrowse: 'id, userId, cachedAtUtc',
       dailyBrowseCompletions: 'id, completedAtUtc'
     });
+    this.version(5).stores({
+      reviewQueue: 'id, cachedAtUtc',
+      notes: 'id, deckId',
+      mediaCache: 'id, userId, mediaId, cachedAtUtc',
+      pendingReviewEvents: 'clientEventId, createdAtUtc',
+      syncState: 'id',
+      conflicts: '++id, clientEventId, createdAtUtc',
+      studyGoals: 'id, cachedAtUtc',
+      studyGoalForecasts: 'studyGoalId, cachedAtUtc',
+      studyGoalDailyPlans: 'studyGoalId, cachedAtUtc',
+      activeTimeBoxedStudySessions: 'id, userId, studyGoalId, studyDate',
+      dailyBrowseExposures: 'id, [userId+studyDate], firstSeenAtUtc',
+      dailyBrowse: 'id, userId, cachedAtUtc',
+      dailyBrowseCompletions: 'id, completedAtUtc'
+    });
   }
 }
 
@@ -213,6 +243,7 @@ export async function resetAfterDataTransfer(syncCursor: number): Promise<void> 
       offlineDb.studyGoals,
       offlineDb.studyGoalForecasts,
       offlineDb.studyGoalDailyPlans,
+      offlineDb.activeTimeBoxedStudySessions,
       offlineDb.dailyBrowseExposures,
       offlineDb.dailyBrowse,
       offlineDb.dailyBrowseCompletions
@@ -224,6 +255,7 @@ export async function resetAfterDataTransfer(syncCursor: number): Promise<void> 
       await offlineDb.studyGoals.clear();
       await offlineDb.studyGoalForecasts.clear();
       await offlineDb.studyGoalDailyPlans.clear();
+      await offlineDb.activeTimeBoxedStudySessions.clear();
       await offlineDb.dailyBrowseExposures.clear();
       await offlineDb.dailyBrowse.clear();
       await offlineDb.dailyBrowseCompletions.clear();
@@ -243,6 +275,12 @@ export const dailyBrowseCacheId = (
   timeZone: string,
   scope: DailyBrowseScope
 ) => `${userId}:${date}:${timeZone}:${scope}`;
+
+export const activeTimeBoxedStudySessionId = (
+  userId: string,
+  studyGoalId: string,
+  studyDate: string
+) => `${userId}:${studyGoalId}:${studyDate}`;
 
 export const dailyBrowseCompletionId = (
   userId: string,

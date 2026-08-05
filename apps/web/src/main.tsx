@@ -39,11 +39,13 @@ import type {
 
 import { ApiError, api } from './api.js';
 import {
+  activeTimeBoxedStudySessionId,
   offlineDb,
   getDeviceId,
   resetAfterDataTransfer,
   setDeviceId as persistDeviceId,
   dailyBrowseCompletionId,
+  type ActiveTimeBoxedStudySession,
   type CachedReviewCard
 } from './offline-db.js';
 import {
@@ -113,6 +115,9 @@ interface ReviewQueue {
   totalEstimatedSeconds: number;
   budgetSeconds: number;
   sessionPlan?: TimeBoxedDailyPlan;
+}
+interface ReviewQueueWithSession extends ReviewQueue {
+  activeSession?: ActiveTimeBoxedStudySession;
 }
 interface ReviewPreview {
   rating: ReviewRating;
@@ -1609,6 +1614,7 @@ function Review() {
   const [revealedAt, setRevealedAt] = useState<Date | null>(null);
   const revealedAtRef = useRef<Date | null>(null);
   const [lastReviewId, setLastReviewId] = useState<string | null>(null);
+  const [lastReviewedCardId, setLastReviewedCardId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [hasConflict, setHasConflict] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -1617,13 +1623,15 @@ function Review() {
   const [sessionStartedAtMs, setSessionStartedAtMs] = useState<number | null>(null);
   const [clockNowMs, setClockNowMs] = useState(Date.now());
   const [extraMinutes, setExtraMinutes] = useState(0);
+  const [completedCardIds, setCompletedCardIds] = useState<string[]>([]);
   const pausedSessionMs = useRef(0);
+  const timeBoxedSessionInitialized = useRef(false);
   const { fontSize, setFontSize, cardWidth, setCardWidth } = useReviewDisplayPreferences();
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const reviewScrollY = useRef<number | null>(null);
   const reviewDocumentMinHeight = useRef<number | null>(null);
   const originalDocumentMinHeight = useRef(document.documentElement.style.minHeight);
-  const sessionId = useState(() => crypto.randomUUID())[0];
+  const [sessionId, setSessionId] = useState<string>(() => crypto.randomUUID());
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const offline = useOffline();
   useEffect(() => {
@@ -1640,9 +1648,24 @@ function Review() {
     },
     []
   );
-  const queue = useQuery({
+  const queue = useQuery<ReviewQueueWithSession>({
     queryKey: ['review-queue', studyGoalId, studyDate],
     queryFn: async () => {
+      if (hasTimeBoxedRequest && userId !== undefined) {
+        const activeSession = await offlineDb.activeTimeBoxedStudySessions.get(
+          activeTimeBoxedStudySessionId(userId, studyGoalId, studyDate)
+        );
+        if (
+          activeSession !== undefined &&
+          activeSession.completedCardIds.length < activeSession.queue.cards.length
+        ) {
+          return {
+            ...activeSession.queue,
+            totalDueCards: activeSession.queue.totalDueCards ?? activeSession.queue.cards.length,
+            activeSession
+          };
+        }
+      }
       try {
         const response = await api.get<ReviewQueue>(reviewQueuePath);
         await offlineDb.reviewQueue.put({
@@ -1656,21 +1679,89 @@ function Review() {
         if (cached === undefined) throw new Error('No offline review queue is available yet.');
         return { ...cached, totalDueCards: cached.totalDueCards ?? cached.cards.length };
       }
-    }
+    },
+    enabled: !hasTimeBoxedRequest || userId !== undefined
   });
   useEffect(() => {
-    if (queue.data?.sessionPlan !== undefined && sessionStartedAtMs === null) {
+    if (
+      !hasTimeBoxedRequest ||
+      userId === undefined ||
+      queue.data?.sessionPlan === undefined ||
+      timeBoxedSessionInitialized.current
+    )
+      return;
+
+    const activeSession = queue.data.activeSession;
+    if (activeSession !== undefined) {
+      setSessionId(activeSession.sessionId);
+      setSessionStartedAtMs(activeSession.startedAtMs);
+      setClockNowMs(Date.now());
+      pausedSessionMs.current = activeSession.pausedDurationMs;
+      setPausedAt(activeSession.pausedAtMs === null ? null : new Date(activeSession.pausedAtMs));
+      setIsPaused(activeSession.pausedAtMs !== null);
+      setExtraMinutes(activeSession.extraMinutes);
+      setCompletedCardIds(activeSession.completedCardIds);
+    } else {
       const startedAt = Date.now();
       setSessionStartedAtMs(startedAt);
       setClockNowMs(startedAt);
     }
-  }, [queue.data?.sessionPlan, sessionStartedAtMs]);
+    timeBoxedSessionInitialized.current = true;
+  }, [hasTimeBoxedRequest, queue.data, userId]);
+  useEffect(() => {
+    if (
+      !hasTimeBoxedRequest ||
+      userId === undefined ||
+      queue.data?.sessionPlan === undefined ||
+      sessionStartedAtMs === null ||
+      !timeBoxedSessionInitialized.current
+    )
+      return;
+
+    const activeSession: ActiveTimeBoxedStudySession = {
+      id: activeTimeBoxedStudySessionId(userId, studyGoalId, studyDate),
+      userId,
+      studyGoalId,
+      studyDate,
+      sessionId,
+      queue: {
+        id: reviewQueueCacheId,
+        cards: queue.data.cards,
+        totalDueCards: queue.data.totalDueCards,
+        totalEstimatedSeconds: queue.data.totalEstimatedSeconds,
+        budgetSeconds: queue.data.budgetSeconds,
+        sessionPlan: queue.data.sessionPlan,
+        cachedAtUtc: new Date().toISOString()
+      },
+      startedAtMs: sessionStartedAtMs,
+      pausedDurationMs: pausedSessionMs.current,
+      pausedAtMs: pausedAt?.getTime() ?? null,
+      extraMinutes,
+      completedCardIds
+    };
+    void offlineDb.activeTimeBoxedStudySessions.put(activeSession);
+  }, [
+    completedCardIds,
+    extraMinutes,
+    hasTimeBoxedRequest,
+    pausedAt,
+    queue.data,
+    reviewQueueCacheId,
+    sessionId,
+    sessionStartedAtMs,
+    studyDate,
+    studyGoalId,
+    userId
+  ]);
   useEffect(() => {
     if (sessionStartedAtMs === null) return;
     const timer = window.setInterval(() => setClockNowMs(Date.now()), 1_000);
     return () => window.clearInterval(timer);
   }, [sessionStartedAtMs]);
-  const cards = queue.data?.cards ?? [];
+  const plannedCards = queue.data?.cards ?? [];
+  const cards = hasTimeBoxedRequest
+    ? plannedCards.filter((queuedCard) => !completedCardIds.includes(queuedCard.id))
+    : plannedCards;
   const activeCardIndex =
     activeCardId === undefined
       ? 0
@@ -1851,9 +1942,15 @@ function Review() {
       setShownAt(new Date());
       return { previousActiveCardId, previousShownAt, previousRevealedAt };
     },
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       setHasConflict(false);
       setLastReviewId(result.offline ? null : result.reviewLog.id);
+      setLastReviewedCardId(variables.card?.id ?? null);
+      if (hasTimeBoxedRequest && variables.card !== undefined) {
+        setCompletedCardIds((current) =>
+          current.includes(variables.card!.id) ? current : [...current, variables.card!.id]
+        );
+      }
     },
     onError: (error, _rating, context) => {
       if (context !== undefined) {
@@ -1891,6 +1988,10 @@ function Review() {
     mutationFn: (reviewLogId: string) => api.post(`/reviews/${reviewLogId}/undo`, {}),
     onSuccess: () => {
       setLastReviewId(null);
+      if (hasTimeBoxedRequest && lastReviewedCardId !== null) {
+        setCompletedCardIds((current) => current.filter((cardId) => cardId !== lastReviewedCardId));
+      }
+      setLastReviewedCardId(null);
       setActiveCardId(undefined);
       void client.invalidateQueries({ queryKey: ['review-queue'] });
     },
@@ -1909,6 +2010,16 @@ function Review() {
     window.speechSynthesis?.cancel();
     setPausedAt(new Date());
     setIsPaused(true);
+  };
+  const endTimeBoxedSession = () => {
+    if (!hasTimeBoxedRequest || userId === undefined) return;
+    void offlineDb.activeTimeBoxedStudySessions
+      .delete(activeTimeBoxedStudySessionId(userId, studyGoalId, studyDate))
+      .then(() =>
+        client.invalidateQueries({
+          queryKey: ['active-time-boxed-study-session', userId, studyGoalId, studyDate]
+        })
+      );
   };
   const toggleFullscreen = async () => {
     try {
@@ -1979,7 +2090,7 @@ function Review() {
     return (
       <Shell focus>
         <header className="review-header">
-          <Link className="button-link" to="/">
+          <Link className="button-link" to="/" onClick={endTimeBoxedSession}>
             Kết thúc phiên
           </Link>
         </header>
@@ -2020,8 +2131,13 @@ function Review() {
     else if (dx > 60 && Math.abs(dx) > Math.abs(dy)) submitGrade('Good');
   };
   const speechText = getCardSpeechText(fields, revealed);
-  const totalCards = queue.data?.totalDueCards ?? queue.data?.cards.length ?? 0;
-  const completedCards = Math.min(activeCardIndex, totalCards);
+  const totalCards = hasTimeBoxedRequest
+    ? plannedCards.length
+    : (queue.data?.totalDueCards ?? queue.data?.cards.length ?? 0);
+  const completedCards = Math.min(
+    hasTimeBoxedRequest ? completedCardIds.length + activeCardIndex : activeCardIndex,
+    totalCards
+  );
   const progress = totalCards === 0 ? 0 : Math.round((completedCards / totalCards) * 100);
   const sessionPlan = queue.data?.sessionPlan;
   const sessionBudgetMinutes = (sessionPlan?.requestedMinutes ?? 0) + extraMinutes;
@@ -2039,7 +2155,7 @@ function Review() {
   return (
     <Shell focus>
       <header className="review-header">
-        <Link className="button-link" to="/">
+        <Link className="button-link" to="/" onClick={endTimeBoxedSession}>
           Kết thúc phiên
         </Link>
         <div className="review-title">
@@ -2091,7 +2207,13 @@ function Review() {
             <p>Hoàn tất câu trả lời đang làm, rồi kết thúc hoặc học thêm nếu bạn vẫn còn sức.</p>
           </div>
           <div>
-            <button type="button" onClick={() => navigate('/study-plan')}>
+            <button
+              type="button"
+              onClick={() => {
+                endTimeBoxedSession();
+                navigate('/study-plan');
+              }}
+            >
               Kết thúc phiên
             </button>
             <button

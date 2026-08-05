@@ -6,8 +6,9 @@ import { Link, useSearchParams } from 'react-router';
 import { z } from 'zod';
 
 import { ApiError, api } from './api.js';
-import { offlineDb } from './offline-db.js';
+import { activeTimeBoxedStudySessionId, offlineDb } from './offline-db.js';
 import { useOffline } from './offline-provider.js';
+import { useSession } from './session.js';
 
 interface Deck {
   id: string;
@@ -441,6 +442,20 @@ function DailyAvailabilityPanel({ goal }: { goal: StudyGoal }) {
 }
 
 function TimeBoxedPlanView({ plan }: { plan: TimeBoxedDailyPlan }) {
+  const userId = useSession((state) => state.user?.id);
+  const activeSession = useQuery({
+    queryKey: ['active-time-boxed-study-session', userId, plan.studyGoalId, plan.date],
+    queryFn: async () => {
+      const session = await offlineDb.activeTimeBoxedStudySessions.get(
+        activeTimeBoxedStudySessionId(userId!, plan.studyGoalId, plan.date)
+      );
+      return session !== undefined && session.completedCardIds.length < session.queue.cards.length
+        ? session
+        : undefined;
+    },
+    enabled: userId !== undefined,
+    retry: false
+  });
   const plannedCards = plan.sections
     .filter((section) => section.type !== 'QUICK_CHECK')
     .reduce((total, section) => total + section.estimatedCardCount, 0);
@@ -495,7 +510,9 @@ function TimeBoxedPlanView({ plan }: { plan: TimeBoxedDailyPlan }) {
           className="button-link study-start-session"
           to={`/review?studyGoalId=${plan.studyGoalId}&date=${plan.date}`}
         >
-          Bắt đầu phiên {plan.requestedMinutes} phút
+          {activeSession.data === undefined
+            ? `Bắt đầu phiên ${plan.requestedMinutes} phút`
+            : `Tiếp tục phiên ${plan.requestedMinutes} phút`}
         </Link>
       )}
     </section>

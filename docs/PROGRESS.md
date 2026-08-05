@@ -531,3 +531,10 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: web tự động xoay refresh token và thử lại request khi access token hết hạn; lỗi `401` từ `/auth/login` hiển thị đúng là email hoặc mật khẩu không đúng; API trả `401` rõ ràng khi thiếu refresh token.
 - Kiểm tra: test API client, Vitest web (25/25), API test (40/40), typecheck và build đều đạt.
+
+## Milestone 43 — Tiếp tục phiên học đang dang dở
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: lưu snapshot phiên học giới hạn thời gian trên thiết bị theo người dùng, mục tiêu và ngày học; khôi phục danh sách thẻ còn lại, tiến độ, đồng hồ, thời gian tạm dừng và phần thời gian học thêm khi quay lại. Nút ở Kế hoạch học tập tự đổi thành “Tiếp tục phiên … phút” khi còn phiên dang dở.
+- Quyết định quan trọng: chỉ nút “Kết thúc phiên” mới xóa snapshot; việc rời trang hoặc tải lại không tạo phiên mới. Snapshot được xóa khi chuyển dữ liệu để tránh khôi phục phiên thuộc dữ liệu cũ.
+- Kiểm tra: `pnpm --filter @flashcard/web typecheck`, `pnpm --filter @flashcard/web test`, `pnpm lint` và `git diff --check` đều đạt.
