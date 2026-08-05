@@ -538,3 +538,9 @@
 - Đã thực hiện: lưu snapshot phiên học giới hạn thời gian trên thiết bị theo người dùng, mục tiêu và ngày học; khôi phục danh sách thẻ còn lại, tiến độ, đồng hồ, thời gian tạm dừng và phần thời gian học thêm khi quay lại. Nút ở Kế hoạch học tập tự đổi thành “Tiếp tục phiên … phút” khi còn phiên dang dở.
 - Quyết định quan trọng: chỉ nút “Kết thúc phiên” mới xóa snapshot; việc rời trang hoặc tải lại không tạo phiên mới. Snapshot được xóa khi chuyển dữ liệu để tránh khôi phục phiên thuộc dữ liệu cũ.
 - Kiểm tra: `pnpm --filter @flashcard/web typecheck`, `pnpm --filter @flashcard/web test`, `pnpm lint` và `git diff --check` đều đạt.
+
+## Milestone 44 — Đồng hồ Pomodoro
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: thêm trang `/pomodoro` với các pha tập trung, nghỉ ngắn và nghỉ dài; đếm giờ chính xác theo thời điểm thực; bắt đầu/tạm dừng/đặt lại; nghỉ dài sau mỗi bốn phiên tập trung; cùng thiết lập thời lượng 1–120 phút lưu cục bộ trên thiết bị.
+- Kiểm tra: unit test cho định dạng thời gian và quy tắc chuyển pha; typecheck, test, lint và build web.

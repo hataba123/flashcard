@@ -63,6 +63,7 @@ import { useSession, type User } from './session.js';
 import { getCardSpeechText, SpeechControl } from './speech-control.js';
 import { NotesPage } from './notes-page.js';
 import { StudyPlanPage } from './study-plan-page.js';
+import { PomodoroPage } from './pomodoro-page.js';
 import { WeaknessAnalysis, type WeaknessAnalysisData } from './weakness-analysis.js';
 import {
   ThemeToggle,
@@ -75,6 +76,7 @@ import {
 import './styles.css';
 import './hallmark.css';
 import './study-plan.css';
+import './pomodoro.css';
 
 interface Deck {
   id: string;
@@ -519,6 +521,9 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
           </NavLink>
           <NavLink to="/review" onClick={() => setNavigationOpen(false)}>
             Ôn tập
+          </NavLink>
+          <NavLink to="/pomodoro" onClick={() => setNavigationOpen(false)}>
+            Pomodoro
           </NavLink>
         </nav>
         <div className="account">
@@ -2480,6 +2485,16 @@ function App() {
         element={
           <Protected>
             <Review />
+          </Protected>
+        }
+      />
+      <Route
+        path="/pomodoro"
+        element={
+          <Protected>
+            <Shell>
+              <PomodoroPage />
+            </Shell>
           </Protected>
         }
       />

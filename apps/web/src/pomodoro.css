@@ -1,0 +1,284 @@
+.pomodoro-page {
+  width: min(100% - 2 * var(--space-lg), 72rem);
+  margin: 0 auto;
+  padding: clamp(var(--space-xl), 7vw, var(--space-3xl)) 0;
+}
+
+.pomodoro-intro {
+  max-width: 39rem;
+  margin-bottom: var(--space-xl);
+}
+
+.pomodoro-intro h1 {
+  margin: var(--space-2xs) 0 var(--space-xs);
+  font-family: var(--font-display);
+  font-size: var(--text-display);
+  letter-spacing: -0.06em;
+  line-height: 0.95;
+}
+
+.pomodoro-intro > p:last-child {
+  max-width: 34rem;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-md);
+  line-height: 1.65;
+}
+
+.pomodoro-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(17rem, 0.65fr);
+  overflow: hidden;
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.pomodoro-timer-column {
+  display: grid;
+  justify-items: center;
+  padding: clamp(var(--space-lg), 6vw, var(--space-3xl));
+  background: linear-gradient(145deg, var(--color-paper-2), var(--color-surface) 65%);
+}
+
+.pomodoro-phase-tabs {
+  display: flex;
+  max-width: 100%;
+  gap: var(--space-3xs);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-pill);
+  padding: var(--space-3xs);
+  background: var(--color-surface);
+}
+
+.pomodoro-phase-tabs button {
+  min-height: 2.35rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-sm);
+  background: transparent;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: 750;
+}
+
+.pomodoro-phase-tabs button:hover,
+.pomodoro-phase-tabs button.is-active {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+.pomodoro-dial {
+  display: grid;
+  width: min(22rem, 72vw);
+  aspect-ratio: 1;
+  place-items: center;
+  margin: clamp(var(--space-lg), 5vw, var(--space-2xl)) 0;
+  border-radius: 50%;
+  padding: 0.9rem;
+  background: conic-gradient(
+    var(--color-accent-2) var(--pomodoro-progress),
+    var(--color-paper-3) 0
+  );
+  transition: background var(--dur-short) var(--ease-out);
+}
+
+.pomodoro-dial.is-running {
+  box-shadow: 0 0 0 0.55rem var(--color-accent-2-soft);
+}
+
+.pomodoro-dial-inner {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  align-content: center;
+  justify-items: center;
+  border-radius: 50%;
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.pomodoro-phase-label,
+.pomodoro-status {
+  color: var(--color-muted);
+  font-family: var(--font-outlier);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pomodoro-time {
+  margin: var(--space-xs) 0;
+  color: var(--color-ink);
+  font-family: var(--font-outlier);
+  font-size: clamp(3.5rem, 10vw, 5.75rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: -0.08em;
+  line-height: 1;
+}
+
+.pomodoro-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-xs);
+}
+
+.pomodoro-actions button {
+  min-height: 3rem;
+  border-radius: var(--radius-pill);
+  font-weight: 800;
+}
+
+.pomodoro-primary {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+.pomodoro-primary:hover:not(:disabled) {
+  border-color: var(--color-accent-deep);
+  background: var(--color-accent-deep);
+  color: var(--color-accent-ink);
+}
+
+.pomodoro-reset {
+  border-color: var(--color-rule);
+  background: transparent;
+  color: var(--color-ink);
+}
+
+.pomodoro-reset:hover:not(:disabled) {
+  background: var(--color-paper-2);
+}
+
+.pomodoro-sidebar {
+  display: grid;
+  align-content: start;
+  border-inline-start: var(--rule-hair) solid var(--color-rule);
+}
+
+.pomodoro-progress-card,
+.pomodoro-settings {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-lg);
+}
+
+.pomodoro-progress-card {
+  background: var(--color-ink);
+  color: var(--color-surface);
+}
+
+.pomodoro-progress-card .eyebrow,
+.pomodoro-progress-card span,
+.pomodoro-progress-card small {
+  color: color-mix(in oklch, var(--color-surface), transparent 30%);
+}
+
+.pomodoro-progress-card strong {
+  font-family: var(--font-outlier);
+  font-size: var(--text-3xl);
+  line-height: 1;
+}
+
+.pomodoro-session-dots {
+  display: flex;
+  gap: var(--space-2xs);
+  margin: var(--space-xs) 0;
+}
+
+.pomodoro-session-dots span {
+  width: 1.75rem;
+  height: 0.4rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklch, var(--color-surface), transparent 75%);
+}
+
+.pomodoro-session-dots span.is-filled {
+  background: var(--color-accent);
+}
+
+.pomodoro-settings {
+  gap: var(--space-sm);
+}
+
+.pomodoro-settings h2 {
+  margin: var(--space-3xs) 0 0;
+  font-size: var(--text-lg);
+}
+
+.pomodoro-settings label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.pomodoro-settings input {
+  width: 5.25rem;
+  min-height: 2.65rem;
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-input);
+  padding: 0 var(--space-xs);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-outlier);
+  font-variant-numeric: tabular-nums;
+}
+
+.pomodoro-settings > p:last-child {
+  margin: var(--space-xs) 0 0;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .pomodoro-page {
+    width: min(100% - 2 * var(--space-sm), 72rem);
+  }
+
+  .pomodoro-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .pomodoro-sidebar {
+    grid-template-columns: 1fr 1fr;
+    border-block-start: var(--rule-hair) solid var(--color-rule);
+    border-inline-start: 0;
+  }
+
+  .pomodoro-settings {
+    border-inline-start: var(--rule-hair) solid var(--color-rule);
+  }
+}
+
+@media (max-width: 520px) {
+  .pomodoro-timer-column {
+    padding: var(--space-lg) var(--space-sm);
+  }
+
+  .pomodoro-phase-tabs {
+    width: 100%;
+  }
+
+  .pomodoro-phase-tabs button {
+    flex: 1;
+    padding: 0 var(--space-2xs);
+    font-size: var(--text-xs);
+  }
+
+  .pomodoro-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .pomodoro-settings {
+    border-block-start: var(--rule-hair) solid var(--color-rule);
+    border-inline-start: 0;
+  }
+}
