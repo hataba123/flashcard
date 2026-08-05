@@ -55,12 +55,7 @@ import { OfflineProvider, useOffline } from './offline-provider.js';
 import { prepareForDataTransfer } from './offline-sync.js';
 import { loadMediaBlob, mediaQueryKey, mediaQueryStaleTimeMs } from './media-cache.js';
 import { ReviewControls } from './review-controls.js';
-import {
-  nextReviewIndex,
-  ratingForShortcut,
-  reviewSessionTimeProgress,
-  type ReviewRating
-} from './review-utils.js';
+import { ratingForShortcut, reviewSessionTimeProgress, type ReviewRating } from './review-utils.js';
 import { useSession, type User } from './session.js';
 import { getCardSpeechText, SpeechControl } from './speech-control.js';
 import { NotesPage } from './notes-page.js';
@@ -1608,7 +1603,7 @@ function Review() {
   const reviewQueueCacheId = hasTimeBoxedRequest
     ? `time-boxed:${studyGoalId}:${studyDate}`
     : 'current';
-  const [index, setIndex] = useState(0);
+  const [activeCardId, setActiveCardId] = useState<string | null | undefined>(undefined);
   const [shownAt, setShownAt] = useState(() => new Date());
   const [revealedAt, setRevealedAt] = useState<Date | null>(null);
   const revealedAtRef = useRef<Date | null>(null);
@@ -1665,7 +1660,22 @@ function Review() {
     const timer = window.setInterval(() => setClockNowMs(Date.now()), 1_000);
     return () => window.clearInterval(timer);
   }, [sessionStartedAtMs]);
-  const card = queue.data?.cards[index];
+  const cards = queue.data?.cards ?? [];
+  const activeCardIndex =
+    activeCardId === undefined
+      ? 0
+      : activeCardId === null
+        ? cards.length
+        : Math.max(
+            0,
+            cards.findIndex((queuedCard) => queuedCard.id === activeCardId)
+          );
+  const card =
+    activeCardId === null
+      ? undefined
+      : activeCardId === undefined
+        ? cards[0]
+        : (cards.find((queuedCard) => queuedCard.id === activeCardId) ?? cards[0]);
   const revealCard = () => {
     const revealedAt = new Date();
     revealedAtRef.current = revealedAt;
@@ -1817,14 +1827,14 @@ function Review() {
       return { reviewLog: { id: event.clientEventId }, offline: true };
     },
     onMutate: () => {
-      const previousIndex = index;
+      const previousActiveCardId = activeCardId;
       const previousShownAt = shownAt;
       const previousRevealedAt = revealedAt;
-      setIndex(nextReviewIndex);
+      setActiveCardId(cards[activeCardIndex + 1]?.id ?? null);
       revealedAtRef.current = null;
       setRevealedAt(null);
       setShownAt(new Date());
-      return { previousIndex, previousShownAt, previousRevealedAt };
+      return { previousActiveCardId, previousShownAt, previousRevealedAt };
     },
     onSuccess: (result) => {
       setHasConflict(false);
@@ -1832,7 +1842,7 @@ function Review() {
     },
     onError: (error, _rating, context) => {
       if (context !== undefined) {
-        setIndex(context.previousIndex);
+        setActiveCardId(context.previousActiveCardId);
         setShownAt(context.previousShownAt);
         revealedAtRef.current = context.previousRevealedAt;
         setRevealedAt(context.previousRevealedAt);
@@ -1847,7 +1857,7 @@ function Review() {
     mutationFn: (reviewLogId: string) => api.post(`/reviews/${reviewLogId}/undo`, {}),
     onSuccess: () => {
       setLastReviewId(null);
-      setIndex((value) => Math.max(0, value - 1));
+      setActiveCardId(undefined);
       void client.invalidateQueries({ queryKey: ['review-queue'] });
     },
     onError: (error) => setSubmitError(errorMessage(error))
@@ -1977,7 +1987,7 @@ function Review() {
   };
   const speechText = getCardSpeechText(fields, revealed);
   const totalCards = queue.data?.totalDueCards ?? queue.data?.cards.length ?? 0;
-  const completedCards = Math.min(index, totalCards);
+  const completedCards = Math.min(activeCardIndex, totalCards);
   const progress = totalCards === 0 ? 0 : Math.round((completedCards / totalCards) * 100);
   const sessionPlan = queue.data?.sessionPlan;
   const sessionBudgetMinutes = (sessionPlan?.requestedMinutes ?? 0) + extraMinutes;
@@ -2014,7 +2024,7 @@ function Review() {
           )}
           <div className="review-progress-copy">
             <span>
-              Thẻ {index + 1} / {totalCards}
+              Thẻ {activeCardIndex + 1} / {totalCards}
             </span>
             <span>{progress}% hoàn thành</span>
           </div>
@@ -2158,7 +2168,7 @@ function Review() {
                         <div className="review-card-meta">
                           <span className="review-side-label">Câu hỏi</span>
                           <span className="review-card-count">
-                            {index + 1} / {totalCards}
+                            {activeCardIndex + 1} / {totalCards}
                           </span>
                         </div>
                         <p className="review-face">{front}</p>
@@ -2234,7 +2244,7 @@ function Review() {
           onClick={() => {
             setHasConflict(false);
             setSubmitError(null);
-            setIndex(0);
+            setActiveCardId(undefined);
             void client.invalidateQueries({ queryKey: ['review-queue'] });
           }}
         >

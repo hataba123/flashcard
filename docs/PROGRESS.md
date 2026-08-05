@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 50 — Giữ đúng thẻ khi hàng đợi đồng bộ lại
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: Review theo dõi thẻ đang học bằng ID thay vì chỉ số mảng; khi đồng bộ loại thẻ vừa chấm khỏi hàng đợi, giao diện vẫn tiếp tục trên đúng thẻ kế tiếp.
+- Kiểm tra: thêm Playwright E2E mô phỏng hàng đợi được làm mới sau khi chấm thẻ.
+
 ## Milestone 49 — Lướt lại thẻ đã học trong ngày
 
 - Trạng thái: Hoàn thành.

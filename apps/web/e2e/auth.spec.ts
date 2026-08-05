@@ -156,6 +156,7 @@ test('navigates to a destination from the mobile topbar', async ({ page }) => {
 
 test('shows review actions on a compact mobile viewport', async ({ page }) => {
   let submittedRating: string | undefined;
+  let reviewSubmissionHandled = false;
   let releaseSecondNote: (() => void) | undefined;
   const secondNoteReady = new Promise<void>((resolve) => {
     releaseSecondNote = resolve;
@@ -273,6 +274,31 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
   );
   await page.route('**/api/reviews', async (route) => {
     submittedRating = JSON.parse(route.request().postData() ?? '{}').rating as string | undefined;
+    await page.route('**/api/reviews/queue*', (queueRoute) =>
+      queueRoute.fulfill({
+        json: {
+          cards: [
+            {
+              id: '00000000-0000-4000-8000-000000000005',
+              noteId: '00000000-0000-4000-8000-000000000006',
+              version: 1,
+              state: 'New',
+              dueAtUtc: '2026-07-23T00:00:00.000Z',
+              lastReviewAtUtc: null,
+              stability: 0,
+              difficulty: 0,
+              elapsedDays: 0,
+              scheduledDays: 0,
+              learningStep: 0,
+              reviewCount: 0,
+              lapseCount: 0
+            }
+          ],
+          totalDueCards: 1
+        }
+      })
+    );
+    reviewSubmissionHandled = true;
     await route.fulfill({
       json: {
         card: {},
@@ -325,6 +351,9 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
   await expect.poll(() => submittedRating).toBe('Hard');
   await expect(page.locator('.review-card-front .review-face')).toHaveCount(0);
   releaseSecondNote?.();
+  await expect(page.locator('.review-card-front .review-face')).toHaveText('Câu hỏi tiếp theo');
+  await expect.poll(() => reviewSubmissionHandled).toBe(true);
+  await page.evaluate(() => window.dispatchEvent(new Event('flashcard-sync-applied')));
   await expect(page.locator('.review-card-front .review-face')).toHaveText('Câu hỏi tiếp theo');
   for (const width of [320, 375, 414, 768]) {
     await page.setViewportSize({ width, height: width === 768 ? 1024 : 900 });
