@@ -166,6 +166,49 @@ interface SpeechControlProps {
   text: string;
 }
 
+interface SpeechReplayButtonProps {
+  text: string;
+  side: 'front' | 'back';
+}
+
+function speakText(text: string, settings: SpeechSettings, voices: SpeechSynthesisVoice[]): void {
+  if (text.trim().length === 0) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = settings.language;
+  utterance.rate = settings.rate;
+  utterance.voice = voices.find((voice) => voice.voiceURI === settings.voiceUri) ?? null;
+  window.speechSynthesis.speak(utterance);
+}
+
+export function SpeechReplayButton({ text, side }: SpeechReplayButtonProps) {
+  const supported =
+    typeof window !== 'undefined' &&
+    'speechSynthesis' in window &&
+    typeof SpeechSynthesisUtterance !== 'undefined';
+  const sideLabel = side === 'front' ? 'mặt trước' : 'mặt sau';
+
+  if (!supported) return null;
+
+  return (
+    <button
+      className="review-speech-button"
+      type="button"
+      aria-label={`Đọc lại ${sideLabel}`}
+      title={`Đọc lại ${sideLabel}`}
+      disabled={text.trim().length === 0}
+      onTouchStart={(event) => event.stopPropagation()}
+      onTouchEnd={(event) => event.stopPropagation()}
+      onClick={() => speakText(text, loadSettings(), window.speechSynthesis.getVoices())}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M4 10v4h4l5 4V6l-5 4H4Z" />
+        <path d="M16 9.5a4 4 0 0 1 0 5M18.5 7a7.5 7.5 0 0 1 0 10" />
+      </svg>
+    </button>
+  );
+}
+
 export function SpeechControl({ contentKey, text }: SpeechControlProps) {
   const supported =
     typeof window !== 'undefined' &&
@@ -203,13 +246,7 @@ export function SpeechControl({ contentKey, text }: SpeechControlProps) {
   const speak = useCallback(() => {
     const current = speechState.current;
     if (!supported || current.text.trim().length === 0) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(current.text);
-    utterance.lang = current.settings.language;
-    utterance.rate = current.settings.rate;
-    utterance.voice =
-      current.voices.find((voice) => voice.voiceURI === current.settings.voiceUri) ?? null;
-    window.speechSynthesis.speak(utterance);
+    speakText(current.text, current.settings, current.voices);
   }, [supported]);
 
   useEffect(() => {

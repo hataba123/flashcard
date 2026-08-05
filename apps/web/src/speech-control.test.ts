@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { getCardSpeechText, SpeechControl } from './speech-control.js';
+import { getCardSpeechText, SpeechControl, SpeechReplayButton } from './speech-control.js';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -125,5 +125,32 @@ describe('SpeechControl', () => {
     expect(cancel.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(speak).toHaveBeenCalledTimes(1);
     view.unmount();
+  });
+
+  it('reads the text of the face whose replay button was selected', () => {
+    class FakeUtterance {
+      lang = '';
+      rate = 1;
+      voice = null;
+
+      constructor(readonly text: string) {}
+    }
+
+    const speak = vi.fn();
+    vi.stubGlobal('SpeechSynthesisUtterance', FakeUtterance);
+    vi.stubGlobal('speechSynthesis', {
+      cancel: vi.fn(),
+      speak,
+      getVoices: () => [],
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn()
+    });
+
+    const view = render(
+      createElement(SpeechReplayButton, { text: 'Front content', side: 'front' })
+    );
+    view.getByRole('button', { name: 'Đọc lại mặt trước' }).click();
+
+    expect(speak).toHaveBeenCalledWith(expect.objectContaining({ text: 'Front content' }));
   });
 });

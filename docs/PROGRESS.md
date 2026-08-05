@@ -1,5 +1,17 @@
 # Tiến độ triển khai
 
+## Milestone 53 — Đọc lại mặt thẻ bằng biểu tượng loa
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: thêm biểu tượng loa trực tiếp trên mặt trước và mặt sau của thẻ trong phiên Ôn tập và Lướt lại hôm nay. Nút đọc lại đúng nội dung của mặt đang hiển thị, dùng giọng/tốc độ đã chọn và không làm lật thẻ trên thiết bị cảm ứng.
+- Kiểm tra: `pnpm --filter @flashcard/web test -- speech-control.test.ts`, `pnpm --filter @flashcard/web typecheck`, `pnpm lint`, `pnpm --filter @flashcard/web build` và `git diff --check` đều đạt.
+
+## Milestone 52 — Giới hạn tải trước nội dung phiên ôn tập
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: chỉ tải trước tối đa bốn thẻ kế tiếp trong phiên ôn tập, thay vì tải toàn bộ hàng đợi ngay khi mở trang. Nhờ đó hàng đợi lớn không vượt giới hạn 120 request/phút của API, trong khi thẻ kế tiếp vẫn sẵn sàng để chuyển nhanh.
+- Kiểm tra: typecheck, lint, test và build web.
+
 ## Milestone 51 — Giữ vị trí màn hình khi chấm bằng phím tắt
 
 - Trạng thái: Hoàn thành.

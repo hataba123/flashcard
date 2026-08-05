@@ -60,7 +60,7 @@ import { loadMediaBlob, mediaQueryKey, mediaQueryStaleTimeMs } from './media-cac
 import { ReviewControls } from './review-controls.js';
 import { ratingForShortcut, reviewSessionTimeProgress, type ReviewRating } from './review-utils.js';
 import { useSession, type User } from './session.js';
-import { getCardSpeechText, SpeechControl } from './speech-control.js';
+import { getCardSpeechText, SpeechControl, SpeechReplayButton } from './speech-control.js';
 import { NotesPage } from './notes-page.js';
 import { StudyPlanPage } from './study-plan-page.js';
 import { PomodoroPage } from './pomodoro-page.js';
@@ -1561,9 +1561,12 @@ function DailyBrowse() {
             <article className="review-card-face review-card-front" aria-hidden={revealed}>
               <div className="review-card-meta">
                 <span className="review-side-label">Câu hỏi</span>
-                <span className="review-card-count">
-                  {index + 1} / {cards.length}
-                </span>
+                <div className="review-card-actions">
+                  <SpeechReplayButton text={getCardSpeechText(speechFields, false)} side="front" />
+                  <span className="review-card-count">
+                    {index + 1} / {cards.length}
+                  </span>
+                </div>
               </div>
               <p className="review-face">{front}</p>
               <p className="review-hint">Hãy thử nhớ trước khi thẻ tự lật.</p>
@@ -1571,9 +1574,12 @@ function DailyBrowse() {
             <article className="review-card-face review-card-back" aria-hidden={!revealed}>
               <div className="review-card-meta">
                 <span className="review-side-label">Đáp án</span>
-                <span className="review-answer-mark" aria-hidden="true">
-                  ✓
-                </span>
+                <div className="review-card-actions">
+                  <SpeechReplayButton text={getCardSpeechText(speechFields, true)} side="back" />
+                  <span className="review-answer-mark" aria-hidden="true">
+                    ✓
+                  </span>
+                </div>
               </div>
               <div className="review-recall">
                 <span>Câu hỏi</span>
@@ -1833,11 +1839,17 @@ function Review() {
     enabled: card !== undefined && revealedAt !== null
   });
   useEffect(() => {
-    const cards = queue.data?.cards;
-    if (cards === undefined || userId === undefined || !offline.online) return;
+    const queuedCards = queue.data?.cards;
+    if (queuedCards === undefined || card === undefined || userId === undefined || !offline.online)
+      return;
+
+    const currentCardIndex = queuedCards.findIndex((queuedCard) => queuedCard.id === card.id);
+    const cardsToPreload = queuedCards.slice(currentCardIndex + 1, currentCardIndex + 5);
+    if (cardsToPreload.length === 0) return;
+
     let cancelled = false;
     const preload = async () => {
-      for (const queuedCard of cards) {
+      for (const queuedCard of cardsToPreload) {
         if (cancelled) return;
         let note: Note;
         try {
@@ -1870,7 +1882,7 @@ function Review() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [client, offline.online, queue.data, userId]);
+  }, [card, client, offline.online, queue.data, userId]);
   const grade = useMutation({
     mutationFn: async ({
       card,
@@ -2328,9 +2340,12 @@ function Review() {
                       >
                         <div className="review-card-meta">
                           <span className="review-side-label">Câu hỏi</span>
-                          <span className="review-card-count">
-                            {activeCardIndex + 1} / {totalCards}
-                          </span>
+                          <div className="review-card-actions">
+                            <SpeechReplayButton text={speechText} side="front" />
+                            <span className="review-card-count">
+                              {activeCardIndex + 1} / {totalCards}
+                            </span>
+                          </div>
                         </div>
                         <p className="review-face">{front}</p>
                         <p className="review-hint">Nhớ câu trả lời trước khi lật thẻ.</p>
@@ -2341,9 +2356,12 @@ function Review() {
                       >
                         <div className="review-card-meta">
                           <span className="review-side-label">Đáp án</span>
-                          <span className="review-answer-mark" aria-hidden="true">
-                            ✓
-                          </span>
+                          <div className="review-card-actions">
+                            <SpeechReplayButton text={speechText} side="back" />
+                            <span className="review-answer-mark" aria-hidden="true">
+                              ✓
+                            </span>
+                          </div>
                         </div>
                         <div className="review-recall">
                           <span>Câu hỏi</span>
