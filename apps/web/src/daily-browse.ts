@@ -2,6 +2,34 @@ import type { DailyBrowseCard, DailyBrowseResponse, DailyBrowseScope } from '@fl
 
 import { dailyBrowseCacheId, offlineDb, type DailyBrowseExposure } from './offline-db.js';
 
+interface DailyBrowseRemainingTimeInput {
+  cardCount: number;
+  index: number;
+  revealed: boolean;
+  phaseDurationMs: number;
+  phaseRemainingMs: number;
+}
+
+export function estimateDailyBrowseRemainingMs({
+  cardCount,
+  index,
+  revealed,
+  phaseDurationMs,
+  phaseRemainingMs
+}: DailyBrowseRemainingTimeInput): number {
+  const remainingCards = Math.max(0, cardCount - index - 1);
+  const remainingCurrentCardMs = phaseRemainingMs + (revealed ? 0 : phaseDurationMs);
+  return Math.max(0, remainingCurrentCardMs + remainingCards * phaseDurationMs * 2);
+}
+
+export function formatDailyBrowseRemainingTime(durationMs: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(durationMs / 1_000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) return `${seconds} giây`;
+  return `${minutes} phút ${String(seconds).padStart(2, '0')} giây`;
+}
+
 export function currentDailyBrowseContext(): { date: string; timeZone: string } {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   const parts = new Intl.DateTimeFormat('en-CA', {

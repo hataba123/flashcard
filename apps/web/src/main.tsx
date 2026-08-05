@@ -51,6 +51,8 @@ import {
 import {
   cacheDailyBrowseResponse,
   currentDailyBrowseContext,
+  estimateDailyBrowseRemainingMs,
+  formatDailyBrowseRemainingTime,
   loadOfflineDailyBrowse,
   recordDailyBrowseExposure
 } from './daily-browse.js';
@@ -1275,6 +1277,7 @@ function DailyBrowse() {
   const [paused, setPaused] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [speed, setSpeed] = useState(1);
+  const [clockNow, setClockNow] = useState(() => performance.now());
   const remainingMs = useRef(4_000);
   const phaseStartedAt = useRef<number | null>(null);
   const queue = useQuery({
@@ -1374,6 +1377,12 @@ function DailyBrowse() {
       Math.max(0, remainingMs.current)
     );
     return () => window.clearTimeout(timer);
+  }, [card, completed, index, paused, phaseDuration, revealed]);
+  useEffect(() => {
+    if (card === undefined || paused || completed) return;
+    setClockNow(performance.now());
+    const ticker = window.setInterval(() => setClockNow(performance.now()), 250);
+    return () => window.clearInterval(ticker);
   }, [card, completed, index, paused, phaseDuration, revealed]);
   useEffect(() => {
     const onVisibilityChange = () => {
@@ -1484,6 +1493,17 @@ function DailyBrowse() {
       : (fields.back ?? '');
   const speechFields = { ...fields, front, back };
   const progress = Math.round((index / cards.length) * 100);
+  const phaseRemainingMs =
+    phaseStartedAt.current === null
+      ? remainingMs.current
+      : Math.max(0, remainingMs.current - (clockNow - phaseStartedAt.current));
+  const browseRemainingMs = estimateDailyBrowseRemainingMs({
+    cardCount: cards.length,
+    index,
+    revealed,
+    phaseDurationMs: phaseDuration,
+    phaseRemainingMs
+  });
   return (
     <Shell focus>
       <header className="review-header daily-browse-header">
@@ -1541,6 +1561,9 @@ function DailyBrowse() {
           </label>
           <span role="status">
             {paused ? 'Đã tạm dừng' : revealed ? 'Đang xem đáp án' : 'Đang nhớ câu trả lời'}
+          </span>
+          <span aria-label="Thời gian còn lại">
+            Còn {formatDailyBrowseRemainingTime(browseRemainingMs)} để hoàn thành
           </span>
         </div>
         <div className="review-support">

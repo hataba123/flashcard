@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 54 — Đếm thời gian hoàn thành phiên lướt thẻ
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: hiển thị thời gian còn lại để xem hết các thẻ trong phiên Lướt lại hôm nay. Bộ đếm cập nhật theo từng pha mặt trước/mặt sau, tự dừng khi tạm dừng phiên và tính lại khi đổi tốc độ hoặc chuyển thẻ thủ công.
+- Kiểm tra: thêm unit test cho cách tính và định dạng thời gian; chạy typecheck, lint, test, build web và `git diff --check`.
+
 ## Milestone 53 — Đọc lại mặt thẻ bằng biểu tượng loa
 
 - Trạng thái: Hoàn thành.
