@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 51 — Giữ vị trí màn hình khi chấm bằng phím tắt
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: lưu và khôi phục vị trí cuộn khi chấm thẻ bằng phím `1`–`4`; giữ chiều cao tài liệu ổn định trong lúc thẻ kế tiếp tải để trình duyệt không tự kéo màn hình.
+- Kiểm tra: Playwright E2E mô phỏng chấm phím tắt ở cuối trang, cùng typecheck, lint và build web đều đạt.
+
 ## Milestone 50 — Giữ đúng thẻ khi hàng đợi đồng bộ lại
 
 - Trạng thái: Hoàn thành.

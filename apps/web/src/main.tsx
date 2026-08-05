@@ -8,6 +8,7 @@ import {
 import { createRoot } from 'react-dom/client';
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -1619,6 +1620,9 @@ function Review() {
   const pausedSessionMs = useRef(0);
   const { fontSize, setFontSize, cardWidth, setCardWidth } = useReviewDisplayPreferences();
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const reviewScrollY = useRef<number | null>(null);
+  const reviewDocumentMinHeight = useRef<number | null>(null);
+  const originalDocumentMinHeight = useRef(document.documentElement.style.minHeight);
   const sessionId = useState(() => crypto.randomUUID())[0];
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const offline = useOffline();
@@ -1630,6 +1634,12 @@ function Review() {
     document.addEventListener('fullscreenchange', onFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
   }, []);
+  useEffect(
+    () => () => {
+      document.documentElement.style.minHeight = originalDocumentMinHeight.current;
+    },
+    []
+  );
   const queue = useQuery({
     queryKey: ['review-queue', studyGoalId, studyDate],
     queryFn: async () => {
@@ -1676,6 +1686,11 @@ function Review() {
       : activeCardId === undefined
         ? cards[0]
         : (cards.find((queuedCard) => queuedCard.id === activeCardId) ?? cards[0]);
+  useEffect(() => {
+    if (card !== undefined || reviewDocumentMinHeight.current === null) return;
+    document.documentElement.style.minHeight = originalDocumentMinHeight.current;
+    reviewDocumentMinHeight.current = null;
+  }, [card]);
   const revealCard = () => {
     const revealedAt = new Date();
     revealedAtRef.current = revealedAt;
@@ -1851,8 +1866,27 @@ function Review() {
       setSubmitError(errorMessage(error));
     }
   });
-  const submitGrade = (rating: ReviewRating) =>
+  useLayoutEffect(() => {
+    const scrollY = reviewScrollY.current;
+    if (scrollY === null) return;
+
+    window.scrollTo({ top: scrollY, left: window.scrollX, behavior: 'auto' });
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: scrollY, left: window.scrollX, behavior: 'auto' });
+      if (!grade.isPending && currentNote?.id === card?.noteId) reviewScrollY.current = null;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeCardId, card?.id, currentNote?.id, grade.isPending]);
+  const submitGrade = (rating: ReviewRating) => {
+    reviewScrollY.current = window.scrollY;
+    const minimumHeight = Math.max(
+      reviewDocumentMinHeight.current ?? 0,
+      document.documentElement.scrollHeight
+    );
+    reviewDocumentMinHeight.current = minimumHeight;
+    document.documentElement.style.minHeight = `${minimumHeight}px`;
     grade.mutate({ card, rating, revealedAt: revealedAtRef.current, shownAt });
+  };
   const undo = useMutation({
     mutationFn: (reviewLogId: string) => api.post(`/reviews/${reviewLogId}/undo`, {}),
     onSuccess: () => {

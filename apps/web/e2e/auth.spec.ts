@@ -347,7 +347,10 @@ test('shows review actions on a compact mobile viewport', async ({ page }) => {
   await expect(page.locator('.grade-actions button')).toHaveCount(4);
   await expect(page.getByText('Câu trả lời', { exact: true })).toBeVisible();
   await expect(page.locator('.grade-actions button').first()).toBeEnabled();
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const scrollYBeforeGrade = await page.evaluate(() => window.scrollY);
   await page.keyboard.press('2');
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(scrollYBeforeGrade);
   await expect.poll(() => submittedRating).toBe('Hard');
   await expect(page.locator('.review-card-front .review-face')).toHaveCount(0);
   releaseSecondNote?.();
