@@ -28,6 +28,9 @@ import {
 import { z } from 'zod';
 import { schedulingService } from '@flashcard/scheduling';
 import type {
+  DailyBrowseResponse,
+  DailyBrowseScope,
+  DailyBrowseSummary,
   DataTransferExport,
   DataTransferImportSummary,
   TimeBoxedDailyPlan
@@ -39,8 +42,15 @@ import {
   getDeviceId,
   resetAfterDataTransfer,
   setDeviceId as persistDeviceId,
+  dailyBrowseCompletionId,
   type CachedReviewCard
 } from './offline-db.js';
+import {
+  cacheDailyBrowseResponse,
+  currentDailyBrowseContext,
+  loadOfflineDailyBrowse,
+  recordDailyBrowseExposure
+} from './daily-browse.js';
 import { OfflineProvider, useOffline } from './offline-provider.js';
 import { prepareForDataTransfer } from './offline-sync.js';
 import { loadMediaBlob, mediaQueryKey, mediaQueryStaleTimeMs } from './media-cache.js';
@@ -87,6 +97,8 @@ interface Note {
 interface ReviewCard {
   id: string;
   noteId: string;
+  deckId: string;
+  templateOrdinal: number;
   version: number;
   state: 'New' | 'Learning' | 'Review' | 'Relearning';
   dueAtUtc: string;
@@ -652,6 +664,8 @@ function DashboardStat({
 }
 
 function Dashboard() {
+  const userId = useSession((state) => state.user?.id);
+  const dailyBrowseContext = currentDailyBrowseContext();
   const decks = useQuery({ queryKey: ['decks'], queryFn: () => api.get<Deck[]>('/decks') });
   const notes = useQuery({ queryKey: ['notes'], queryFn: () => api.get<Note[]>('/notes') });
   const today = useQuery({
@@ -674,8 +688,16 @@ function Dashboard() {
     queryKey: ['dashboard', 'weaknesses'],
     queryFn: () => api.get<WeaknessAnalysisData>('/dashboard/weaknesses')
   });
+  const dailyBrowse = useQuery({
+    queryKey: ['daily-browse-summary', dailyBrowseContext.date, dailyBrowseContext.timeZone],
+    queryFn: () =>
+      api.get<DailyBrowseSummary>(
+        `/daily-browse/today/summary?date=${encodeURIComponent(dailyBrowseContext.date)}&timeZone=${encodeURIComponent(dailyBrowseContext.timeZone)}`
+      ),
+    enabled: userId !== undefined
+  });
   const offline = useOffline();
-  const queries = [decks, notes, today, retention, backlog, activity, weaknesses];
+  const queries = [decks, notes, today, retention, backlog, activity, weaknesses, dailyBrowse];
   const isLoading = queries.some((query) => query.isLoading);
   const hasError = queries.some((query) => query.isError);
   const hasTodayData = today.data !== undefined;
@@ -927,6 +949,38 @@ function Dashboard() {
                   </span>
                   <span className="dashboard-next-arrow" aria-hidden="true">
                     ↗
+                  </span>
+                </Link>
+                <Link className="dashboard-next-item" to="/daily-browse?scope=new">
+                  <span className="dashboard-next-icon" aria-hidden="true">
+                    ✦
+                  </span>
+                  <span>
+                    <strong>Lướt thẻ mới hôm nay</strong>
+                    <small>
+                      {dailyBrowse.data === undefined
+                        ? 'Đang kiểm tra thẻ đã học hôm nay.'
+                        : `${formatDashboardCount(dailyBrowse.data.newCardCount)} thẻ, tự lật và tự chuyển.`}
+                    </small>
+                  </span>
+                  <span className="dashboard-next-arrow" aria-hidden="true">
+                    →
+                  </span>
+                </Link>
+                <Link className="dashboard-next-item" to="/daily-browse?scope=all">
+                  <span className="dashboard-next-icon" aria-hidden="true">
+                    ↺
+                  </span>
+                  <span>
+                    <strong>Lướt tất cả thẻ đã học</strong>
+                    <small>
+                      {dailyBrowse.data === undefined
+                        ? 'Đang kiểm tra thẻ đã học hôm nay.'
+                        : `${formatDashboardCount(dailyBrowse.data.allCardCount)} thẻ, không chấm điểm.`}
+                    </small>
+                  </span>
+                  <span className="dashboard-next-arrow" aria-hidden="true">
+                    →
                   </span>
                 </Link>
                 <Link className="dashboard-next-item" to="/decks">
@@ -1203,6 +1257,343 @@ function Decks() {
   );
 }
 
+function DailyBrowse() {
+  const navigate = useNavigate();
+  const userId = useSession((state) => state.user?.id);
+  const [params] = useSearchParams();
+  const scope: DailyBrowseScope = params.get('scope') === 'new' ? 'new' : 'all';
+  const { date, timeZone } = currentDailyBrowseContext();
+  const [cards, setCards] = useState<DailyBrowseResponse['cards']>([]);
+  const [index, setIndex] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [speed, setSpeed] = useState(1);
+  const remainingMs = useRef(4_000);
+  const phaseStartedAt = useRef<number | null>(null);
+  const queue = useQuery({
+    queryKey: ['daily-browse', scope, date, timeZone],
+    queryFn: async () => {
+      if (userId === undefined) throw new Error('Phiên đăng nhập chưa sẵn sàng.');
+      try {
+        const response = await api.get<DailyBrowseResponse>(
+          `/daily-browse/today?scope=${scope}&date=${encodeURIComponent(date)}&timeZone=${encodeURIComponent(timeZone)}`
+        );
+        await cacheDailyBrowseResponse(userId, response);
+        return response;
+      } catch {
+        return loadOfflineDailyBrowse(userId, date, timeZone, scope);
+      }
+    },
+    enabled: userId !== undefined
+  });
+  const phaseDuration = 4_000 / speed;
+  const resetPhase = (nextRevealed = false) => {
+    phaseStartedAt.current = null;
+    remainingMs.current = phaseDuration;
+    setRevealed(nextRevealed);
+  };
+  const complete = () => {
+    if (userId === undefined) return;
+    phaseStartedAt.current = null;
+    setPaused(true);
+    setCompleted(true);
+    void offlineDb.dailyBrowseCompletions.put({
+      id: dailyBrowseCompletionId(userId, date, timeZone, scope),
+      completedAtUtc: new Date().toISOString()
+    });
+  };
+  const moveTo = (nextIndex: number) => {
+    if (nextIndex < 0 || nextIndex >= cards.length) return;
+    setIndex(nextIndex);
+    resetPhase();
+  };
+  const moveNext = () => {
+    if (index + 1 >= cards.length) {
+      complete();
+      return;
+    }
+    moveTo(index + 1);
+  };
+  const pause = () => {
+    if (paused) {
+      setPaused(false);
+      return;
+    }
+    if (phaseStartedAt.current !== null) {
+      remainingMs.current = Math.max(
+        0,
+        remainingMs.current - (performance.now() - phaseStartedAt.current)
+      );
+      phaseStartedAt.current = null;
+    }
+    setPaused(true);
+  };
+  const changeSpeed = (nextSpeed: number) => {
+    setSpeed(nextSpeed);
+    phaseStartedAt.current = null;
+    remainingMs.current = 4_000 / nextSpeed;
+  };
+  const replay = () => {
+    setCards((current) => shuffle(current));
+    setIndex(0);
+    setCompleted(false);
+    setPaused(false);
+    remainingMs.current = phaseDuration;
+    resetPhase();
+  };
+  useEffect(() => {
+    if (queue.data === undefined) return;
+    setCards(shuffle(queue.data.cards));
+    setIndex(0);
+    setRevealed(false);
+    setPaused(false);
+    setCompleted(false);
+    remainingMs.current = phaseDuration;
+  }, [queue.data]);
+  const card = cards[index];
+  useEffect(() => {
+    if (card === undefined || paused || completed) return;
+    phaseStartedAt.current = performance.now();
+    const timer = window.setTimeout(
+      () => {
+        phaseStartedAt.current = null;
+        if (!revealed) {
+          remainingMs.current = phaseDuration;
+          setRevealed(true);
+          return;
+        }
+        moveNext();
+      },
+      Math.max(0, remainingMs.current)
+    );
+    return () => window.clearTimeout(timer);
+  }, [card, completed, index, paused, phaseDuration, revealed]);
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (!document.hidden || paused) return;
+      if (phaseStartedAt.current !== null) {
+        remainingMs.current = Math.max(
+          0,
+          remainingMs.current - (performance.now() - phaseStartedAt.current)
+        );
+        phaseStartedAt.current = null;
+      }
+      setPaused(true);
+      window.speechSynthesis?.cancel();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [paused]);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLElement && event.target.matches('input, select, textarea'))
+        return;
+      if (event.key === ' ') {
+        event.preventDefault();
+        pause();
+      }
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        moveTo(index - 1);
+      }
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        moveNext();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
+  if (queue.isLoading)
+    return (
+      <Shell focus>
+        <section
+          className="review-study"
+          aria-busy="true"
+          aria-label="Đang chuẩn bị phiên lướt lại"
+        >
+          <div className="review-stage">
+            <div className="review-card review-card-loading">
+              <span
+                className="skeleton"
+                style={{ width: '56%', height: 40, justifySelf: 'center' }}
+              />
+            </div>
+          </div>
+        </section>
+      </Shell>
+    );
+  if (queue.isError)
+    return (
+      <Shell focus>
+        <QueryError
+          title="Không thể chuẩn bị phiên lướt lại."
+          onRetry={() => void queue.refetch()}
+        />
+      </Shell>
+    );
+  if (cards.length === 0)
+    return (
+      <Shell focus>
+        <EmptyState
+          title={scope === 'new' ? 'Chưa có thẻ mới hôm nay' : 'Chưa có thẻ nào để lướt lại'}
+          description="Hãy học vài thẻ trước, rồi quay lại đây vào buổi tối để xem lướt một vòng."
+          action={
+            <Link className="button" to="/review">
+              Mở phiên ôn tập
+            </Link>
+          }
+        />
+      </Shell>
+    );
+  if (completed)
+    return (
+      <Shell focus>
+        <EmptyState
+          title="Bạn đã lướt xong hôm nay"
+          description={`Đã xem ${cards.length} thẻ ${scope === 'new' ? 'mới' : 'đã học'} mà không thay đổi lịch ôn tập.`}
+          action={
+            <div className="daily-browse-end-actions">
+              <button type="button" onClick={replay}>
+                Xem lại
+              </button>
+              <button className="secondary" type="button" onClick={() => navigate('/')}>
+                Về tổng quan
+              </button>
+            </div>
+          }
+        />
+      </Shell>
+    );
+  if (card === undefined) return null;
+  const fields = parseJson<Record<string, string>>(card.fieldsJson, {});
+  const front =
+    card.noteType === 'BasicAndReverse' && card.templateOrdinal === 1
+      ? (fields.back ?? '')
+      : (fields.front ?? fields.text ?? '');
+  const back =
+    card.noteType === 'BasicAndReverse' && card.templateOrdinal === 1
+      ? (fields.front ?? '')
+      : (fields.back ?? '');
+  const speechFields = { ...fields, front, back };
+  const progress = Math.round((index / cards.length) * 100);
+  return (
+    <Shell focus>
+      <header className="review-header daily-browse-header">
+        <Link className="button-link" to="/">
+          Kết thúc lướt lại
+        </Link>
+        <div className="review-title">
+          <p className="eyebrow">Lướt lại hôm nay</p>
+          <h1>{scope === 'new' ? 'Thẻ mới' : 'Tất cả thẻ đã học'}</h1>
+        </div>
+        <div className="review-progress" aria-label="Tiến độ phiên lướt lại">
+          <div className="review-progress-copy">
+            <span>
+              Thẻ {index + 1} / {cards.length}
+            </span>
+            <span>{progress}%</span>
+          </div>
+          <div
+            className="progress-track"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={cards.length}
+            aria-valuenow={index}
+          >
+            <span className="progress-value" style={{ transform: `scaleX(${progress / 100})` }} />
+          </div>
+        </div>
+        <div className="daily-browse-actions">
+          <button
+            className="secondary"
+            type="button"
+            onClick={() => moveTo(index - 1)}
+            disabled={index === 0}
+          >
+            Trước
+          </button>
+          <button className="secondary" type="button" onClick={pause}>
+            {paused ? 'Tiếp tục' : 'Tạm dừng'} <kbd>Space</kbd>
+          </button>
+          <button className="secondary" type="button" onClick={moveNext}>
+            Tiếp <kbd>→</kbd>
+          </button>
+        </div>
+      </header>
+      <section className="review-study daily-browse-study" aria-live="off">
+        <div className="daily-browse-toolbar">
+          <label>
+            Tốc độ
+            <select value={speed} onChange={(event) => changeSpeed(Number(event.target.value))}>
+              <option value={0.75}>0.75×</option>
+              <option value={1}>1×</option>
+              <option value={1.5}>1.5×</option>
+              <option value={2}>2×</option>
+            </select>
+          </label>
+          <span role="status">
+            {paused ? 'Đã tạm dừng' : revealed ? 'Đang xem đáp án' : 'Đang nhớ câu trả lời'}
+          </span>
+        </div>
+        <div className="review-support">
+          <SpeechControl
+            contentKey={`${card.cardId}:${revealed ? 'back' : 'front'}`}
+            text={getCardSpeechText(speechFields, revealed)}
+          />
+        </div>
+        <div
+          className="review-stage"
+          role="group"
+          aria-label={revealed ? 'Mặt sau của thẻ' : 'Mặt trước của thẻ'}
+        >
+          <div
+            key={`${card.cardId}:${revealed}`}
+            className={`review-card daily-browse-card${revealed ? ' is-revealed' : ''}`}
+          >
+            <article className="review-card-face review-card-front" aria-hidden={revealed}>
+              <div className="review-card-meta">
+                <span className="review-side-label">Câu hỏi</span>
+                <span className="review-card-count">
+                  {index + 1} / {cards.length}
+                </span>
+              </div>
+              <p className="review-face">{front}</p>
+              <p className="review-hint">Hãy thử nhớ trước khi thẻ tự lật.</p>
+            </article>
+            <article className="review-card-face review-card-back" aria-hidden={!revealed}>
+              <div className="review-card-meta">
+                <span className="review-side-label">Đáp án</span>
+                <span className="review-answer-mark" aria-hidden="true">
+                  ✓
+                </span>
+              </div>
+              <div className="review-recall">
+                <span>Câu hỏi</span>
+                <p>{front}</p>
+              </div>
+              <p className="answer">{back}</p>
+            </article>
+          </div>
+        </div>
+        <div className="review-support">
+          <AudioControl mediaId={fields.audioMediaId} />
+        </div>
+      </section>
+    </Shell>
+  );
+}
+
+function shuffle<T>(items: T[]): T[] {
+  const result = [...items];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const target = Math.floor(Math.random() * (index + 1));
+    [result[index], result[target]] = [result[target]!, result[index]!];
+  }
+  return result;
+}
+
 function Review() {
   const client = useQueryClient();
   const navigate = useNavigate();
@@ -1296,6 +1687,25 @@ function Review() {
     },
     enabled: card !== undefined
   });
+  const currentNote = note.data?.id === card?.noteId ? note.data : undefined;
+  const rememberForDailyBrowse = async (reviewedCard: ReviewCard, firstSeenAt: Date) => {
+    if (userId === undefined || currentNote === undefined) return;
+    const { date, timeZone } = currentDailyBrowseContext();
+    await recordDailyBrowseExposure({
+      userId,
+      studyDate: date,
+      timeZone,
+      cardId: reviewedCard.id,
+      noteId: reviewedCard.noteId,
+      deckId: reviewedCard.deckId ?? currentNote.deckId,
+      templateOrdinal: reviewedCard.templateOrdinal ?? 0,
+      noteType: currentNote.noteType,
+      fieldsJson: currentNote.fieldsJson,
+      firstSeenAtUtc: firstSeenAt.toISOString(),
+      wasNewToday: reviewedCard.state === 'New'
+    });
+    await client.invalidateQueries({ queryKey: ['daily-browse-summary'] });
+  };
   const previews = useQuery({
     queryKey: ['review-preview', card?.id],
     queryFn: () => api.get<ReviewPreview[]>(`/cards/${card!.id}/review-preview`),
@@ -1370,7 +1780,9 @@ function Review() {
       };
       if (navigator.onLine) {
         try {
-          return await api.post<ReviewSubmission>('/reviews', event);
+          const result = await api.post<ReviewSubmission>('/reviews', event);
+          await rememberForDailyBrowse(card, shownAt);
+          return result;
         } catch (error) {
           if (error instanceof ApiError) throw error;
         }
@@ -1401,6 +1813,7 @@ function Review() {
           )
         });
       }
+      await rememberForDailyBrowse(card, shownAt);
       return { reviewLog: { id: event.clientEventId }, offline: true };
     },
     onMutate: () => {
@@ -1537,7 +1950,6 @@ function Review() {
         )}
       </Shell>
     );
-  const currentNote = note.data?.id === card.noteId ? note.data : undefined;
   const hasCurrentNote = currentNote !== undefined;
   const fields =
     currentNote === undefined ? {} : parseJson<Record<string, string>>(currentNote.fieldsJson, {});
@@ -1902,6 +2314,14 @@ function App() {
         element={
           <Protected>
             <Review />
+          </Protected>
+        }
+      />
+      <Route
+        path="/daily-browse"
+        element={
+          <Protected>
+            <DailyBrowse />
           </Protected>
         }
       />

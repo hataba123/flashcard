@@ -5,3 +5,4 @@ export * from './admission/admission.contracts.js';
 export * from './sync/sync.contracts.js';
 export * from './study-goals/study-goal.contracts.js';
 export * from './data-transfer/data-transfer.contracts.js';
+export * from './daily-browse/daily-browse.contracts.js';

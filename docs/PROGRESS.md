@@ -1,5 +1,17 @@
 # Tiến độ triển khai
 
+## Milestone 49 — Lướt lại thẻ đã học trong ngày
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: thêm luồng đọc riêng cho thẻ mới hoặc toàn bộ thẻ đã gặp hôm nay; tự lật 4 giây/mặt, có pause, điều chỉnh tốc độ, xáo trộn, cache offline cùng thiết bị và đánh dấu hoàn tất cục bộ.
+- Tương thích: không chấm điểm, không gọi FSRS, không đổi card/lịch ôn tập và không ghi `ReviewLog`/`SyncEvent`; `ReviewLog` chỉ là nguồn đọc danh sách thẻ đã nhìn thấy.
+
+## Milestone 48 — Khắc phục dependency bảo mật trong CI
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: cập nhật override `fast-uri` lên `3.1.5` và `brace-expansion` lên `5.0.9`, đồng bộ `pnpm-lock.yaml` để loại bỏ hai cảnh báo mức high làm GitHub Actions thất bại.
+- Kiểm tra: `pnpm audit --audit-level high`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` và `git diff --check` đều đạt.
+
 ## Milestone 47 — Dashboard theo dõi nhịp học
 
 - Trạng thái: Hoàn thành.

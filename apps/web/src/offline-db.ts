@@ -1,9 +1,15 @@
 import { Dexie, type EntityTable } from 'dexie';
-import type { TimeBoxedDailyPlan } from '@flashcard/contracts';
+import type {
+  DailyBrowseResponse,
+  DailyBrowseScope,
+  TimeBoxedDailyPlan
+} from '@flashcard/contracts';
 
 export interface CachedReviewCard {
   id: string;
   noteId: string;
+  deckId: string;
+  templateOrdinal: number;
   version: number;
   state: 'New' | 'Learning' | 'Review' | 'Relearning';
   dueAtUtc: string;
@@ -88,6 +94,33 @@ export interface CachedStudyGoalDailyPlan {
   cachedAtUtc: string;
 }
 
+export interface DailyBrowseExposure {
+  id: string;
+  userId: string;
+  studyDate: string;
+  timeZone: string;
+  cardId: string;
+  noteId: string;
+  deckId: string;
+  templateOrdinal: number;
+  noteType: 'Basic' | 'BasicAndReverse' | 'Cloze';
+  fieldsJson: string;
+  firstSeenAtUtc: string;
+  wasNewToday: boolean;
+}
+
+export interface CachedDailyBrowse {
+  id: string;
+  userId: string;
+  data: DailyBrowseResponse;
+  cachedAtUtc: string;
+}
+
+export interface DailyBrowseCompletion {
+  id: string;
+  completedAtUtc: string;
+}
+
 class FlashcardOfflineDatabase extends Dexie {
   reviewQueue!: EntityTable<CachedReviewQueue, 'id'>;
   notes!: EntityTable<CachedNote, 'id'>;
@@ -98,6 +131,9 @@ class FlashcardOfflineDatabase extends Dexie {
   studyGoals!: EntityTable<CachedStudyGoals, 'id'>;
   studyGoalForecasts!: EntityTable<CachedStudyGoalForecast, 'studyGoalId'>;
   studyGoalDailyPlans!: EntityTable<CachedStudyGoalDailyPlan, 'studyGoalId'>;
+  dailyBrowseExposures!: EntityTable<DailyBrowseExposure, 'id'>;
+  dailyBrowse!: EntityTable<CachedDailyBrowse, 'id'>;
+  dailyBrowseCompletions!: EntityTable<DailyBrowseCompletion, 'id'>;
 
   constructor() {
     super('flashcard-offline');
@@ -128,6 +164,20 @@ class FlashcardOfflineDatabase extends Dexie {
       studyGoals: 'id, cachedAtUtc',
       studyGoalForecasts: 'studyGoalId, cachedAtUtc',
       studyGoalDailyPlans: 'studyGoalId, cachedAtUtc'
+    });
+    this.version(4).stores({
+      reviewQueue: 'id, cachedAtUtc',
+      notes: 'id, deckId',
+      mediaCache: 'id, userId, mediaId, cachedAtUtc',
+      pendingReviewEvents: 'clientEventId, createdAtUtc',
+      syncState: 'id',
+      conflicts: '++id, clientEventId, createdAtUtc',
+      studyGoals: 'id, cachedAtUtc',
+      studyGoalForecasts: 'studyGoalId, cachedAtUtc',
+      studyGoalDailyPlans: 'studyGoalId, cachedAtUtc',
+      dailyBrowseExposures: 'id, [userId+studyDate], firstSeenAtUtc',
+      dailyBrowse: 'id, userId, cachedAtUtc',
+      dailyBrowseCompletions: 'id, completedAtUtc'
     });
   }
 }
@@ -162,7 +212,10 @@ export async function resetAfterDataTransfer(syncCursor: number): Promise<void> 
       offlineDb.syncState,
       offlineDb.studyGoals,
       offlineDb.studyGoalForecasts,
-      offlineDb.studyGoalDailyPlans
+      offlineDb.studyGoalDailyPlans,
+      offlineDb.dailyBrowseExposures,
+      offlineDb.dailyBrowse,
+      offlineDb.dailyBrowseCompletions
     ],
     async () => {
       await offlineDb.reviewQueue.clear();
@@ -171,6 +224,9 @@ export async function resetAfterDataTransfer(syncCursor: number): Promise<void> 
       await offlineDb.studyGoals.clear();
       await offlineDb.studyGoalForecasts.clear();
       await offlineDb.studyGoalDailyPlans.clear();
+      await offlineDb.dailyBrowseExposures.clear();
+      await offlineDb.dailyBrowse.clear();
+      await offlineDb.dailyBrowseCompletions.clear();
       const state = await offlineDb.syncState.get('state');
       await offlineDb.syncState.put({
         id: 'state',
@@ -180,3 +236,17 @@ export async function resetAfterDataTransfer(syncCursor: number): Promise<void> 
     }
   );
 }
+
+export const dailyBrowseCacheId = (
+  userId: string,
+  date: string,
+  timeZone: string,
+  scope: DailyBrowseScope
+) => `${userId}:${date}:${timeZone}:${scope}`;
+
+export const dailyBrowseCompletionId = (
+  userId: string,
+  date: string,
+  timeZone: string,
+  scope: DailyBrowseScope
+) => `complete:${userId}:${date}:${timeZone}:${scope}`;

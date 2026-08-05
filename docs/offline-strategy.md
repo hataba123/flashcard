@@ -7,3 +7,5 @@ Khi mất mạng, thao tác chấm thẻ vẫn dùng `@flashcard/scheduling` đ�
 Sự kiện review tiếp tục dùng `clientEventId` nên server xử lý idempotent. Conflict phiên bản được lưu vào IndexedDB để người học thấy trạng thái cần giải quyết; hàng đợi còn lại không bị xóa. Sau khi đẩy thành công, client kéo `GET /api/sync/pull` bằng cursor; Socket.IO chỉ kích hoạt lần đồng bộ này, không phải nguồn dữ liệu.
 
 Service worker chỉ precache app shell và tài nguyên build. API có token/cookie không được đưa vào runtime cache.
+
+Phiên “Lướt lại hôm nay” lưu danh sách thẻ đã xem và trạng thái hoàn tất cục bộ trong IndexedDB. Khi offline, thiết bị vẫn có thể lướt các thẻ đã học trên chính thiết bị đó; dữ liệu từ thiết bị khác chỉ có sau khi đồng bộ và gọi lại API. Dữ liệu này không được đẩy lên sync cursor và không ảnh hưởng lịch FSRS.
