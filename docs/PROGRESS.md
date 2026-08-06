@@ -562,3 +562,9 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: thêm trang `/pomodoro` với các pha tập trung, nghỉ ngắn và nghỉ dài; đếm giờ chính xác theo thời điểm thực; bắt đầu/tạm dừng/đặt lại; nghỉ dài sau mỗi bốn phiên tập trung; cùng thiết lập thời lượng 1–120 phút lưu cục bộ trên thiết bị.
 - Kiểm tra: unit test cho định dạng thời gian và quy tắc chuyển pha; typecheck, test, lint và build web.
+
+## Milestone 45 — Pomodoro chạy nền khi chuyển view
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: lưu snapshot timer và thời điểm kết thúc vào `localStorage`, tính lại số giây theo thời gian thực khi quay lại Pomodoro; timer không bị reset khi chuyển sang view khác.
+- Kiểm tra: `pnpm --filter @flashcard/web typecheck`, `pnpm --filter @flashcard/web test`, `pnpm lint`, `pnpm build` và `git diff --check` đều đạt.

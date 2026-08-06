@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatPomodoroTime, nextPomodoroPhase } from './pomodoro-utils.js';
+import {
+  advancePomodoroTimer,
+  formatPomodoroTime,
+  getPomodoroRemainingSeconds,
+  nextPomodoroPhase,
+  type PomodoroTimerState
+} from './pomodoro-utils.js';
 
 describe('pomodoro helpers', () => {
   it('formats the remaining time as minutes and seconds', () => {
@@ -14,5 +20,23 @@ describe('pomodoro helpers', () => {
     expect(nextPomodoroPhase('focus', 3)).toBe('longBreak');
     expect(nextPomodoroPhase('shortBreak', 3)).toBe('focus');
     expect(nextPomodoroPhase('longBreak', 4)).toBe('focus');
+  });
+
+  it('calculates a running timer from its end timestamp', () => {
+    const timer: PomodoroTimerState = {
+      phase: 'focus',
+      remainingSeconds: 25,
+      isRunning: true,
+      endsAtMs: 125_000,
+      completedFocusSessions: 0
+    };
+
+    expect(getPomodoroRemainingSeconds(timer, 100_001)).toBe(25);
+    expect(getPomodoroRemainingSeconds(timer, 101_002)).toBe(24);
+    expect(advancePomodoroTimer(timer, 125_001)).toMatchObject({
+      remainingSeconds: 0,
+      isRunning: false,
+      endsAtMs: null
+    });
   });
 });

@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 
 import {
+  advancePomodoroTimer,
   formatPomodoroTime,
   nextPomodoroPhase,
   pomodoroPhaseLabels,
-  type PomodoroPhase
+  type PomodoroPhase,
+  type PomodoroTimerState
 } from './pomodoro-utils.js';
 
 const pomodoroSettingsKey = 'flashcard-pomodoro-settings';
+const pomodoroTimerKey = 'flashcard-pomodoro-timer';
 const defaultDurations: Record<PomodoroPhase, number> = {
   focus: 25,
   shortBreak: 5,
@@ -38,12 +41,59 @@ function loadDurations(): Record<PomodoroPhase, number> {
   }
 }
 
+function isPomodoroPhase(value: unknown): value is PomodoroPhase {
+  return value === 'focus' || value === 'shortBreak' || value === 'longBreak';
+}
+
+function createInitialTimerState(durations: Record<PomodoroPhase, number>): PomodoroTimerState {
+  return {
+    phase: 'focus',
+    remainingSeconds: durations.focus * 60,
+    isRunning: false,
+    endsAtMs: null,
+    completedFocusSessions: 0
+  };
+}
+
+function loadTimerState(durations: Record<PomodoroPhase, number>): PomodoroTimerState {
+  const fallback = createInitialTimerState(durations);
+  try {
+    const stored = JSON.parse(localStorage.getItem(pomodoroTimerKey) ?? 'null') as Partial<
+      PomodoroTimerState
+    > | null;
+    if (
+      stored === null ||
+      !isPomodoroPhase(stored.phase) ||
+      typeof stored.remainingSeconds !== 'number' ||
+      !Number.isFinite(stored.remainingSeconds) ||
+      stored.remainingSeconds < 0 ||
+      typeof stored.isRunning !== 'boolean' ||
+      (stored.endsAtMs !== null &&
+        (typeof stored.endsAtMs !== 'number' || !Number.isFinite(stored.endsAtMs))) ||
+      typeof stored.completedFocusSessions !== 'number' ||
+      !Number.isInteger(stored.completedFocusSessions) ||
+      stored.completedFocusSessions < 0
+    ) {
+      return fallback;
+    }
+
+    const timer: PomodoroTimerState = {
+      phase: stored.phase,
+      remainingSeconds: Math.floor(stored.remainingSeconds),
+      isRunning: stored.isRunning && stored.endsAtMs !== null,
+      endsAtMs: stored.isRunning ? stored.endsAtMs : null,
+      completedFocusSessions: stored.completedFocusSessions
+    };
+    return timer.isRunning ? advancePomodoroTimer(timer) : timer;
+  } catch {
+    return fallback;
+  }
+}
+
 export function PomodoroPage() {
   const [durations, setDurations] = useState<Record<PomodoroPhase, number>>(loadDurations);
-  const [phase, setPhase] = useState<PomodoroPhase>('focus');
-  const [remainingSeconds, setRemainingSeconds] = useState(() => loadDurations().focus * 60);
-  const [isRunning, setIsRunning] = useState(false);
-  const [completedFocusSessions, setCompletedFocusSessions] = useState(0);
+  const [timer, setTimer] = useState<PomodoroTimerState>(() => loadTimerState(durations));
+  const { phase, remainingSeconds, isRunning, completedFocusSessions } = timer;
 
   const totalSeconds = durations[phase] * 60;
   const progress = totalSeconds === 0 ? 0 : (totalSeconds - remainingSeconds) / totalSeconds;
@@ -60,30 +110,43 @@ export function PomodoroPage() {
   }, [durations]);
 
   useEffect(() => {
-    if (!isRunning) return undefined;
+    localStorage.setItem(pomodoroTimerKey, JSON.stringify(timer));
+  }, [timer]);
 
-    const endsAt = Date.now() + remainingSeconds * 1_000;
+  useEffect(() => {
+    if (!timer.isRunning || timer.endsAtMs === null) return undefined;
+
     const updateRemainingTime = () => {
-      const nextRemainingSeconds = Math.max(0, Math.ceil((endsAt - Date.now()) / 1_000));
-      setRemainingSeconds(nextRemainingSeconds);
-      if (nextRemainingSeconds === 0) setIsRunning(false);
+      setTimer((current) => {
+        if (!current.isRunning || current.endsAtMs !== timer.endsAtMs) return current;
+        return advancePomodoroTimer(current);
+      });
     };
     updateRemainingTime();
     const intervalId = window.setInterval(updateRemainingTime, 250);
     return () => window.clearInterval(intervalId);
-  }, [isRunning]);
+  }, [timer.endsAtMs, timer.isRunning]);
 
   const resetTimer = () => {
-    setIsRunning(false);
-    setRemainingSeconds(totalSeconds);
+    setTimer((current) => ({
+      ...current,
+      isRunning: false,
+      endsAtMs: null,
+      remainingSeconds: totalSeconds
+    }));
   };
 
   const moveToNextPhase = () => {
     const nextPhase = nextPomodoroPhase(phase, completedFocusSessions);
-    if (phase === 'focus') setCompletedFocusSessions((count) => count + 1);
-    setPhase(nextPhase);
-    setRemainingSeconds(durations[nextPhase] * 60);
-    setIsRunning(false);
+    setTimer((current) => ({
+      ...current,
+      phase: nextPhase,
+      remainingSeconds: durations[nextPhase] * 60,
+      isRunning: false,
+      endsAtMs: null,
+      completedFocusSessions:
+        current.completedFocusSessions + (current.phase === 'focus' ? 1 : 0)
+    }));
   };
 
   const updateDuration = (targetPhase: PomodoroPhase, value: string) => {
@@ -91,9 +154,31 @@ export function PomodoroPage() {
     if (!Number.isInteger(nextMinutes) || nextMinutes < 1 || nextMinutes > 120) return;
     setDurations((current) => ({ ...current, [targetPhase]: nextMinutes }));
     if (targetPhase === phase) {
-      setIsRunning(false);
-      setRemainingSeconds(nextMinutes * 60);
+      setTimer((current) => ({
+        ...current,
+        isRunning: false,
+        endsAtMs: null,
+        remainingSeconds: nextMinutes * 60
+      }));
     }
+  };
+
+  const toggleTimer = () => {
+    if (remainingSeconds === 0) {
+      moveToNextPhase();
+      return;
+    }
+    setTimer((current) => {
+      if (current.isRunning) {
+        const paused = advancePomodoroTimer(current);
+        return { ...paused, isRunning: false, endsAtMs: null };
+      }
+      return {
+        ...current,
+        isRunning: true,
+        endsAtMs: Date.now() + current.remainingSeconds * 1_000
+      };
+    });
   };
 
   const phaseLabel = pomodoroPhaseLabels[phase];
@@ -137,9 +222,13 @@ export function PomodoroPage() {
                 type="button"
                 aria-selected={item === phase}
                 onClick={() => {
-                  setIsRunning(false);
-                  setPhase(item);
-                  setRemainingSeconds(durations[item] * 60);
+                  setTimer((current) => ({
+                    ...current,
+                    phase: item,
+                    remainingSeconds: durations[item] * 60,
+                    isRunning: false,
+                    endsAtMs: null
+                  }));
                 }}
               >
                 {pomodoroPhaseLabels[item]}
@@ -167,10 +256,7 @@ export function PomodoroPage() {
             <button
               className="pomodoro-primary"
               type="button"
-              onClick={() => {
-                if (remainingSeconds === 0) moveToNextPhase();
-                else setIsRunning((running) => !running);
-              }}
+              onClick={toggleTimer}
             >
               {actionLabel}
             </button>
