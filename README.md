@@ -172,6 +172,10 @@ Biểu mẫu sửa giữ nguyên nội dung hiện tại để cập nhật nhan
 
 Phiên ôn tập hiển thị tiến độ, thẻ hiện tại, tùy chỉnh cỡ chữ/chiều rộng, chế độ tối, toàn màn hình và phím tắt lật thẻ/chấm điểm.
 
+### Pomodoro
+
+![Pomodoro](docs/screenshots/12-pomodoro.png)
+
 ## Kiến trúc tổng quan
 
 Flashcard Platform là modular monolith TypeScript. API là nguồn dữ liệu chuẩn; web chịu trách nhiệm trải nghiệm PWA, cache cục bộ và hàng đợi thao tác offline.
