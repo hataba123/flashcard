@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
 import {
   advancePomodoroTimer,
@@ -8,9 +8,15 @@ import {
   type PomodoroPhase,
   type PomodoroTimerState
 } from './pomodoro-utils.js';
+import {
+  playPomodoroCompletion,
+  playPomodoroTick,
+  unlockPomodoroAudio
+} from './pomodoro-sound.js';
 
 const pomodoroSettingsKey = 'flashcard-pomodoro-settings';
 const pomodoroTimerKey = 'flashcard-pomodoro-timer';
+const pomodoroSoundKey = 'flashcard-pomodoro-sound';
 const defaultDurations: Record<PomodoroPhase, number> = {
   focus: 25,
   shortBreak: 5,
@@ -90,9 +96,15 @@ function loadTimerState(durations: Record<PomodoroPhase, number>): PomodoroTimer
   }
 }
 
+function loadSoundPreference(): boolean {
+  return localStorage.getItem(pomodoroSoundKey) !== 'false';
+}
+
 export function PomodoroPage() {
   const [durations, setDurations] = useState<Record<PomodoroPhase, number>>(loadDurations);
   const [timer, setTimer] = useState<PomodoroTimerState>(() => loadTimerState(durations));
+  const [soundEnabled, setSoundEnabled] = useState(loadSoundPreference);
+  const previousTimer = useRef(timer);
   const { phase, remainingSeconds, isRunning, completedFocusSessions } = timer;
 
   const totalSeconds = durations[phase] * 60;
@@ -112,6 +124,21 @@ export function PomodoroPage() {
   useEffect(() => {
     localStorage.setItem(pomodoroTimerKey, JSON.stringify(timer));
   }, [timer]);
+
+  useEffect(() => {
+    localStorage.setItem(pomodoroSoundKey, String(soundEnabled));
+  }, [soundEnabled]);
+
+  useEffect(() => {
+    const previous = previousTimer.current;
+    const cycleCompleted =
+      previous.isRunning && previous.remainingSeconds > 0 && timer.remainingSeconds === 0;
+    const secondElapsed =
+      previous.isRunning && timer.isRunning && timer.remainingSeconds < previous.remainingSeconds;
+    if (soundEnabled && cycleCompleted) playPomodoroCompletion();
+    else if (soundEnabled && secondElapsed) playPomodoroTick();
+    previousTimer.current = timer;
+  }, [soundEnabled, timer]);
 
   useEffect(() => {
     if (!timer.isRunning || timer.endsAtMs === null) return undefined;
@@ -173,6 +200,7 @@ export function PomodoroPage() {
         const paused = advancePomodoroTimer(current);
         return { ...paused, isRunning: false, endsAtMs: null };
       }
+      if (soundEnabled) unlockPomodoroAudio();
       return {
         ...current,
         isRunning: true,
@@ -297,6 +325,14 @@ export function PomodoroPage() {
               </label>
             ))}
             <p>Thay đổi được lưu trên thiết bị này.</p>
+            <label className="pomodoro-sound-setting">
+              <input
+                type="checkbox"
+                checked={soundEnabled}
+                onChange={(event) => setSoundEnabled(event.target.checked)}
+              />
+              <span>Âm thanh tick và báo hết chu kỳ</span>
+            </label>
           </section>
         </aside>
       </section>

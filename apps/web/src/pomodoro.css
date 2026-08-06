@@ -238,6 +238,22 @@
   line-height: 1.5;
 }
 
+.pomodoro-sound-setting {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  color: var(--color-ink-2);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
+.pomodoro-sound-setting input {
+  width: 1.1rem;
+  min-height: 1.1rem;
+  margin: 0.1rem 0 0;
+  accent-color: var(--color-accent-2);
+}
+
 @media (max-width: 760px) {
   .pomodoro-page {
     width: min(100% - 2 * var(--space-sm), 72rem);

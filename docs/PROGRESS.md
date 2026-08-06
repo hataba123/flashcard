@@ -568,3 +568,9 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: lưu snapshot timer và thời điểm kết thúc vào `localStorage`, tính lại số giây theo thời gian thực khi quay lại Pomodoro; timer không bị reset khi chuyển sang view khác.
 - Kiểm tra: `pnpm --filter @flashcard/web typecheck`, `pnpm --filter @flashcard/web test`, `pnpm lint`, `pnpm build` và `git diff --check` đều đạt.
+
+## Milestone 46 — Âm thanh tick và báo hết chu kỳ Pomodoro
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: thêm tick ngắn mỗi giây, chuỗi âm báo khi chu kỳ kết thúc, cơ chế mở quyền Web Audio từ thao tác bắt đầu timer và công tắc bật/tắt âm thanh được lưu trên thiết bị.
+- Kiểm tra: `pnpm --filter @flashcard/web typecheck`, `pnpm --filter @flashcard/web test`, `pnpm lint`, `pnpm build` và `git diff --check` đều đạt.
