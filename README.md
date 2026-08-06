@@ -11,6 +11,7 @@ Repository được tổ chức dưới dạng pnpm workspace với TypeScript s
 - [Kiến trúc tổng quan](#kiến-trúc-tổng-quan)
 - [Yêu cầu hệ thống](#yêu-cầu-hệ-thống)
 - [Bắt đầu nhanh trên Windows](#bắt-đầu-nhanh-trên-windows)
+- [Tài khoản đăng nhập kiểm thử](#tài-khoản-đăng-nhập-kiểm-thử)
 - [Cài đặt thủ công](#cài-đặt-thủ-công)
 - [Biến môi trường](#biến-môi-trường)
 - [Luồng sử dụng](#luồng-sử-dụng)
@@ -116,6 +117,8 @@ Repository được tổ chức dưới dạng pnpm workspace với TypeScript s
 
 ## Ảnh giao diện
 
+Các ảnh dưới đây được chụp lại từ phiên chạy local của ứng dụng sau khi đăng nhập thành công. Ảnh bao gồm các trạng thái chính của từng màn hình: xem danh sách, mở biểu mẫu tạo mới, mở biểu mẫu chỉnh sửa, xem kế hoạch và phiên ôn tập.
+
 ### Đăng nhập và đăng ký
 
 ![Trang đăng nhập](docs/ui-login.png)
@@ -147,6 +150,18 @@ Repository được tổ chức dưới dạng pnpm workspace với TypeScript s
 ![Tạo thẻ](docs/ui-note-create.png)
 
 ![Sửa thẻ](docs/ui-note-edit.png)
+
+## Tài khoản đăng nhập kiểm thử
+
+Thông tin tài khoản dùng để kiểm tra giao diện local:
+
+- Email: `nguyentanloi000000@gmail.com`
+- Mật khẩu: không lưu trong repository hoặc README để tránh làm lộ thông tin đăng nhập khi đẩy mã nguồn lên GitHub; sử dụng mật khẩu đã được cung cấp khi đăng nhập.
+- Địa chỉ web local: `http://localhost:5556`
+
+Sau khi khởi động API và web, mở địa chỉ trên, nhập thông tin tài khoản, rồi kiểm tra lần lượt **Tổng quan**, **Kế hoạch học tập**, **Bộ thẻ**, **Thẻ** và **Ôn tập**. Menu tài khoản ở góc phải hiển thị email hiện tại và trạng thái đồng bộ.
+
+> Lưu ý: không sử dụng tài khoản kiểm thử này cho môi trường production và không đặt lại mật khẩu thành mật khẩu đang dùng ở các dịch vụ khác.
 
 ## Kiến trúc tổng quan
 
