@@ -13,6 +13,7 @@ import {
   useState,
   type ChangeEvent,
   type ReactNode,
+  type SyntheticEvent,
   type TouchEvent
 } from 'react';
 import { useForm } from 'react-hook-form';
@@ -1278,6 +1279,7 @@ function DailyBrowse() {
   const [paused, setPaused] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [speed, setSpeed] = useState(1);
+  const [audioRepeatCount, setAudioRepeatCount] = useState(1);
   const [clockNow, setClockNow] = useState(() => performance.now());
   const remainingMs = useRef(4_000);
   const phaseStartedAt = useRef<number | null>(null);
@@ -1614,7 +1616,12 @@ function DailyBrowse() {
           </div>
         </div>
         <div className="review-support">
-          <AudioControl mediaId={fields.audioMediaId} />
+          <AudioControl
+            mediaId={fields.audioMediaId}
+            isBack={revealed}
+            repeatCount={audioRepeatCount}
+            onRepeatCountChange={setAudioRepeatCount}
+          />
         </div>
       </section>
     </Shell>
@@ -1658,6 +1665,7 @@ function Review() {
   const [sessionStartedAtMs, setSessionStartedAtMs] = useState<number | null>(null);
   const [clockNowMs, setClockNowMs] = useState(Date.now());
   const [extraMinutes, setExtraMinutes] = useState(0);
+  const [audioRepeatCount, setAudioRepeatCount] = useState(1);
   const [completedCardIds, setCompletedCardIds] = useState<string[]>([]);
   const pausedSessionMs = useRef(0);
   const timeBoxedSessionInitialized = useRef(false);
@@ -2396,7 +2404,12 @@ function Review() {
                     </div>
                   </div>
                   <div className="review-support">
-                    <AudioControl mediaId={fields.audioMediaId} />
+                    <AudioControl
+                      mediaId={fields.audioMediaId}
+                      isBack={revealed}
+                      repeatCount={audioRepeatCount}
+                      onRepeatCountChange={setAudioRepeatCount}
+                    />
                   </div>
                   {!revealed ? (
                     <ReviewControls
@@ -2457,7 +2470,17 @@ function Review() {
     </Shell>
   );
 }
-function AudioControl({ mediaId }: { mediaId: string | undefined }) {
+function AudioControl({
+  mediaId,
+  isBack,
+  repeatCount,
+  onRepeatCountChange
+}: {
+  mediaId: string | undefined;
+  isBack: boolean;
+  repeatCount: number;
+  onRepeatCountChange(value: number): void;
+}) {
   const userId = useSession((state) => state.user?.id);
   const media = useQuery({
     queryKey: ['media', userId, mediaId],
@@ -2473,12 +2496,78 @@ function AudioControl({ mediaId }: { mediaId: string | undefined }) {
     setUrl(objectUrl);
     return () => URL.revokeObjectURL(objectUrl);
   }, [media.data, mediaId, userId]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const repeatCountRef = useRef(0);
+  const autoReplayRef = useRef(false);
+
+  useEffect(() => {
+    repeatCountRef.current = 0;
+    autoReplayRef.current = false;
+    const audio = audioRef.current;
+    if (audio === null) return;
+    audio.pause();
+    audio.currentTime = 0;
+  }, [isBack, mediaId]);
+
+  const handleAudioPlay = (event: SyntheticEvent<HTMLAudioElement>) => {
+    if (autoReplayRef.current) {
+      autoReplayRef.current = false;
+      return;
+    }
+    if (event.currentTarget.currentTime === 0 || event.currentTarget.ended) {
+      repeatCountRef.current = 0;
+    }
+  };
+
+  const handleAudioEnded = (event: SyntheticEvent<HTMLAudioElement>) => {
+    const nextPlayCount = repeatCountRef.current + 1;
+    if (isBack && nextPlayCount < repeatCount) {
+      repeatCountRef.current = nextPlayCount;
+      autoReplayRef.current = true;
+      event.currentTarget.currentTime = 0;
+      void event.currentTarget.play().catch(() => {
+        autoReplayRef.current = false;
+      });
+      return;
+    }
+    repeatCountRef.current = 0;
+  };
+
   if (userId === undefined || mediaId === undefined) return null;
   if (media.isError) return <p className="form-error">Không thể tải âm thanh của thẻ.</p>;
   return url === null ? (
     <p className="muted">Đang tải âm thanh…</p>
   ) : (
-    <audio key={`${userId}:${mediaId}`} controls preload="auto" src={url} />
+    <div className="review-audio-control">
+      {isBack && (
+        <label>
+          Số lần phát mặt sau
+          <select
+            value={repeatCount}
+            onChange={(event) => {
+              repeatCountRef.current = 0;
+              autoReplayRef.current = false;
+              onRepeatCountChange(Number(event.target.value));
+            }}
+          >
+            <option value={1}>1 lần</option>
+            <option value={2}>2 lần</option>
+            <option value={3}>3 lần</option>
+            <option value={4}>4 lần</option>
+            <option value={5}>5 lần</option>
+          </select>
+        </label>
+      )}
+      <audio
+        key={`${userId}:${mediaId}:${isBack ? 'back' : 'front'}`}
+        ref={audioRef}
+        controls
+        preload="auto"
+        src={url}
+        onPlay={handleAudioPlay}
+        onEnded={handleAudioEnded}
+      />
+    </div>
   );
 }
 function App() {

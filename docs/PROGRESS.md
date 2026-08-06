@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 60 — Lặp âm thanh mặt sau khi ôn tập
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: thêm lựa chọn phát âm thanh mặt sau từ 1–5 lần trong phiên Ôn tập và Lướt lại hôm nay; âm thanh tự phát lại đủ số lần sau khi người dùng bắt đầu phát.
+- Kiểm tra: typecheck, test, lint, build web và kiểm tra diff.
+
 ## Milestone 59 — Ẩn mục tiêu đã xóa mềm khỏi cache giao diện
 
 - Trạng thái: Hoàn thành.

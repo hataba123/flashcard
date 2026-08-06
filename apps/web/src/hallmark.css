@@ -1887,6 +1887,24 @@ label {
   display: none;
 }
 
+.review-audio-control {
+  display: grid;
+  width: min(100%, 28rem);
+  gap: var(--space-xs);
+}
+
+.review-audio-control label {
+  display: grid;
+  gap: var(--space-3xs);
+  color: var(--color-neutral);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.review-audio-control select {
+  min-height: 2.5rem;
+}
+
 .reveal {
   display: flex;
   width: min(100%, 25rem);
