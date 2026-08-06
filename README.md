@@ -11,7 +11,6 @@ Repository được tổ chức dưới dạng pnpm workspace với TypeScript s
 - [Kiến trúc tổng quan](#kiến-trúc-tổng-quan)
 - [Yêu cầu hệ thống](#yêu-cầu-hệ-thống)
 - [Bắt đầu nhanh trên Windows](#bắt-đầu-nhanh-trên-windows)
-- [Tài khoản đăng nhập kiểm thử](#tài-khoản-đăng-nhập-kiểm-thử)
 - [Cài đặt thủ công](#cài-đặt-thủ-công)
 - [Biến môi trường](#biến-môi-trường)
 - [Luồng sử dụng](#luồng-sử-dụng)
@@ -117,51 +116,61 @@ Repository được tổ chức dưới dạng pnpm workspace với TypeScript s
 
 ## Ảnh giao diện
 
-Các ảnh dưới đây được chụp lại từ phiên chạy local của ứng dụng sau khi đăng nhập thành công. Ảnh bao gồm các trạng thái chính của từng màn hình: xem danh sách, mở biểu mẫu tạo mới, mở biểu mẫu chỉnh sửa, xem kế hoạch và phiên ôn tập.
+Các ảnh mới được chụp lại từ phiên chạy local sau khi đăng nhập thành công. Bộ ảnh tập trung vào giao diện và thao tác chính; không chụp menu tài khoản để tránh hiển thị thông tin nhận diện.
 
-### Đăng nhập và đăng ký
+### Xác thực
 
-![Trang đăng nhập](docs/ui-login.png)
+![Trang đăng nhập](docs/screenshots/01-dang-nhap.jpg)
 
-![Trang đăng ký](docs/ui-register.png)
+Trang đăng nhập gồm nhận email, mật khẩu, nút gửi biểu mẫu và liên kết sang đăng ký.
 
-### Tổng quan và tài khoản
+![Trang đăng ký](docs/screenshots/02-dang-ky.jpg)
 
-![Dashboard tổng quan](docs/ui-dashboard.png)
+Trang đăng ký dùng cùng ngôn ngữ giao diện, bổ sung luồng tạo tài khoản mới và liên kết quay lại đăng nhập.
 
-![Menu tài khoản](docs/ui-account.png)
+### Dashboard và kế hoạch học
 
-### Kế hoạch và ôn tập
+![Tổng quan](docs/screenshots/03-tong-quan.jpg)
 
-![Kế hoạch học tập](docs/ui-study-plan.png)
+Dashboard hiển thị số bộ thẻ, tổng số thẻ, lượng cần ôn, thời gian học, khả năng ghi nhớ, hoạt động gần đây và nhóm điểm yếu cần xử lý.
 
-![Phiên ôn tập](docs/ui-review.png)
+![Kế hoạch học tập](docs/screenshots/04-ke-hoach.jpg)
 
-### Bộ thẻ và thẻ học
+Trang kế hoạch hiển thị mục tiêu, dự báo hoàn thành, ngân sách thời gian, cảnh báo quá tải, biểu đồ tải học và kế hoạch theo ngày.
 
-![Danh sách bộ thẻ](docs/ui-decks.png)
+### Bộ thẻ
 
-![Tạo bộ thẻ](docs/ui-deck-create.png)
+![Danh sách bộ thẻ](docs/screenshots/05-bo-the.jpg)
 
-![Sửa bộ thẻ](docs/ui-deck-edit.png)
+Danh sách bộ thẻ có tìm kiếm, thông tin retention, giới hạn thẻ mới mỗi ngày và thao tác thêm vào kế hoạch.
 
-![Danh sách thẻ](docs/ui-notes.png)
+![Tạo bộ thẻ](docs/screenshots/06-tao-bo-the.jpg)
 
-![Tạo thẻ](docs/ui-note-create.png)
+Biểu mẫu tạo bộ thẻ cho phép nhập tên, mô tả, desired retention, giới hạn thẻ mới và trạng thái bộ thẻ cốt lõi.
 
-![Sửa thẻ](docs/ui-note-edit.png)
+![Sửa bộ thẻ](docs/screenshots/07-sua-bo-the.jpg)
 
-## Tài khoản đăng nhập kiểm thử
+Biểu mẫu sửa tải lại dữ liệu hiện có để điều chỉnh cấu hình mà không tạo bộ thẻ trùng.
 
-Thông tin tài khoản dùng để kiểm tra giao diện local:
+### Thẻ học
 
-- Email: `nguyentanloi000000@gmail.com`
-- Mật khẩu: không lưu trong repository hoặc README để tránh làm lộ thông tin đăng nhập khi đẩy mã nguồn lên GitHub; sử dụng mật khẩu đã được cung cấp khi đăng nhập.
-- Địa chỉ web local: `http://localhost:5556`
+![Danh sách thẻ](docs/screenshots/08-the.jpg)
 
-Sau khi khởi động API và web, mở địa chỉ trên, nhập thông tin tài khoản, rồi kiểm tra lần lượt **Tổng quan**, **Kế hoạch học tập**, **Bộ thẻ**, **Thẻ** và **Ôn tập**. Menu tài khoản ở góc phải hiển thị email hiện tại và trạng thái đồng bộ.
+Danh sách thẻ hỗ trợ chọn bộ thẻ, nhập Excel, hoàn tác import gần nhất, xem nhãn và mở thao tác sửa/xóa.
 
-> Lưu ý: không sử dụng tài khoản kiểm thử này cho môi trường production và không đặt lại mật khẩu thành mật khẩu đang dùng ở các dịch vụ khác.
+![Tạo thẻ](docs/screenshots/09-tao-the.jpg)
+
+Biểu mẫu tạo thẻ hỗ trợ chọn bộ thẻ, loại `Basic`, `Basic và đảo chiều` hoặc `Cloze`, cùng mặt trước, mặt sau và nhãn.
+
+![Sửa thẻ](docs/screenshots/10-sua-the.jpg)
+
+Biểu mẫu sửa giữ nguyên nội dung hiện tại để cập nhật nhanh mặt trước, mặt sau, loại thẻ và nhãn.
+
+### Ôn tập
+
+![Phiên ôn tập](docs/screenshots/11-on-tap.jpg)
+
+Phiên ôn tập hiển thị tiến độ, thẻ hiện tại, tùy chỉnh cỡ chữ/chiều rộng, chế độ tối, toàn màn hình và phím tắt lật thẻ/chấm điểm.
 
 ## Kiến trúc tổng quan
 
@@ -345,10 +354,7 @@ pnpm --filter @flashcard/api seed:demo
 
 Mặc định:
 
-- Email: `demo@flashcard.local`
-- Mật khẩu: `DemoPassword123!`
-
-Có thể đặt `SEED_DEMO_EMAIL` và `SEED_DEMO_PASSWORD` trước khi chạy seed. Seed bị chặn trong môi trường production.
+Seed chỉ tạo dữ liệu mẫu cho môi trường local. Thông tin đăng nhập phải được cấu hình bên ngoài repository và không ghi vào README, log hoặc commit. Seed bị chặn trong môi trường production.
 
 ## Biến môi trường
 
