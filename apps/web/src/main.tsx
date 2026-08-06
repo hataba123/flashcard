@@ -38,6 +38,7 @@ import type {
 } from '@flashcard/contracts';
 
 import { ApiError, api } from './api.js';
+import { formatCardTextForDisplay } from './card-content.js';
 import {
   activeTimeBoxedStudySessionId,
   offlineDb,
@@ -1608,7 +1609,7 @@ function DailyBrowse() {
                 <span>Câu hỏi</span>
                 <p>{front}</p>
               </div>
-              <p className="answer">{back}</p>
+              <p className="answer">{formatCardTextForDisplay(back)}</p>
             </article>
           </div>
         </div>
@@ -2390,7 +2391,7 @@ function Review() {
                           <span>Câu hỏi</span>
                           <p>{front}</p>
                         </div>
-                        <p className="answer">{back}</p>
+                        <p className="answer">{formatCardTextForDisplay(back)}</p>
                       </article>
                     </div>
                   </div>

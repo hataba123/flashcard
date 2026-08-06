@@ -585,6 +585,7 @@ small {
 
 .card p {
   color: #475569;
+  white-space: pre-wrap;
 }
 
 .search-field {

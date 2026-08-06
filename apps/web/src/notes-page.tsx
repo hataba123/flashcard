@@ -5,6 +5,7 @@ import { Link } from 'react-router';
 import { z } from 'zod';
 
 import { ApiError, api } from './api.js';
+import { formatCardTextForDisplay } from './card-content.js';
 import type { Deck, ExcelImportPreview, ExcelImportResult, Note } from './card-types.js';
 
 const noteSchema = z.object({
@@ -488,7 +489,7 @@ export function NotesPage() {
                 <article className="card" key={note.id}>
                   <div>
                     <h2>{fields.front ?? fields.text ?? 'Thẻ'}</h2>
-                    <p>{fields.back ?? ''}</p>
+                    <p>{formatCardTextForDisplay(fields.back ?? '')}</p>
                     <small>{note.noteType}</small>
                     {tags.length > 0 && (
                       <div className="tag-list" aria-label="Nhãn">

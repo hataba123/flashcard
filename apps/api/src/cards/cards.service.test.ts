@@ -39,6 +39,25 @@ describe('CardsService Excel importer', () => {
     ]);
   });
 
+  it('preserves Vietnamese Front/Back content and em dashes', async () => {
+    const result = await readWorksheet([
+      ['Front', 'Back'],
+      [
+        'là nguyên nhân chính gây ra một vấn đề',
+        'be a major contributing factor — Social inequality can be a major contributing factor to urban crime.'
+      ]
+    ]);
+
+    expect(result.rows).toEqual([
+      {
+        front: 'là nguyên nhân chính gây ra một vấn đề',
+        back: 'be a major contributing factor — Social inequality can be a major contributing factor to urban crime.',
+        tags: [],
+        noteType: 'Basic'
+      }
+    ]);
+  });
+
   it('accepts additional front and back column aliases in Vietnamese and English', async () => {
     const result = await readWorksheet([
       ['Question', 'Definition'],

@@ -31,9 +31,11 @@ describe('getCardSpeechText', () => {
     ).toBe('Hello how are you');
   });
 
-  it('skips Vietnamese text on either face of the card', () => {
-    expect(getCardSpeechText({ front: 'Xin chào', back: 'Hello' }, false)).toBe('');
-    expect(getCardSpeechText({ front: 'Toi dang hoc tieng Anh', back: 'Hello' }, false)).toBe('');
+  it('reads Vietnamese text on the front of a card', () => {
+    expect(getCardSpeechText({ front: 'Xin chào', back: 'Hello' }, false)).toBe('Xin chào');
+    expect(getCardSpeechText({ front: 'Toi dang hoc tieng Anh', back: 'Hello' }, false)).toBe(
+      'Toi dang hoc tieng Anh'
+    );
     expect(
       getCardSpeechText(
         { front: 'achieve', back: 'Nghĩa: đạt được\n\nVí dụ: achieve a goal' },
@@ -62,8 +64,7 @@ describe('getCardSpeechText', () => {
       getCardSpeechText(
         {
           front: 'resume',
-          back:
-            "lấy lại, chiếm lại; lại tiếp tục\n\nPhiên âm: /ri'zju:m/\n\nVí dụ: to resume one's spirits"
+          back: "lấy lại, chiếm lại; lại tiếp tục\n\nPhiên âm: /ri'zju:m/\n\nVí dụ: to resume one's spirits"
         },
         true
       )
@@ -75,8 +76,7 @@ describe('getCardSpeechText', () => {
       getCardSpeechText(
         {
           front: 'resume',
-          back:
-            "lấy lại, chiếm lại, hồi phục lại; lại bắt đầu, lại tiếp tục (sau khi nghỉ, dừng); tóm tắt lại, nêu điểm chính\n\nPhiên âm: /ri'zju:m/\n\nVí dụ: to resume one's spirits — lấy lại tinh thần, lấy lại can đảm"
+          back: "lấy lại, chiếm lại, hồi phục lại; lại bắt đầu, lại tiếp tục (sau khi nghỉ, dừng); tóm tắt lại, nêu điểm chính\n\nPhiên âm: /ri'zju:m/\n\nVí dụ: to resume one's spirits — lấy lại tinh thần, lấy lại can đảm"
         },
         true
       )
@@ -85,9 +85,7 @@ describe('getCardSpeechText', () => {
 
   it('does not read pronunciation when the back has no English answer content', () => {
     expect(getCardSpeechText({ front: 'resume', phonetic: "/ri'zju:m/" }, true)).toBe('');
-    expect(
-      getCardSpeechText({ front: 'resume', back: "Phiên âm: (/ri'zju:m/)." }, true)
-    ).toBe('');
+    expect(getCardSpeechText({ front: 'resume', back: "Phiên âm: (/ri'zju:m/)." }, true)).toBe('');
   });
 
   it('removes punctuation from regular card content', () => {
@@ -149,8 +147,42 @@ describe('SpeechControl', () => {
     const view = render(
       createElement(SpeechReplayButton, { text: 'Front content', side: 'front' })
     );
-    view.getByRole('button', { name: 'Đọc lại mặt trước' }).click();
+    const replayButton = view.container.querySelector<HTMLButtonElement>('button');
+    if (replayButton === null) throw new Error('Không tìm thấy nút đọc lại.');
+    replayButton.click();
 
     expect(speak).toHaveBeenCalledWith(expect.objectContaining({ text: 'Front content' }));
+  });
+
+  it('uses a Vietnamese voice locale for Vietnamese card content', () => {
+    class FakeUtterance {
+      lang = '';
+      rate = 1;
+      voice = null;
+
+      constructor(readonly text: string) {}
+    }
+
+    const speak = vi.fn();
+    vi.stubGlobal('SpeechSynthesisUtterance', FakeUtterance);
+    vi.stubGlobal('speechSynthesis', {
+      cancel: vi.fn(),
+      speak,
+      getVoices: () => [],
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn()
+    });
+
+    const view = render(
+      createElement(SpeechReplayButton, {
+        text: 'là nguyên nhân chính gây ra một vấn đề',
+        side: 'front'
+      })
+    );
+    const replayButton = view.container.querySelector<HTMLButtonElement>('button');
+    if (replayButton === null) throw new Error('Không tìm thấy nút đọc lại.');
+    replayButton.click();
+
+    expect(speak).toHaveBeenCalledWith(expect.objectContaining({ lang: 'vi-VN' }));
   });
 });

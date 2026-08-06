@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 55 — Hỗ trợ thẻ Việt-Anh
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: giữ nguyên nội dung Unicode trong cấu trúc `Front`/`Back`; tự đọc mặt trước tiếng Việt bằng giọng `vi-VN`; đưa phần ví dụ bắt đầu bằng dấu gạch ngang dài (`—` hoặc `–`) xuống dòng khi hiển thị.
+- Kiểm tra: unit test cho định dạng nội dung, giọng đọc tiếng Việt và import Excel `Front`/`Back`; typecheck web đạt.
+
 ## Milestone 54 — Đếm thời gian hoàn thành phiên lướt thẻ
 
 - Trạng thái: Hoàn thành.

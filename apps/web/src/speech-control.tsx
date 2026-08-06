@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 const STORAGE_KEY = 'flashcard:speech-settings';
 
 const languageOptions = [
+  { value: 'vi-VN', label: 'Tiếng Việt' },
   { value: 'en-US', label: 'Tiếng Anh (Mỹ)' },
   { value: 'en-GB', label: 'Tiếng Anh (Anh)' },
   { value: 'fr-FR', label: 'Tiếng Pháp' },
@@ -74,6 +75,12 @@ function isVietnameseWord(word: string): boolean {
   return vietnameseWords.has(normalized);
 }
 
+function isVietnameseText(text: string): boolean {
+  if (vietnameseCharacterPattern.test(text)) return true;
+  const words = text.match(wordPattern) ?? [];
+  return words.filter(isVietnameseWord).length >= 2;
+}
+
 function getEnglishSpeechText(text: string): string {
   return text
     .split(/\r?\n/u)
@@ -92,7 +99,10 @@ function getEnglishSpeechLine(text: string): string {
   if (vietnameseCharacterCount >= 2) {
     const lineWithoutExampleLabel = text.replace(exampleLinePattern, '');
     const [englishBeforeTranslation] = lineWithoutExampleLabel.split(translationSeparatorPattern);
-    if (englishBeforeTranslation !== undefined && !vietnameseCharacterPattern.test(englishBeforeTranslation))
+    if (
+      englishBeforeTranslation !== undefined &&
+      !vietnameseCharacterPattern.test(englishBeforeTranslation)
+    )
       return getEnglishSpeechLine(englishBeforeTranslation);
     return '';
   }
@@ -126,7 +136,7 @@ function loadSettings(): SpeechSettings {
     return {
       autoRead: typeof parsed.autoRead === 'boolean' ? parsed.autoRead : defaultSettings.autoRead,
       language: languageOptions.some((option) => option.value === parsed.language)
-        ? parsed.language ?? defaultSettings.language
+        ? (parsed.language ?? defaultSettings.language)
         : defaultSettings.language,
       voiceUri: typeof parsed.voiceUri === 'string' ? parsed.voiceUri : defaultSettings.voiceUri,
       rate:
@@ -140,7 +150,10 @@ function loadSettings(): SpeechSettings {
 }
 
 export function getCardSpeechText(fields: Record<string, string>, revealed: boolean): string {
-  if (!revealed) return removeSpeechMarks(getEnglishSpeechText(fields.front ?? fields.text ?? ''));
+  if (!revealed) {
+    const front = fields.front ?? fields.text ?? '';
+    return removeSpeechMarks(isVietnameseText(front) ? front : getEnglishSpeechText(front));
+  }
 
   const frontKeys = new Set(['front', 'text', 'audioMediaId']);
   const answerText = [
@@ -175,9 +188,15 @@ function speakText(text: string, settings: SpeechSettings, voices: SpeechSynthes
   if (text.trim().length === 0) return;
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = settings.language;
+  const language = isVietnameseText(text) ? 'vi-VN' : settings.language;
+  const selectedVoice = voices.find((voice) => voice.voiceURI === settings.voiceUri);
+  utterance.lang = language;
   utterance.rate = settings.rate;
-  utterance.voice = voices.find((voice) => voice.voiceURI === settings.voiceUri) ?? null;
+  utterance.voice =
+    selectedVoice?.lang.toLowerCase().startsWith(language.toLowerCase()) === true
+      ? selectedVoice
+      : (voices.find((voice) => voice.lang.toLowerCase().startsWith(language.toLowerCase())) ??
+        null);
   window.speechSynthesis.speak(utterance);
 }
 
