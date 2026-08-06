@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 56 — Viết lại tài liệu README
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: viết lại README bằng tiếng Việt theo cấu trúc dễ tra cứu; cập nhật tính năng hiện có, kiến trúc, cài đặt Windows/thủ công, biến môi trường, import Excel `Front`/`Back`, đọc tiếng Việt, offline/sync, API, kiểm thử, migration, bảo mật và xử lý sự cố.
+- Kiểm tra: đối chiếu nội dung với script/package hiện tại, chạy Prettier, kiểm tra liên kết tệp nội bộ và `git diff --check`.
+
 ## Milestone 55 — Hỗ trợ thẻ Việt-Anh
 
 - Trạng thái: Hoàn thành.
