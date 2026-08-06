@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 57 — Xóa mục tiêu trong kế hoạch học tập
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: hoàn thiện thao tác xóa mục tiêu trên trang `study-plan`; mục tiêu được lưu trữ, biến khỏi danh sách mặc định và không ảnh hưởng đến các bộ thẻ.
+- Kiểm tra: typecheck API/web, test web và `git diff --check`.
+
 ## Milestone 56 — Viết lại tài liệu README
 
 - Trạng thái: Hoàn thành.

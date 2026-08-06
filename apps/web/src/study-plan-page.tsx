@@ -223,7 +223,15 @@ export function StudyPlanPage() {
                   selected={selectedGoalId === goal.id}
                   onSelect={() => setSelectedGoalId(goal.id)}
                   onEdit={() => setEditing(goal)}
-                  onArchive={() => archive.mutate(goal.id)}
+                  onDelete={() => {
+                    if (
+                      confirm(
+                        `Xóa mục tiêu “${goal.name}”? Mục tiêu sẽ được lưu trữ và không ảnh hưởng đến các bộ thẻ.`
+                      )
+                    ) {
+                      archive.mutate(goal.id);
+                    }
+                  }}
                   archivePending={archive.isPending}
                   mutationDisabled={!offline.online}
                 />
@@ -1061,7 +1069,7 @@ function GoalListItem({
   selected,
   onSelect,
   onEdit,
-  onArchive,
+  onDelete,
   archivePending,
   mutationDisabled
 }: {
@@ -1069,7 +1077,7 @@ function GoalListItem({
   selected: boolean;
   onSelect(): void;
   onEdit(): void;
-  onArchive(): void;
+  onDelete(): void;
   archivePending: boolean;
   mutationDisabled: boolean;
 }) {
@@ -1106,9 +1114,9 @@ function GoalListItem({
           type="button"
           className="danger"
           disabled={archivePending || mutationDisabled}
-          onClick={onArchive}
+          onClick={onDelete}
         >
-          Lưu trữ
+          Xóa
         </button>
       </div>
     </article>

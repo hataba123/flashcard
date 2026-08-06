@@ -8,7 +8,7 @@ import type {
   StudyGoalType
 } from '@flashcard/contracts';
 import { randomUUID } from 'node:crypto';
-import { In, type EntityManager, type Repository } from 'typeorm';
+import { In, Not, type EntityManager, type Repository } from 'typeorm';
 
 import { DeckEntity } from '../cards/entities/deck.entity.js';
 import { SyncService } from '../sync/sync.service.js';
@@ -71,7 +71,7 @@ export class StudyGoalsService {
 
   async list(userId: string, page: number, pageSize: number): Promise<StudyGoalListResult> {
     const [goals, total] = await this.goals.findAndCount({
-      where: { userId },
+      where: { userId, status: Not('Archived') },
       order: { updatedAtUtc: 'DESC' },
       skip: (page - 1) * pageSize,
       take: pageSize

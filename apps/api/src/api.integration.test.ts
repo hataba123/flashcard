@@ -410,6 +410,24 @@ describe('API integration', () => {
       .get(`/api/study-goals/${goal.body.id}/forecast/latest`)
       .set('Authorization', `Bearer ${second.accessToken}`)
       .expect(404);
+    await request(app.getHttpServer())
+      .delete(`/api/study-goals/${goal.body.id}`)
+      .set('Authorization', `Bearer ${first.accessToken}`)
+      .expect(204);
+    await request(app.getHttpServer())
+      .get('/api/study-goals?page=1&pageSize=100')
+      .set('Authorization', `Bearer ${first.accessToken}`)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.items).not.toEqual(
+          expect.arrayContaining([expect.objectContaining({ id: goal.body.id })])
+        );
+      });
+    await request(app.getHttpServer())
+      .get(`/api/study-goals/${goal.body.id}`)
+      .set('Authorization', `Bearer ${first.accessToken}`)
+      .expect(200)
+      .expect(({ body }) => expect(body.status).toBe('Archived'));
     expect(goal.body.targetDate).toBe(targetDate);
   }, 30_000);
 
