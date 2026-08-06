@@ -117,6 +117,15 @@ const WEEK_DAYS = [
   [0, 'Chủ nhật']
 ] as const;
 
+function withoutArchivedGoals(data: StudyGoalList): StudyGoalList {
+  const items = data.items.filter((goal) => goal.status !== 'Archived');
+  return {
+    ...data,
+    items,
+    total: Math.max(0, data.total - (data.items.length - items.length))
+  };
+}
+
 export function StudyPlanPage() {
   const client = useQueryClient();
   const offline = useOffline();
@@ -129,15 +138,16 @@ export function StudyPlanPage() {
     queryFn: async () => {
       try {
         const data = await api.get<StudyGoalList>('/study-goals?page=1&pageSize=100');
+        const visibleData = withoutArchivedGoals(data);
         const cachedAtUtc = new Date().toISOString();
-        await offlineDb.studyGoals.put({ id: 'current', data, cachedAtUtc });
+        await offlineDb.studyGoals.put({ id: 'current', data: visibleData, cachedAtUtc });
         setGoalsCachedAtUtc(null);
-        return data;
+        return visibleData;
       } catch (error) {
         const cached = await offlineDb.studyGoals.get('current');
         if (cached === undefined) throw error;
         setGoalsCachedAtUtc(cached.cachedAtUtc);
-        return cached.data as StudyGoalList;
+        return withoutArchivedGoals(cached.data as StudyGoalList);
       }
     },
     retry: false
@@ -145,8 +155,22 @@ export function StudyPlanPage() {
   const decks = useQuery({ queryKey: ['decks'], queryFn: () => api.get<Deck[]>('/decks') });
   const archive = useMutation({
     mutationFn: (id: string) => api.delete(`/study-goals/${id}`),
-    onSuccess: async () => {
+    onSuccess: async (_data, id) => {
       setSelectedGoalId(null);
+      const current = client.getQueryData<StudyGoalList>(['study-goals']);
+      if (current !== undefined) {
+        const visibleData = {
+          ...current,
+          items: current.items.filter((goal) => goal.id !== id),
+          total: Math.max(0, current.total - 1)
+        };
+        client.setQueryData(['study-goals'], visibleData);
+        await offlineDb.studyGoals.put({
+          id: 'current',
+          data: visibleData,
+          cachedAtUtc: new Date().toISOString()
+        });
+      }
       await client.invalidateQueries({ queryKey: ['study-goals'] });
     }
   });

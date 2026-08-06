@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 59 — Ẩn mục tiêu đã xóa mềm khỏi cache giao diện
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: lọc mục tiêu `Archived` ở lớp hiển thị, cập nhật React Query và IndexedDB ngay sau khi xóa mềm thành công để mục tiêu không xuất hiện lại từ cache cũ.
+- Kiểm tra: typecheck và test web.
+
 ## Milestone 57 — Xóa mục tiêu trong kế hoạch học tập
 
 - Trạng thái: Hoàn thành.
