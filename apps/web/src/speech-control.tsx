@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const STORAGE_KEY = 'flashcard:speech-settings';
+const speechVoiceWaitMs = 700;
+let speechRequestId = 0;
 
 const languageOptions = [
   { value: 'vi-VN', label: 'Tiếng Việt' },
@@ -54,9 +56,11 @@ const vietnameseWords = new Set([
   'toi',
   'tranh',
   'vi',
+  'viet',
   'xin'
 ]);
 
+const strongVietnameseWords = new Set(['chao', 'xin', 'tieng', 'viet', 'nghia', 'ngu', 'phien']);
 const vietnameseCharacterPattern =
   /[\u00e0-\u00e3\u00e8-\u00ea\u00ec\u00ed\u00f2-\u00f5\u00f9\u00fa\u00fd\u0103\u0111\u0129\u0169\u01a1\u01b0\u1ea0-\u1ef9]/iu;
 const wordPattern = /[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu;
@@ -78,7 +82,11 @@ function isVietnameseWord(word: string): boolean {
 function isVietnameseText(text: string): boolean {
   if (vietnameseCharacterPattern.test(text)) return true;
   const words = text.match(wordPattern) ?? [];
-  return words.filter(isVietnameseWord).length >= 2;
+  const vietnameseWordCount = words.filter(isVietnameseWord).length;
+  return (
+    vietnameseWordCount >= 2 ||
+    (words.length === 1 && strongVietnameseWords.has(words[0]?.toLocaleLowerCase('vi') ?? ''))
+  );
 }
 
 function getEnglishSpeechText(text: string): string {
@@ -156,7 +164,7 @@ export function getCardSpeechText(fields: Record<string, string>, revealed: bool
   }
 
   const frontKeys = new Set(['front', 'text', 'audioMediaId']);
-  const answerText = [
+  const answerValues = [
     ...new Set(
       Object.entries(fields)
         .filter(
@@ -167,11 +175,19 @@ export function getCardSpeechText(fields: Record<string, string>, revealed: bool
         )
         .map(([, value]) => value.replace(pronunciationLinePattern, '').trim())
     )
-  ]
+  ];
+  const englishAnswerText = answerValues
     .map(getEnglishSpeechText)
     .filter((value) => value.length > 0)
     .join('. ');
-  return removeSpeechMarks(answerText);
+  if (englishAnswerText.length > 0) return removeSpeechMarks(englishAnswerText);
+
+  const vietnameseAnswerText = answerValues
+    .filter(isVietnameseText)
+    .map(removeSpeechMarks)
+    .filter((value) => value.length > 0)
+    .join('. ');
+  return removeSpeechMarks(vietnameseAnswerText);
 }
 
 interface SpeechControlProps {
@@ -217,20 +233,63 @@ function SpeechRepeatSetting({
   );
 }
 
-function speakText(
+function hasVoiceForLanguage(voices: SpeechSynthesisVoice[], language: string): boolean {
+  return voices.some((voice) => voice.lang.toLowerCase().startsWith(language.toLowerCase()));
+}
+
+function waitForVoices(language: string): Promise<SpeechSynthesisVoice[]> {
+  const initialVoices = window.speechSynthesis.getVoices();
+  if (hasVoiceForLanguage(initialVoices, language)) return Promise.resolve(initialVoices);
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (voices: SpeechSynthesisVoice[]) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+      resolve(voices);
+    };
+    const onVoicesChanged = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (hasVoiceForLanguage(voices, language)) finish(voices);
+    };
+    const timeout = window.setTimeout(
+      () => finish(window.speechSynthesis.getVoices()),
+      speechVoiceWaitMs
+    );
+    window.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
+  });
+}
+
+export function cancelSpeech(): void {
+  speechRequestId += 1;
+  window.speechSynthesis?.cancel();
+}
+
+async function speakText(
   text: string,
   settings: SpeechSettings,
   voices: SpeechSynthesisVoice[],
   repeatCount = 1
-): void {
+): Promise<void> {
   if (text.trim().length === 0) return;
+  const requestId = speechRequestId + 1;
+  speechRequestId = requestId;
   window.speechSynthesis.cancel();
   const language = isVietnameseText(text) ? 'vi-VN' : settings.language;
+  const resolvedVoices =
+    language.toLowerCase().startsWith('vi-') && !hasVoiceForLanguage(voices, language)
+      ? await waitForVoices(language)
+      : voices;
+  if (requestId !== speechRequestId) return;
   const selectedVoice = voices.find((voice) => voice.voiceURI === settings.voiceUri);
   const voice =
     selectedVoice?.lang.toLowerCase().startsWith(language.toLowerCase()) === true
       ? selectedVoice
-      : (voices.find((item) => item.lang.toLowerCase().startsWith(language.toLowerCase())) ?? null);
+      : (resolvedVoices.find((item) =>
+          item.lang.toLowerCase().startsWith(language.toLowerCase())
+        ) ?? null);
   for (let index = 0; index < Math.max(1, repeatCount); index += 1) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = language;
@@ -259,7 +318,7 @@ export function SpeechReplayButton({ text, side, repeatCount = 1 }: SpeechReplay
       onTouchStart={(event) => event.stopPropagation()}
       onTouchEnd={(event) => event.stopPropagation()}
       onClick={() =>
-        speakText(
+        void speakText(
           text,
           loadSettings(),
           window.speechSynthesis.getVoices(),
@@ -318,7 +377,7 @@ export function SpeechControl({
   const speak = useCallback(() => {
     const current = speechState.current;
     if (!supported || current.text.trim().length === 0) return;
-    speakText(
+    void speakText(
       current.text,
       current.settings,
       current.voices,
@@ -329,7 +388,7 @@ export function SpeechControl({
   useEffect(() => {
     if (settings.autoRead) speak();
     return () => {
-      if (supported) window.speechSynthesis.cancel();
+      if (supported) cancelSpeech();
     };
   }, [contentKey, settings.autoRead, speak, supported]);
 
@@ -352,6 +411,9 @@ export function SpeechControl({
     <details className="speech-control">
       <summary>Âm thanh đọc thẻ</summary>
       <div className="speech-settings">
+        <p className="speech-language-hint">
+          Tự động nhận diện tiếng Việt và dùng giọng Việt Nam khi nội dung là tiếng Việt.
+        </p>
         <label className="speech-toggle">
           <input
             type="checkbox"

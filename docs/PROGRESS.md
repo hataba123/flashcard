@@ -1,5 +1,13 @@
 # Tiến độ triển khai
 
+## Milestone 61 — Giọng đọc tiếng Việt và ghi chú trong phiên review
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: tự động ưu tiên giọng `vi-VN` khi nhận diện nội dung tiếng Việt có dấu hoặc không dấu, đồng thời giữ giọng mặc định phù hợp cho nội dung tiếng Anh; giữ nội dung tiếng Việt ở mặt sau khi không có ví dụ tiếng Anh.
+- Đã thực hiện: chờ `voiceschanged` tối đa khoảng 700 ms khi voice tiếng Việt chưa được trình duyệt nạp, hủy lượt đọc đang chờ khi đổi thẻ hoặc tạm dừng để tránh âm thanh cũ phát muộn.
+- Đã thực hiện: thêm checkbox `Ghi chú phiên học` trong tùy chỉnh review; panel ghi chú cạnh flashcard trên màn hình rộng, tự cuộn trong chiều cao của thẻ, chuyển xuống dưới ở màn hình hẹp và lưu tạm theo người dùng/ngữ cảnh phiên trên thiết bị.
+- Kiểm tra: `pnpm --filter @flashcard/web typecheck`, `pnpm --filter @flashcard/web test`, `pnpm --filter @flashcard/web build` và `pnpm lint` đều đạt.
+
 ## Milestone 60 — Lặp âm thanh mặt sau khi ôn tập
 
 - Trạng thái: Hoàn thành.
@@ -11,6 +19,12 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: lọc mục tiêu `Archived` ở lớp hiển thị, cập nhật React Query và IndexedDB ngay sau khi xóa mềm thành công để mục tiêu không xuất hiện lại từ cache cũ.
 - Kiểm tra: typecheck và test web.
+
+## Milestone 58 — Dọn thẻ mồ côi khi xóa bộ thẻ
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: dọn các note/card thuộc bộ thẻ đã xóa mềm, ghi sự kiện đồng bộ cho dữ liệu đã dọn và cập nhật xóa bộ thẻ để soft-delete nội dung đi kèm trong cùng transaction.
+- Dữ liệu hiện tại: đã dọn 10.304 note và 10.304 card đang nằm trong các bộ thẻ đã xóa mềm.
 
 ## Milestone 57 — Xóa mục tiêu trong kế hoạch học tập
 

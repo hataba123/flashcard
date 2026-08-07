@@ -64,7 +64,13 @@ import { loadMediaBlob, mediaQueryKey, mediaQueryStaleTimeMs } from './media-cac
 import { ReviewControls } from './review-controls.js';
 import { ratingForShortcut, reviewSessionTimeProgress, type ReviewRating } from './review-utils.js';
 import { useSession, type User } from './session.js';
-import { getCardSpeechText, SpeechControl, SpeechReplayButton } from './speech-control.js';
+import {
+  cancelSpeech,
+  getCardSpeechText,
+  SpeechControl,
+  SpeechReplayButton
+} from './speech-control.js';
+import { ReviewScratchpad, useReviewScratchpad } from './review-scratchpad.js';
 import { NotesPage } from './notes-page.js';
 import { StudyPlanPage } from './study-plan-page.js';
 import { PomodoroPage } from './pomodoro-page.js';
@@ -1676,6 +1682,7 @@ function Review() {
   const pausedSessionMs = useRef(0);
   const timeBoxedSessionInitialized = useRef(false);
   const { fontSize, setFontSize, cardWidth, setCardWidth } = useReviewDisplayPreferences();
+  const reviewScratchpad = useReviewScratchpad(userId, studyGoalId, studyDate);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const reviewScrollY = useRef<number | null>(null);
   const reviewDocumentMinHeight = useRef<number | null>(null);
@@ -2062,7 +2069,7 @@ function Review() {
       setIsPaused(false);
       return;
     }
-    window.speechSynthesis?.cancel();
+    cancelSpeech();
     setPausedAt(new Date());
     setIsPaused(true);
   };
@@ -2306,6 +2313,17 @@ function Review() {
               <option value="wide">Rộng</option>
             </select>
           </label>
+          <label className="review-notes-toggle">
+            <input
+              type="checkbox"
+              checked={reviewScratchpad.enabled}
+              onChange={(event) => reviewScratchpad.setEnabled(event.target.checked)}
+            />
+            <span className="review-notes-copy">
+              <strong>Ghi chú phiên học</strong>
+              <small>Mở bảng ghi chú cạnh flashcard</small>
+            </span>
+          </label>
           <ThemeToggle />
           <button className="secondary" type="button" onClick={() => void toggleFullscreen()}>
             {isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'} <kbd>F</kbd>
@@ -2364,57 +2382,71 @@ function Review() {
                     />
                   </div>
                   <div
-                    className="review-stage"
-                    role="group"
-                    aria-label={revealed ? 'Mặt sau của thẻ' : 'Mặt trước của thẻ'}
-                    onTouchStart={(event) => {
-                      const touch = event.touches[0];
-                      if (touch !== undefined)
-                        touchStart.current = { x: touch.clientX, y: touch.clientY };
-                    }}
-                    onTouchEnd={handleTouchEnd}
+                    className={
+                      reviewScratchpad.enabled
+                        ? 'review-stage-layout review-stage-layout-with-notes'
+                        : 'review-stage-layout review-stage-layout-standard'
+                    }
                   >
-                    <div key={card.id} className={`review-card${revealed ? ' is-revealed' : ''}`}>
-                      <article
-                        className="review-card-face review-card-front"
-                        aria-hidden={revealed}
-                      >
-                        <div className="review-card-meta">
-                          <span className="review-side-label">Câu hỏi</span>
-                          <div className="review-card-actions">
-                            <SpeechReplayButton text={speechText} side="front" />
-                            <span className="review-card-count">
-                              {activeCardIndex + 1} / {totalCards}
-                            </span>
+                    <div
+                      className="review-stage"
+                      role="group"
+                      aria-label={revealed ? 'Mặt sau của thẻ' : 'Mặt trước của thẻ'}
+                      onTouchStart={(event) => {
+                        const touch = event.touches[0];
+                        if (touch !== undefined)
+                          touchStart.current = { x: touch.clientX, y: touch.clientY };
+                      }}
+                      onTouchEnd={handleTouchEnd}
+                    >
+                      <div key={card.id} className={`review-card${revealed ? ' is-revealed' : ''}`}>
+                        <article
+                          className="review-card-face review-card-front"
+                          aria-hidden={revealed}
+                        >
+                          <div className="review-card-meta">
+                            <span className="review-side-label">Câu hỏi</span>
+                            <div className="review-card-actions">
+                              <SpeechReplayButton text={speechText} side="front" />
+                              <span className="review-card-count">
+                                {activeCardIndex + 1} / {totalCards}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                        <p className="review-face">{front}</p>
-                        <p className="review-hint">Nhớ câu trả lời trước khi lật thẻ.</p>
-                      </article>
-                      <article
-                        className="review-card-face review-card-back"
-                        aria-hidden={!revealed}
-                      >
-                        <div className="review-card-meta">
-                          <span className="review-side-label">Đáp án</span>
-                          <div className="review-card-actions">
-                            <SpeechReplayButton
-                              text={speechText}
-                              side="back"
-                              repeatCount={audioRepeatCount}
-                            />
-                            <span className="review-answer-mark" aria-hidden="true">
-                              ✓
-                            </span>
+                          <p className="review-face">{front}</p>
+                          <p className="review-hint">Nhớ câu trả lời trước khi lật thẻ.</p>
+                        </article>
+                        <article
+                          className="review-card-face review-card-back"
+                          aria-hidden={!revealed}
+                        >
+                          <div className="review-card-meta">
+                            <span className="review-side-label">Đáp án</span>
+                            <div className="review-card-actions">
+                              <SpeechReplayButton
+                                text={speechText}
+                                side="back"
+                                repeatCount={audioRepeatCount}
+                              />
+                              <span className="review-answer-mark" aria-hidden="true">
+                                ✓
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                        <div className="review-recall">
-                          <span>Câu hỏi</span>
-                          <p>{front}</p>
-                        </div>
-                        <p className="answer">{formatCardTextForDisplay(back)}</p>
-                      </article>
+                          <div className="review-recall">
+                            <span>Câu hỏi</span>
+                            <p>{front}</p>
+                          </div>
+                          <p className="answer">{formatCardTextForDisplay(back)}</p>
+                        </article>
+                      </div>
                     </div>
+                    {reviewScratchpad.enabled && (
+                      <ReviewScratchpad
+                        value={reviewScratchpad.text}
+                        onChange={reviewScratchpad.setText}
+                      />
+                    )}
                   </div>
                   <div className="review-support">
                     <AudioControl

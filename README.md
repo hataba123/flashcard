@@ -61,6 +61,8 @@ Repository được tổ chức dưới dạng pnpm workspace với TypeScript s
 - Hỗ trợ phím tắt, thao tác chạm/vuốt và giao diện responsive.
 - Có thể hoàn tác lượt chấm gần nhất bằng event bù; lịch sử cũ không bị sửa hoặc xóa.
 - Phiên học có thể chạy toàn màn hình, tạm dừng, thay đổi cỡ chữ và chiều rộng thẻ.
+- Trong **Tùy chỉnh phiên học**, bật **Ghi chú phiên học** để mở bảng ghi chú cạnh flashcard trên màn hình rộng; trên màn hình hẹp bảng sẽ chuyển xuống dưới để giữ responsive.
+- Ghi chú phiên học tự lưu tạm trên thiết bị theo tài khoản/ngữ cảnh học. Khi tắt ghi chú, flashcard trở lại đúng bố cục, chiều rộng và cỡ chữ như trước khi bật.
 - Phiên giới hạn thời gian ưu tiên thẻ đến hạn, thẻ yếu/leech và thẻ mới theo ngân sách học trong ngày.
 - Phiên đang học được lưu cục bộ để tiếp tục sau khi đổi trang hoặc tải lại ứng dụng.
 
@@ -75,7 +77,8 @@ Repository được tổ chức dưới dạng pnpm workspace với TypeScript s
 ### Âm thanh đọc thẻ
 
 - Dùng Web Speech API có sẵn trong trình duyệt, không cần API key bên ngoài.
-- Đọc được mặt trước tiếng Việt bằng locale `vi-VN` và tự chọn giọng Việt có sẵn trên thiết bị.
+- Tự động nhận diện nội dung tiếng Việt có dấu hoặc không dấu; khi nhận diện được, mặt thẻ được đọc bằng locale `vi-VN` và ưu tiên giọng Việt có sẵn trên thiết bị.
+- Nếu trình duyệt chưa nạp danh sách voice, lần đọc đầu chờ sự kiện `voiceschanged` tối đa khoảng 700 ms; các lần sau đọc ngay khi voice đã sẵn sàng.
 - Hỗ trợ tiếng Anh Mỹ, tiếng Anh Anh và một số ngôn ngữ phổ biến khác.
 - Có nút loa riêng trên từng mặt thẻ, chế độ tự đọc, chọn giọng và tốc độ từ `0,5×` đến `2×`.
 - Nội dung tiếng Anh ở mặt sau được lọc khỏi phần nghĩa/dịch tiếng Việt để phát âm tự nhiên hơn.
@@ -401,8 +404,9 @@ Web dùng `VITE_API_URL` nếu API không nằm tại `http://localhost:3000/api
 2. Tạo một bộ thẻ và cấu hình desired retention/giới hạn thẻ mới.
 3. Tạo thẻ thủ công hoặc nhập từ Excel.
 4. Mở **Ôn tập**, thử nhớ đáp án rồi lật thẻ.
-5. Chọn `Again`, `Hard`, `Good` hoặc `Easy`.
-6. Theo dõi thẻ đến hạn, backlog và retention trên dashboard.
+5. Mở **Tùy chỉnh phiên học** nếu cần đổi cỡ chữ/chiều rộng, hoặc bật **Ghi chú phiên học**.
+6. Chọn `Again`, `Hard`, `Good` hoặc `Easy`.
+7. Theo dõi thẻ đến hạn, backlog và retention trên dashboard.
 
 ### Học theo mục tiêu thời gian
 
@@ -500,6 +504,7 @@ Phần **Âm thanh đọc thẻ** sử dụng `window.speechSynthesis` của tr�
 - Nếu phát hiện tiếng Việt, nội dung được giữ nguyên và phát bằng locale `vi-VN`.
 - Trình đọc ưu tiên voice tiếng Việt có sẵn trên thiết bị.
 - Nội dung tiếng Việt không dấu phổ biến cũng được nhận diện bằng danh sách từ thực dụng.
+- Nếu voice chưa sẵn sàng, hệ thống chỉ chờ tối đa khoảng 700 ms rồi tiếp tục đọc, tránh làm chậm phiên học.
 - Nếu không phải tiếng Việt, locale/voice đang chọn trong cài đặt được sử dụng.
 
 ### Mặt sau
@@ -728,6 +733,7 @@ Kiểm tra lần lượt `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWOR
 - Tương tác với trang ít nhất một lần để trình duyệt cho phép phát âm thanh.
 - Kiểm tra công tắc tự đọc, ngôn ngữ, voice và tốc độ.
 - Cài voice tiếng Việt/tiếng Anh trong hệ điều hành nếu danh sách trống.
+- Nếu mặt trước tiếng Việt vẫn bị đọc bằng giọng nước ngoài, mở phần **Âm thanh đọc thẻ**, kiểm tra thiết bị có voice `vi-VN`; một số hệ điều hành không cài sẵn giọng Việt.
 - Thử Chromium mới nếu trình duyệt hiện tại hỗ trợ Web Speech không đầy đủ.
 
 ### PWA/offline vẫn hiển thị bản cũ

@@ -50,6 +50,13 @@ describe('getCardSpeechText', () => {
     ).toBe('achieve a goal');
   });
 
+  it('reads Vietnamese answer content when the back has no English example', () => {
+    expect(getCardSpeechText({ front: 'Hello', back: 'Xin chào' }, true)).toBe('Xin chào');
+    expect(getCardSpeechText({ front: 'Hello', back: 'Toi dang hoc tieng Viet' }, true)).toBe(
+      'Toi dang hoc tieng Viet'
+    );
+  });
+
   it('keeps English words that are also valid unaccented Vietnamese words', () => {
     expect(getCardSpeechText({ front: 'A productive day', back: '' }, false)).toBe(
       'A productive day'
@@ -175,7 +182,7 @@ describe('SpeechControl', () => {
     expect(speak).toHaveBeenCalledWith(expect.objectContaining({ text: 'Front content' }));
   });
 
-  it('uses a Vietnamese voice locale for Vietnamese card content', () => {
+  it('uses a Vietnamese voice locale for Vietnamese card content', async () => {
     class FakeUtterance {
       lang = '';
       rate = 1;
@@ -204,6 +211,8 @@ describe('SpeechControl', () => {
     if (replayButton === null) throw new Error('Không tìm thấy nút đọc lại.');
     replayButton.click();
 
-    expect(speak).toHaveBeenCalledWith(expect.objectContaining({ lang: 'vi-VN' }));
+    await vi.waitFor(() =>
+      expect(speak).toHaveBeenCalledWith(expect.objectContaining({ lang: 'vi-VN' }))
+    );
   });
 });

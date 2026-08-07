@@ -771,6 +771,14 @@ audio {
   margin-top: 16px;
 }
 
+.speech-language-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 18px;
+}
+
 .speech-settings label:not(.speech-toggle) {
   display: grid;
   gap: 6px;
