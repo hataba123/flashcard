@@ -177,33 +177,70 @@ export function getCardSpeechText(fields: Record<string, string>, revealed: bool
 interface SpeechControlProps {
   contentKey: string;
   text: string;
-  hasAudio?: boolean;
-  audioRepeatCount?: number;
-  onAudioRepeatCountChange?: (value: number) => void;
+  isBack?: boolean;
+  repeatCount?: number;
+  onRepeatCountChange?: (value: number) => void;
 }
 
 interface SpeechReplayButtonProps {
   text: string;
   side: 'front' | 'back';
+  repeatCount?: number;
 }
 
-function speakText(text: string, settings: SpeechSettings, voices: SpeechSynthesisVoice[]): void {
+interface SpeechRepeatSettingProps {
+  repeatCount: number;
+  onRepeatCountChange(value: number): void;
+  disabled?: boolean;
+}
+
+function SpeechRepeatSetting({
+  repeatCount,
+  onRepeatCountChange,
+  disabled = false
+}: SpeechRepeatSettingProps) {
+  return (
+    <label>
+      Số lần đọc mặt sau
+      <select
+        value={repeatCount}
+        disabled={disabled}
+        onChange={(event) => onRepeatCountChange(Number(event.target.value))}
+      >
+        <option value={1}>1 lần</option>
+        <option value={2}>2 lần</option>
+        <option value={3}>3 lần</option>
+        <option value={4}>4 lần</option>
+        <option value={5}>5 lần</option>
+      </select>
+    </label>
+  );
+}
+
+function speakText(
+  text: string,
+  settings: SpeechSettings,
+  voices: SpeechSynthesisVoice[],
+  repeatCount = 1
+): void {
   if (text.trim().length === 0) return;
   window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
   const language = isVietnameseText(text) ? 'vi-VN' : settings.language;
   const selectedVoice = voices.find((voice) => voice.voiceURI === settings.voiceUri);
-  utterance.lang = language;
-  utterance.rate = settings.rate;
-  utterance.voice =
+  const voice =
     selectedVoice?.lang.toLowerCase().startsWith(language.toLowerCase()) === true
       ? selectedVoice
-      : (voices.find((voice) => voice.lang.toLowerCase().startsWith(language.toLowerCase())) ??
-        null);
-  window.speechSynthesis.speak(utterance);
+      : (voices.find((item) => item.lang.toLowerCase().startsWith(language.toLowerCase())) ?? null);
+  for (let index = 0; index < Math.max(1, repeatCount); index += 1) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = language;
+    utterance.rate = settings.rate;
+    utterance.voice = voice;
+    window.speechSynthesis.speak(utterance);
+  }
 }
 
-export function SpeechReplayButton({ text, side }: SpeechReplayButtonProps) {
+export function SpeechReplayButton({ text, side, repeatCount = 1 }: SpeechReplayButtonProps) {
   const supported =
     typeof window !== 'undefined' &&
     'speechSynthesis' in window &&
@@ -221,7 +258,14 @@ export function SpeechReplayButton({ text, side }: SpeechReplayButtonProps) {
       disabled={text.trim().length === 0}
       onTouchStart={(event) => event.stopPropagation()}
       onTouchEnd={(event) => event.stopPropagation()}
-      onClick={() => speakText(text, loadSettings(), window.speechSynthesis.getVoices())}
+      onClick={() =>
+        speakText(
+          text,
+          loadSettings(),
+          window.speechSynthesis.getVoices(),
+          side === 'back' ? repeatCount : 1
+        )
+      }
     >
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path d="M4 10v4h4l5 4V6l-5 4H4Z" />
@@ -234,9 +278,9 @@ export function SpeechReplayButton({ text, side }: SpeechReplayButtonProps) {
 export function SpeechControl({
   contentKey,
   text,
-  hasAudio = false,
-  audioRepeatCount = 1,
-  onAudioRepeatCountChange
+  isBack = false,
+  repeatCount = 1,
+  onRepeatCountChange
 }: SpeechControlProps) {
   const supported =
     typeof window !== 'undefined' &&
@@ -244,8 +288,8 @@ export function SpeechControl({
     typeof SpeechSynthesisUtterance !== 'undefined';
   const [settings, setSettings] = useState<SpeechSettings>(loadSettings);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const speechState = useRef({ settings, text, voices });
-  speechState.current = { settings, text, voices };
+  const speechState = useRef({ settings, text, voices, isBack, repeatCount });
+  speechState.current = { settings, text, voices, isBack, repeatCount };
 
   useEffect(() => {
     if (!supported) return;
@@ -274,7 +318,12 @@ export function SpeechControl({
   const speak = useCallback(() => {
     const current = speechState.current;
     if (!supported || current.text.trim().length === 0) return;
-    speakText(current.text, current.settings, current.voices);
+    speakText(
+      current.text,
+      current.settings,
+      current.voices,
+      current.isBack ? current.repeatCount : 1
+    );
   }, [supported]);
 
   useEffect(() => {
@@ -285,7 +334,19 @@ export function SpeechControl({
   }, [contentKey, settings.autoRead, speak, supported]);
 
   if (!supported)
-    return <p className="muted">Trình duyệt này không hỗ trợ đọc thẻ bằng Web Speech API.</p>;
+    return (
+      <details className="speech-control">
+        <summary>Âm thanh đọc thẻ</summary>
+        <div className="speech-settings">
+          <p className="muted">Trình duyệt này không hỗ trợ đọc thẻ bằng Web Speech API.</p>
+          <SpeechRepeatSetting
+            repeatCount={repeatCount}
+            onRepeatCountChange={onRepeatCountChange ?? (() => undefined)}
+            disabled
+          />
+        </div>
+      </details>
+    );
 
   return (
     <details className="speech-control">
@@ -349,21 +410,10 @@ export function SpeechControl({
             }
           />
         </label>
-        {hasAudio && onAudioRepeatCountChange !== undefined && (
-          <label>
-            Số lần phát khi xem mặt sau
-            <select
-              value={audioRepeatCount}
-              onChange={(event) => onAudioRepeatCountChange(Number(event.target.value))}
-            >
-              <option value={1}>1 lần</option>
-              <option value={2}>2 lần</option>
-              <option value={3}>3 lần</option>
-              <option value={4}>4 lần</option>
-              <option value={5}>5 lần</option>
-            </select>
-          </label>
-        )}
+        <SpeechRepeatSetting
+          repeatCount={repeatCount}
+          onRepeatCountChange={onRepeatCountChange ?? (() => undefined)}
+        />
         <button
           className="secondary"
           type="button"

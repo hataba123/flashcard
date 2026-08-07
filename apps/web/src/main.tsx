@@ -1573,9 +1573,9 @@ function DailyBrowse() {
           <SpeechControl
             contentKey={`${card.cardId}:${revealed ? 'back' : 'front'}`}
             text={getCardSpeechText(speechFields, revealed)}
-            hasAudio={fields.audioMediaId !== undefined}
-            audioRepeatCount={audioRepeatCount}
-            onAudioRepeatCountChange={setAudioRepeatCount}
+            isBack={revealed}
+            repeatCount={audioRepeatCount}
+            onRepeatCountChange={setAudioRepeatCount}
           />
         </div>
         <div
@@ -1604,7 +1604,11 @@ function DailyBrowse() {
               <div className="review-card-meta">
                 <span className="review-side-label">Đáp án</span>
                 <div className="review-card-actions">
-                  <SpeechReplayButton text={getCardSpeechText(speechFields, true)} side="back" />
+                  <SpeechReplayButton
+                    text={getCardSpeechText(speechFields, true)}
+                    side="back"
+                    repeatCount={audioRepeatCount}
+                  />
                   <span className="review-answer-mark" aria-hidden="true">
                     ✓
                   </span>
@@ -2354,9 +2358,9 @@ function Review() {
                     <SpeechControl
                       contentKey={`${card.id}:${revealed ? 'back' : 'front'}`}
                       text={speechText}
-                      hasAudio={fields.audioMediaId !== undefined}
-                      audioRepeatCount={audioRepeatCount}
-                      onAudioRepeatCountChange={setAudioRepeatCount}
+                      isBack={revealed}
+                      repeatCount={audioRepeatCount}
+                      onRepeatCountChange={setAudioRepeatCount}
                     />
                   </div>
                   <div
@@ -2394,7 +2398,11 @@ function Review() {
                         <div className="review-card-meta">
                           <span className="review-side-label">Đáp án</span>
                           <div className="review-card-actions">
-                            <SpeechReplayButton text={speechText} side="back" />
+                            <SpeechReplayButton
+                              text={speechText}
+                              side="back"
+                              repeatCount={audioRepeatCount}
+                            />
                             <span className="review-answer-mark" aria-hidden="true">
                               ✓
                             </span>

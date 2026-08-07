@@ -1,5 +1,5 @@
 import { createElement } from 'react';
-import { render } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { getCardSpeechText, SpeechControl, SpeechReplayButton } from './speech-control.js';
@@ -94,6 +94,27 @@ describe('getCardSpeechText', () => {
 });
 
 describe('SpeechControl', () => {
+  it('keeps the speech repeat setting visible when speech synthesis is unavailable', () => {
+    vi.stubGlobal('speechSynthesis', undefined);
+    vi.stubGlobal('SpeechSynthesisUtterance', undefined);
+    const onRepeatCountChange = vi.fn();
+
+    render(
+      createElement(SpeechControl, {
+        contentKey: 'card-1:front',
+        text: 'Hello',
+        isBack: true,
+        repeatCount: 2,
+        onRepeatCountChange
+      })
+    );
+
+    const repeatSelect = screen.getByLabelText('Số lần đọc mặt sau');
+    expect((repeatSelect as HTMLSelectElement).value).toBe('2');
+    fireEvent.change(repeatSelect, { target: { value: '4' } });
+    expect(onRepeatCountChange).toHaveBeenCalledWith(4);
+  });
+
   it('cancels the previous utterance before reading the newly revealed face', () => {
     class FakeUtterance {
       lang = '';
