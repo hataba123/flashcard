@@ -250,6 +250,45 @@ describe('SpeechControl', () => {
     view.unmount();
   });
 
+  it('notifies after the last repeated back utterance finishes', () => {
+    class FakeUtterance {
+      lang = '';
+      rate = 1;
+      voice = null;
+      onend: (() => void) | null = null;
+
+      constructor(readonly text: string) {}
+    }
+
+    const utterances: FakeUtterance[] = [];
+    const onBackSpeechComplete = vi.fn();
+    vi.stubGlobal('SpeechSynthesisUtterance', FakeUtterance);
+    vi.stubGlobal('speechSynthesis', {
+      cancel: vi.fn(),
+      speak: (utterance: FakeUtterance) => utterances.push(utterance),
+      getVoices: () => [],
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn()
+    });
+
+    render(
+      createElement(SpeechControl, {
+        contentKey: 'card-1:back',
+        text: 'Answer',
+        isBack: true,
+        repeatCount: 3,
+        onBackSpeechComplete
+      })
+    );
+
+    expect(utterances).toHaveLength(3);
+    utterances[0]?.onend?.();
+    utterances[1]?.onend?.();
+    expect(onBackSpeechComplete).not.toHaveBeenCalled();
+    utterances[2]?.onend?.();
+    expect(onBackSpeechComplete).toHaveBeenCalledOnce();
+  });
+
   it('reads the text of the face whose replay button was selected', () => {
     class FakeUtterance {
       lang = '';

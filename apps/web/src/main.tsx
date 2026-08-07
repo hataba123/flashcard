@@ -11,6 +11,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  useCallback,
   type ChangeEvent,
   type ReactNode,
   type SyntheticEvent,
@@ -62,7 +63,12 @@ import { OfflineProvider, useOffline } from './offline-provider.js';
 import { prepareForDataTransfer } from './offline-sync.js';
 import { loadMediaBlob, mediaQueryKey, mediaQueryStaleTimeMs } from './media-cache.js';
 import { ReviewControls } from './review-controls.js';
-import { ratingForShortcut, reviewSessionTimeProgress, type ReviewRating } from './review-utils.js';
+import {
+  ratingForShortcut,
+  reviewRatings,
+  reviewSessionTimeProgress,
+  type ReviewRating
+} from './review-utils.js';
 import { useSession, type User } from './session.js';
 import { getCardSpeechText, SpeechControl, SpeechReplayButton } from './speech-control.js';
 import { ReviewScratchpad, useReviewScratchpad } from './review-scratchpad.js';
@@ -135,6 +141,11 @@ interface ReviewSubmission {
   reviewLog: { id: string };
   offline?: boolean;
 }
+interface AutoGradeSettings {
+  enabled: boolean;
+  rating: ReviewRating;
+  delayMs: number;
+}
 interface DashboardToday {
   dueCount: number;
   estimatedReviewSeconds: number;
@@ -153,6 +164,42 @@ interface DashboardBacklog {
 interface DashboardActivity {
   day: string;
   reviews: number;
+}
+const autoGradeSettingsStorageKey = 'flashcard:review-auto-grade-settings';
+const defaultAutoGradeSettings: AutoGradeSettings = {
+  enabled: false,
+  rating: 'Good',
+  delayMs: 1_000
+};
+
+function loadAutoGradeSettings(): AutoGradeSettings {
+  try {
+    const saved = localStorage.getItem(autoGradeSettingsStorageKey);
+    if (saved === null) return defaultAutoGradeSettings;
+    const parsed = JSON.parse(saved) as Partial<AutoGradeSettings>;
+    return {
+      enabled:
+        typeof parsed.enabled === 'boolean' ? parsed.enabled : defaultAutoGradeSettings.enabled,
+      rating:
+        typeof parsed.rating === 'string' && reviewRatings.includes(parsed.rating as ReviewRating)
+          ? (parsed.rating as ReviewRating)
+          : defaultAutoGradeSettings.rating,
+      delayMs:
+        typeof parsed.delayMs === 'number' &&
+        Number.isFinite(parsed.delayMs) &&
+        parsed.delayMs >= 0 &&
+        parsed.delayMs <= 10_000
+          ? parsed.delayMs
+          : defaultAutoGradeSettings.delayMs
+    };
+  } catch {
+    return defaultAutoGradeSettings;
+  }
+}
+
+function formatAutoGradeDelay(delayMs: number): string {
+  if (delayMs === 0) return 'ngay lập tức';
+  return `${(delayMs / 1_000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} giây`;
 }
 const loginSchema = z.object({
   email: z.email('Email không hợp lệ.'),
@@ -1674,9 +1721,19 @@ function Review() {
   const [clockNowMs, setClockNowMs] = useState(Date.now());
   const [extraMinutes, setExtraMinutes] = useState(0);
   const [audioRepeatCount, setAudioRepeatCount] = useState(1);
+  const [autoGradeSettings, setAutoGradeSettings] =
+    useState<AutoGradeSettings>(loadAutoGradeSettings);
   const [completedCardIds, setCompletedCardIds] = useState<string[]>([]);
   const pausedSessionMs = useRef(0);
   const timeBoxedSessionInitialized = useRef(false);
+  const autoGradeSettingsRef = useRef(autoGradeSettings);
+  const autoGradeTimer = useRef<number | null>(null);
+  const currentReviewCardIdRef = useRef<string | null>(null);
+  const isPausedRef = useRef(isPaused);
+  const gradePendingRef = useRef(false);
+  const submitGradeRef = useRef<(rating: ReviewRating) => void>(() => undefined);
+  autoGradeSettingsRef.current = autoGradeSettings;
+  isPausedRef.current = isPaused;
   const { fontSize, setFontSize, cardWidth, setCardWidth } = useReviewDisplayPreferences();
   const reviewScratchpad = useReviewScratchpad(userId, studyGoalId, studyDate);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -1686,6 +1743,18 @@ function Review() {
   const [sessionId, setSessionId] = useState<string>(() => crypto.randomUUID());
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const offline = useOffline();
+  const clearAutoGradeTimer = useCallback(() => {
+    if (autoGradeTimer.current === null) return;
+    window.clearTimeout(autoGradeTimer.current);
+    autoGradeTimer.current = null;
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(autoGradeSettingsStorageKey, JSON.stringify(autoGradeSettings));
+    } catch {
+      // Tùy chọn tự chấm chỉ là tiện ích cục bộ; phiên học vẫn hoạt động nếu bộ nhớ bị chặn.
+    }
+  }, [autoGradeSettings]);
   useEffect(() => {
     void getDeviceId().then(setDeviceId);
   }, []);
@@ -1829,6 +1898,13 @@ function Review() {
       : activeCardId === undefined
         ? cards[0]
         : (cards.find((queuedCard) => queuedCard.id === activeCardId) ?? cards[0]);
+  currentReviewCardIdRef.current = card?.id ?? null;
+  useEffect(
+    () => () => {
+      clearAutoGradeTimer();
+    },
+    [card?.id, clearAutoGradeTimer]
+  );
   useEffect(() => {
     if (card !== undefined || reviewDocumentMinHeight.current === null) return;
     document.documentElement.style.minHeight = originalDocumentMinHeight.current;
@@ -2022,6 +2098,7 @@ function Review() {
       setSubmitError(errorMessage(error));
     }
   });
+  gradePendingRef.current = grade.isPending;
   useLayoutEffect(() => {
     const scrollY = reviewScrollY.current;
     if (scrollY === null) return;
@@ -2034,6 +2111,7 @@ function Review() {
     return () => window.cancelAnimationFrame(frame);
   }, [activeCardId, card?.id, currentNote?.id, grade.isPending]);
   const submitGrade = (rating: ReviewRating) => {
+    clearAutoGradeTimer();
     reviewScrollY.current = window.scrollY;
     const minimumHeight = Math.max(
       reviewDocumentMinHeight.current ?? 0,
@@ -2043,6 +2121,39 @@ function Review() {
     document.documentElement.style.minHeight = `${minimumHeight}px`;
     grade.mutate({ card, rating, revealedAt: revealedAtRef.current, shownAt });
   };
+  submitGradeRef.current = submitGrade;
+  const handleBackSpeechComplete = useCallback(() => {
+    const settings = autoGradeSettingsRef.current;
+    const scheduledCardId = currentReviewCardIdRef.current;
+    if (
+      !settings.enabled ||
+      scheduledCardId === null ||
+      isPausedRef.current ||
+      gradePendingRef.current ||
+      revealedAtRef.current === null
+    )
+      return;
+
+    clearAutoGradeTimer();
+    const autoGrade = () => {
+      autoGradeTimer.current = null;
+      const latestSettings = autoGradeSettingsRef.current;
+      if (
+        !latestSettings.enabled ||
+        isPausedRef.current ||
+        gradePendingRef.current ||
+        currentReviewCardIdRef.current !== scheduledCardId ||
+        revealedAtRef.current === null
+      )
+        return;
+      submitGradeRef.current(latestSettings.rating);
+    };
+    if (settings.delayMs === 0) autoGrade();
+    else autoGradeTimer.current = window.setTimeout(autoGrade, settings.delayMs);
+  }, [clearAutoGradeTimer]);
+  useEffect(() => {
+    if (!autoGradeSettings.enabled || isPaused || grade.isPending) clearAutoGradeTimer();
+  }, [autoGradeSettings.enabled, clearAutoGradeTimer, grade.isPending, isPaused]);
   const undo = useMutation({
     mutationFn: (reviewLogId: string) => api.post(`/reviews/${reviewLogId}/undo`, {}),
     onSuccess: () => {
@@ -2066,6 +2177,7 @@ function Review() {
       setIsPaused(false);
       return;
     }
+    clearAutoGradeTimer();
     window.speechSynthesis?.cancel();
     setPausedAt(new Date());
     setIsPaused(true);
@@ -2321,6 +2433,57 @@ function Review() {
               <small>Mở bảng ghi chú cạnh flashcard</small>
             </span>
           </label>
+          <label className="review-notes-toggle review-auto-grade-toggle">
+            <input
+              type="checkbox"
+              checked={autoGradeSettings.enabled}
+              onChange={(event) =>
+                setAutoGradeSettings((current) => ({
+                  ...current,
+                  enabled: event.target.checked
+                }))
+              }
+            />
+            <span className="review-notes-copy">
+              <strong>Tự động chấm sau khi đọc mặt sau</strong>
+              <small>Chỉ chạy sau khi đọc đủ số lần lặp mặt sau</small>
+            </span>
+          </label>
+          <label>
+            Mức chấm tự động
+            <select
+              value={autoGradeSettings.rating}
+              disabled={!autoGradeSettings.enabled}
+              onChange={(event) =>
+                setAutoGradeSettings((current) => ({
+                  ...current,
+                  rating: event.target.value as ReviewRating
+                }))
+              }
+            >
+              <option value="Again">Again — Chưa nhớ</option>
+              <option value="Hard">Hard — Hơi khó</option>
+              <option value="Good">Good — Nhớ tốt</option>
+              <option value="Easy">Easy — Rất dễ</option>
+            </select>
+          </label>
+          <label className="review-auto-grade-delay">
+            Chờ trước khi chấm: {formatAutoGradeDelay(autoGradeSettings.delayMs)}
+            <input
+              type="range"
+              min="0"
+              max="10000"
+              step="500"
+              value={autoGradeSettings.delayMs}
+              disabled={!autoGradeSettings.enabled}
+              onChange={(event) =>
+                setAutoGradeSettings((current) => ({
+                  ...current,
+                  delayMs: Number(event.target.value)
+                }))
+              }
+            />
+          </label>
           <ThemeToggle />
           <button className="secondary" type="button" onClick={() => void toggleFullscreen()}>
             {isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'} <kbd>F</kbd>
@@ -2378,6 +2541,7 @@ function Review() {
                       repeatCount={audioRepeatCount}
                       onRepeatCountChange={setAudioRepeatCount}
                       onFrontSpeechComplete={revealCard}
+                      onBackSpeechComplete={handleBackSpeechComplete}
                     />
                   </div>
                   <div

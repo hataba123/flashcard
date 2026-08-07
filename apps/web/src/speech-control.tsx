@@ -210,6 +210,7 @@ interface SpeechControlProps {
   repeatCount?: number;
   onRepeatCountChange?: (value: number) => void;
   onFrontSpeechComplete?: () => void;
+  onBackSpeechComplete?: () => void;
 }
 
 interface SpeechReplayButtonProps {
@@ -322,7 +323,8 @@ export function SpeechControl({
   allowAutoReveal = true,
   repeatCount = 1,
   onRepeatCountChange,
-  onFrontSpeechComplete
+  onFrontSpeechComplete,
+  onBackSpeechComplete
 }: SpeechControlProps) {
   const supported =
     typeof window !== 'undefined' &&
@@ -340,7 +342,8 @@ export function SpeechControl({
     allowAutoReveal,
     repeatCount,
     contentKey,
-    onFrontSpeechComplete
+    onFrontSpeechComplete,
+    onBackSpeechComplete
   });
   speechState.current = {
     settings,
@@ -351,7 +354,8 @@ export function SpeechControl({
     allowAutoReveal,
     repeatCount,
     contentKey,
-    onFrontSpeechComplete
+    onFrontSpeechComplete,
+    onBackSpeechComplete
   };
 
   const clearAutoRevealTimer = useCallback(() => {
@@ -425,9 +429,11 @@ export function SpeechControl({
       current.settings,
       current.voices,
       current.isBack ? current.repeatCount : 1,
-      !current.isBack && current.allowAutoReveal && current.settings.autoReveal
-        ? () => scheduleAutoReveal(current.contentKey)
-        : undefined
+      current.isBack
+        ? current.onBackSpeechComplete
+        : current.allowAutoReveal && current.settings.autoReveal
+          ? () => scheduleAutoReveal(current.contentKey)
+          : undefined
     );
   }, [scheduleAutoReveal, supported]);
 

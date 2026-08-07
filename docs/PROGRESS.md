@@ -1,5 +1,12 @@
 # Tiến độ triển khai
 
+## Milestone 63 — Tự động chấm sau khi đọc mặt sau
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: thêm checkbox trong `Tùy chỉnh phiên học` để tự chấm một mức `Again`, `Hard`, `Good` hoặc `Easy` sau khi đọc xong mặt sau; cho chọn mức chấm và thời gian chờ 0–10 giây.
+- Hành vi: chỉ kích hoạt sau utterance cuối cùng của số lần đọc mặt sau đã chọn; tự hủy khi tạm dừng, chuyển thẻ, người dùng chấm thủ công hoặc tắt tùy chọn.
+- Kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, Prettier và `git diff --check` đều đạt.
+
 ## Milestone 62 — Tự động lật thẻ sau khi đọc mặt trước
 
 - Trạng thái: Hoàn thành.
