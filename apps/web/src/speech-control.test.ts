@@ -6,6 +6,11 @@ import { getCardSpeechText, SpeechControl, SpeechReplayButton } from './speech-c
 
 afterEach(() => {
   vi.useRealTimers();
+  try {
+    window.localStorage.clear();
+  } catch {
+    // localStorage có thể không khả dụng trong môi trường test Node.
+  }
   vi.unstubAllGlobals();
 });
 
