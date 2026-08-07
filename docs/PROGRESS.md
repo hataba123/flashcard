@@ -1,5 +1,12 @@
 # Tiến độ triển khai
 
+## Milestone 62 — Tự động lật thẻ sau khi đọc mặt trước
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: thêm checkbox trong `Âm thanh đọc thẻ` để tự chuyển sang mặt sau khi Web Speech API phát xong mặt trước; thêm thanh chọn thời gian chờ 0–10 giây và lưu cấu hình trên thiết bị.
+- Hành vi: bộ hẹn giờ chỉ bắt đầu sau sự kiện kết thúc câu đọc, tự hủy khi đổi thẻ/tạm dừng/lật thủ công.
+- Kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` và kiểm tra định dạng đều đạt.
+
 ## Milestone 61 — Giọng đọc tiếng Việt và ghi chú trong phiên review
 
 - Trạng thái: Hoàn thành.

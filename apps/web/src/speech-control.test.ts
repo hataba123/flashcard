@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getCardSpeechText, SpeechControl, SpeechReplayButton } from './speech-control.js';
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -150,6 +151,102 @@ describe('SpeechControl', () => {
     view.rerender(createElement(SpeechControl, { contentKey: 'card-1:back', text: '' }));
     expect(cancel.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(speak).toHaveBeenCalledTimes(1);
+    view.unmount();
+  });
+
+  it('reveals the card after the front utterance ends when auto reveal is enabled', () => {
+    class FakeUtterance {
+      lang = '';
+      rate = 1;
+      voice = null;
+      onend: (() => void) | null = null;
+
+      constructor(readonly text: string) {}
+    }
+
+    const utterances: FakeUtterance[] = [];
+    const onFrontSpeechComplete = vi.fn();
+    vi.stubGlobal('SpeechSynthesisUtterance', FakeUtterance);
+    vi.stubGlobal('speechSynthesis', {
+      cancel: vi.fn(),
+      speak: (utterance: FakeUtterance) => utterances.push(utterance),
+      getVoices: () => [],
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn()
+    });
+
+    const view = render(
+      createElement(SpeechControl, {
+        contentKey: 'card-1:front',
+        text: 'Hello',
+        onFrontSpeechComplete
+      })
+    );
+    fireEvent.click(screen.getByRole('checkbox', { name: /Tự động chuyển sang mặt sau/i }));
+    fireEvent.change(screen.getByLabelText('Thời gian chờ trước khi lật'), {
+      target: { value: '0' }
+    });
+    view.rerender(
+      createElement(SpeechControl, {
+        contentKey: 'card-2:front',
+        text: 'Good morning',
+        onFrontSpeechComplete
+      })
+    );
+
+    expect(utterances).toHaveLength(2);
+    utterances[1]?.onend?.();
+    expect(onFrontSpeechComplete).toHaveBeenCalledOnce();
+    view.unmount();
+  });
+
+  it('waits for the configured delay after the front utterance ends', () => {
+    vi.useFakeTimers();
+
+    class FakeUtterance {
+      lang = '';
+      rate = 1;
+      voice = null;
+      onend: (() => void) | null = null;
+
+      constructor(readonly text: string) {}
+    }
+
+    const utterances: FakeUtterance[] = [];
+    const onFrontSpeechComplete = vi.fn();
+    vi.stubGlobal('SpeechSynthesisUtterance', FakeUtterance);
+    vi.stubGlobal('speechSynthesis', {
+      cancel: vi.fn(),
+      speak: (utterance: FakeUtterance) => utterances.push(utterance),
+      getVoices: () => [],
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn()
+    });
+
+    const view = render(
+      createElement(SpeechControl, {
+        contentKey: 'card-1:front',
+        text: 'Hello',
+        onFrontSpeechComplete
+      })
+    );
+    fireEvent.click(screen.getByRole('checkbox', { name: /Tự động chuyển sang mặt sau/i }));
+    fireEvent.change(screen.getByLabelText('Thời gian chờ trước khi lật'), {
+      target: { value: '2000' }
+    });
+    view.rerender(
+      createElement(SpeechControl, {
+        contentKey: 'card-2:front',
+        text: 'Good morning',
+        onFrontSpeechComplete
+      })
+    );
+
+    utterances[1]?.onend?.();
+    vi.advanceTimersByTime(1_999);
+    expect(onFrontSpeechComplete).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(onFrontSpeechComplete).toHaveBeenCalledOnce();
     view.unmount();
   });
 

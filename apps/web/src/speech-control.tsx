@@ -16,6 +16,8 @@ const languageOptions = [
 
 interface SpeechSettings {
   autoRead: boolean;
+  autoReveal: boolean;
+  autoRevealDelayMs: number;
   language: string;
   voiceUri: string;
   rate: number;
@@ -23,6 +25,8 @@ interface SpeechSettings {
 
 const defaultSettings: SpeechSettings = {
   autoRead: true,
+  autoReveal: false,
+  autoRevealDelayMs: 1_000,
   language: 'en-US',
   voiceUri: '',
   rate: 1
@@ -141,6 +145,15 @@ function loadSettings(): SpeechSettings {
     const parsed = JSON.parse(saved) as Partial<SpeechSettings>;
     return {
       autoRead: typeof parsed.autoRead === 'boolean' ? parsed.autoRead : defaultSettings.autoRead,
+      autoReveal:
+        typeof parsed.autoReveal === 'boolean' ? parsed.autoReveal : defaultSettings.autoReveal,
+      autoRevealDelayMs:
+        typeof parsed.autoRevealDelayMs === 'number' &&
+        Number.isFinite(parsed.autoRevealDelayMs) &&
+        parsed.autoRevealDelayMs >= 0 &&
+        parsed.autoRevealDelayMs <= 10_000
+          ? parsed.autoRevealDelayMs
+          : defaultSettings.autoRevealDelayMs,
       language: languageOptions.some((option) => option.value === parsed.language)
         ? (parsed.language ?? defaultSettings.language)
         : defaultSettings.language,
@@ -192,8 +205,11 @@ interface SpeechControlProps {
   contentKey: string;
   text: string;
   isBack?: boolean;
+  isPaused?: boolean;
+  allowAutoReveal?: boolean;
   repeatCount?: number;
   onRepeatCountChange?: (value: number) => void;
+  onFrontSpeechComplete?: () => void;
 }
 
 interface SpeechReplayButtonProps {
@@ -231,11 +247,17 @@ function SpeechRepeatSetting({
   );
 }
 
+function formatAutoRevealDelay(delayMs: number): string {
+  if (delayMs === 0) return 'ngay lập tức';
+  return `${(delayMs / 1_000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} giây`;
+}
+
 function speakText(
   text: string,
   settings: SpeechSettings,
   voices: SpeechSynthesisVoice[],
-  repeatCount = 1
+  repeatCount = 1,
+  onComplete?: () => void
 ): void {
   if (text.trim().length === 0) return;
   window.speechSynthesis.cancel();
@@ -245,11 +267,14 @@ function speakText(
     selectedVoice?.lang.toLowerCase().startsWith(language.toLowerCase()) === true
       ? selectedVoice
       : (voices.find((item) => item.lang.toLowerCase().startsWith(language.toLowerCase())) ?? null);
-  for (let index = 0; index < Math.max(1, repeatCount); index += 1) {
+  const totalUtterances = Math.max(1, repeatCount);
+  for (let index = 0; index < totalUtterances; index += 1) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = language;
     utterance.rate = settings.rate;
     utterance.voice = voice;
+    if (onComplete !== undefined && index === totalUtterances - 1)
+      utterance.onend = () => onComplete();
     window.speechSynthesis.speak(utterance);
   }
 }
@@ -293,8 +318,11 @@ export function SpeechControl({
   contentKey,
   text,
   isBack = false,
+  isPaused = false,
+  allowAutoReveal = true,
   repeatCount = 1,
-  onRepeatCountChange
+  onRepeatCountChange,
+  onFrontSpeechComplete
 }: SpeechControlProps) {
   const supported =
     typeof window !== 'undefined' &&
@@ -302,8 +330,68 @@ export function SpeechControl({
     typeof SpeechSynthesisUtterance !== 'undefined';
   const [settings, setSettings] = useState<SpeechSettings>(loadSettings);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const speechState = useRef({ settings, text, voices, isBack, repeatCount });
-  speechState.current = { settings, text, voices, isBack, repeatCount };
+  const autoRevealTimer = useRef<number | null>(null);
+  const speechState = useRef({
+    settings,
+    text,
+    voices,
+    isBack,
+    isPaused,
+    allowAutoReveal,
+    repeatCount,
+    contentKey,
+    onFrontSpeechComplete
+  });
+  speechState.current = {
+    settings,
+    text,
+    voices,
+    isBack,
+    isPaused,
+    allowAutoReveal,
+    repeatCount,
+    contentKey,
+    onFrontSpeechComplete
+  };
+
+  const clearAutoRevealTimer = useCallback(() => {
+    if (autoRevealTimer.current === null) return;
+    window.clearTimeout(autoRevealTimer.current);
+    autoRevealTimer.current = null;
+  }, []);
+
+  const scheduleAutoReveal = useCallback(
+    (speechContentKey: string) => {
+      const current = speechState.current;
+      if (
+        !current.settings.autoReveal ||
+        !current.allowAutoReveal ||
+        current.isBack ||
+        current.isPaused ||
+        current.onFrontSpeechComplete === undefined
+      )
+        return;
+
+      clearAutoRevealTimer();
+      const reveal = () => {
+        autoRevealTimer.current = null;
+        const latest = speechState.current;
+        if (
+          latest.contentKey !== speechContentKey ||
+          latest.settings.autoReveal === false ||
+          latest.allowAutoReveal === false ||
+          latest.isBack ||
+          latest.isPaused
+        )
+          return;
+        latest.onFrontSpeechComplete?.();
+      };
+
+      if (current.settings.autoRevealDelayMs === 0) reveal();
+      else autoRevealTimer.current = window.setTimeout(reveal, current.settings.autoRevealDelayMs);
+    },
+    [clearAutoRevealTimer]
+  );
 
   useEffect(() => {
     if (!supported) return;
@@ -336,16 +424,30 @@ export function SpeechControl({
       current.text,
       current.settings,
       current.voices,
-      current.isBack ? current.repeatCount : 1
+      current.isBack ? current.repeatCount : 1,
+      !current.isBack && current.allowAutoReveal && current.settings.autoReveal
+        ? () => scheduleAutoReveal(current.contentKey)
+        : undefined
     );
-  }, [supported]);
+  }, [scheduleAutoReveal, supported]);
+
+  useEffect(() => {
+    if (
+      !allowAutoReveal ||
+      settings.autoRead === false ||
+      settings.autoReveal === false ||
+      isPaused
+    )
+      clearAutoRevealTimer();
+  }, [allowAutoReveal, clearAutoRevealTimer, isPaused, settings.autoRead, settings.autoReveal]);
 
   useEffect(() => {
     if (settings.autoRead) speak();
     return () => {
+      clearAutoRevealTimer();
       if (supported) window.speechSynthesis.cancel();
     };
-  }, [contentKey, settings.autoRead, speak, supported]);
+  }, [clearAutoRevealTimer, contentKey, settings.autoRead, speak, supported]);
 
   if (!supported)
     return (
@@ -379,6 +481,45 @@ export function SpeechControl({
           />
           Tự động đọc khi hiện mặt thẻ
         </label>
+        {allowAutoReveal && (
+          <>
+            <label className="speech-toggle">
+              <input
+                type="checkbox"
+                checked={settings.autoReveal}
+                disabled={!settings.autoRead}
+                onChange={(event) =>
+                  setSettings((current) => ({ ...current, autoReveal: event.target.checked }))
+                }
+              />
+              Tự động chuyển sang mặt sau sau khi đọc xong mặt trước
+            </label>
+            <label className="speech-delay-setting">
+              <span>
+                Thời gian chờ trước khi lật:{' '}
+                <strong>{formatAutoRevealDelay(settings.autoRevealDelayMs)}</strong>
+              </span>
+              <input
+                aria-label="Thời gian chờ trước khi lật"
+                type="range"
+                min="0"
+                max="10000"
+                step="500"
+                value={settings.autoRevealDelayMs}
+                disabled={!settings.autoRead || !settings.autoReveal}
+                onChange={(event) =>
+                  setSettings((current) => ({
+                    ...current,
+                    autoRevealDelayMs: Number(event.target.value)
+                  }))
+                }
+              />
+              <small className="speech-auto-reveal-hint">
+                Thời gian được tính từ lúc đọc xong nội dung mặt trước.
+              </small>
+            </label>
+          </>
+        )}
         <label>
           Ngôn ngữ
           <select

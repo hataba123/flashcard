@@ -795,6 +795,20 @@ audio {
   width: auto;
 }
 
+.speech-delay-setting {
+  grid-column: 1 / -1;
+}
+
+.speech-delay-setting strong {
+  color: #334155;
+}
+
+.speech-auto-reveal-hint {
+  color: #475569;
+  font-size: 13px;
+  line-height: 18px;
+}
+
 .speech-settings input[type='range'] {
   padding: 0;
 }

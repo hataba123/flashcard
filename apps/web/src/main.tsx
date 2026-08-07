@@ -1575,6 +1575,7 @@ function DailyBrowse() {
             contentKey={`${card.cardId}:${revealed ? 'back' : 'front'}`}
             text={getCardSpeechText(speechFields, revealed)}
             isBack={revealed}
+            allowAutoReveal={false}
             repeatCount={audioRepeatCount}
             onRepeatCountChange={setAudioRepeatCount}
           />
@@ -1834,6 +1835,7 @@ function Review() {
     reviewDocumentMinHeight.current = null;
   }, [card]);
   const revealCard = () => {
+    if (revealedAtRef.current !== null) return;
     const revealedAt = new Date();
     revealedAtRef.current = revealedAt;
     setRevealedAt(revealedAt);
@@ -2372,8 +2374,10 @@ function Review() {
                       contentKey={`${card.id}:${revealed ? 'back' : 'front'}`}
                       text={speechText}
                       isBack={revealed}
+                      isPaused={isPaused}
                       repeatCount={audioRepeatCount}
                       onRepeatCountChange={setAudioRepeatCount}
+                      onFrontSpeechComplete={revealCard}
                     />
                   </div>
                   <div
