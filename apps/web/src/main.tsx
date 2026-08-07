@@ -2539,25 +2539,23 @@ function AudioControl({
     <p className="muted">Đang tải âm thanh…</p>
   ) : (
     <div className="review-audio-control">
-      {isBack && (
-        <label>
-          Số lần phát mặt sau
-          <select
-            value={repeatCount}
-            onChange={(event) => {
-              repeatCountRef.current = 0;
-              autoReplayRef.current = false;
-              onRepeatCountChange(Number(event.target.value));
-            }}
-          >
-            <option value={1}>1 lần</option>
-            <option value={2}>2 lần</option>
-            <option value={3}>3 lần</option>
-            <option value={4}>4 lần</option>
-            <option value={5}>5 lần</option>
-          </select>
-        </label>
-      )}
+      <label>
+        Số lần phát khi xem mặt sau
+        <select
+          value={repeatCount}
+          onChange={(event) => {
+            repeatCountRef.current = 0;
+            autoReplayRef.current = false;
+            onRepeatCountChange(Number(event.target.value));
+          }}
+        >
+          <option value={1}>1 lần</option>
+          <option value={2}>2 lần</option>
+          <option value={3}>3 lần</option>
+          <option value={4}>4 lần</option>
+          <option value={5}>5 lần</option>
+        </select>
+      </label>
       <audio
         key={`${userId}:${mediaId}:${isBack ? 'back' : 'front'}`}
         ref={audioRef}
