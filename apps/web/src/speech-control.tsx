@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const STORAGE_KEY = 'flashcard:speech-settings';
-const speechVoiceWaitMs = 700;
-let speechRequestId = 0;
 
 const languageOptions = [
   { value: 'vi-VN', label: 'Tiếng Việt' },
@@ -233,63 +231,20 @@ function SpeechRepeatSetting({
   );
 }
 
-function hasVoiceForLanguage(voices: SpeechSynthesisVoice[], language: string): boolean {
-  return voices.some((voice) => voice.lang.toLowerCase().startsWith(language.toLowerCase()));
-}
-
-function waitForVoices(language: string): Promise<SpeechSynthesisVoice[]> {
-  const initialVoices = window.speechSynthesis.getVoices();
-  if (hasVoiceForLanguage(initialVoices, language)) return Promise.resolve(initialVoices);
-
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = (voices: SpeechSynthesisVoice[]) => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
-      resolve(voices);
-    };
-    const onVoicesChanged = () => {
-      const voices = window.speechSynthesis.getVoices();
-      if (hasVoiceForLanguage(voices, language)) finish(voices);
-    };
-    const timeout = window.setTimeout(
-      () => finish(window.speechSynthesis.getVoices()),
-      speechVoiceWaitMs
-    );
-    window.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
-  });
-}
-
-export function cancelSpeech(): void {
-  speechRequestId += 1;
-  window.speechSynthesis?.cancel();
-}
-
-async function speakText(
+function speakText(
   text: string,
   settings: SpeechSettings,
   voices: SpeechSynthesisVoice[],
   repeatCount = 1
-): Promise<void> {
+): void {
   if (text.trim().length === 0) return;
-  const requestId = speechRequestId + 1;
-  speechRequestId = requestId;
   window.speechSynthesis.cancel();
   const language = isVietnameseText(text) ? 'vi-VN' : settings.language;
-  const resolvedVoices =
-    language.toLowerCase().startsWith('vi-') && !hasVoiceForLanguage(voices, language)
-      ? await waitForVoices(language)
-      : voices;
-  if (requestId !== speechRequestId) return;
   const selectedVoice = voices.find((voice) => voice.voiceURI === settings.voiceUri);
   const voice =
     selectedVoice?.lang.toLowerCase().startsWith(language.toLowerCase()) === true
       ? selectedVoice
-      : (resolvedVoices.find((item) =>
-          item.lang.toLowerCase().startsWith(language.toLowerCase())
-        ) ?? null);
+      : (voices.find((item) => item.lang.toLowerCase().startsWith(language.toLowerCase())) ?? null);
   for (let index = 0; index < Math.max(1, repeatCount); index += 1) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = language;
@@ -318,7 +273,7 @@ export function SpeechReplayButton({ text, side, repeatCount = 1 }: SpeechReplay
       onTouchStart={(event) => event.stopPropagation()}
       onTouchEnd={(event) => event.stopPropagation()}
       onClick={() =>
-        void speakText(
+        speakText(
           text,
           loadSettings(),
           window.speechSynthesis.getVoices(),
@@ -377,7 +332,7 @@ export function SpeechControl({
   const speak = useCallback(() => {
     const current = speechState.current;
     if (!supported || current.text.trim().length === 0) return;
-    void speakText(
+    speakText(
       current.text,
       current.settings,
       current.voices,
@@ -388,7 +343,7 @@ export function SpeechControl({
   useEffect(() => {
     if (settings.autoRead) speak();
     return () => {
-      if (supported) cancelSpeech();
+      if (supported) window.speechSynthesis.cancel();
     };
   }, [contentKey, settings.autoRead, speak, supported]);
 

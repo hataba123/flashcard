@@ -4,7 +4,7 @@
 
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: tự động ưu tiên giọng `vi-VN` khi nhận diện nội dung tiếng Việt có dấu hoặc không dấu, đồng thời giữ giọng mặc định phù hợp cho nội dung tiếng Anh; giữ nội dung tiếng Việt ở mặt sau khi không có ví dụ tiếng Anh.
-- Đã thực hiện: chờ `voiceschanged` tối đa khoảng 700 ms khi voice tiếng Việt chưa được trình duyệt nạp, hủy lượt đọc đang chờ khi đổi thẻ hoặc tạm dừng để tránh âm thanh cũ phát muộn.
+- Đã thực hiện: phát ngay khi bắt đầu đọc, dùng locale `vi-VN` khi nhận diện nội dung tiếng Việt kể cả khi thiết bị chưa cung cấp voice Việt; không chờ voice nạp chậm để tránh làm gián đoạn phiên học.
 - Đã thực hiện: thêm checkbox `Ghi chú phiên học` trong tùy chỉnh review; panel ghi chú cạnh flashcard trên màn hình rộng, tự cuộn trong chiều cao của thẻ, chuyển xuống dưới ở màn hình hẹp và lưu tạm theo người dùng/ngữ cảnh phiên trên thiết bị.
 - Kiểm tra: `pnpm --filter @flashcard/web typecheck`, `pnpm --filter @flashcard/web test`, `pnpm --filter @flashcard/web build` và `pnpm lint` đều đạt.
 

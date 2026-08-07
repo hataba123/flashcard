@@ -182,7 +182,7 @@ describe('SpeechControl', () => {
     expect(speak).toHaveBeenCalledWith(expect.objectContaining({ text: 'Front content' }));
   });
 
-  it('uses a Vietnamese voice locale for Vietnamese card content', async () => {
+  it('uses a Vietnamese voice locale for Vietnamese card content', () => {
     class FakeUtterance {
       lang = '';
       rate = 1;
@@ -211,8 +211,6 @@ describe('SpeechControl', () => {
     if (replayButton === null) throw new Error('Không tìm thấy nút đọc lại.');
     replayButton.click();
 
-    await vi.waitFor(() =>
-      expect(speak).toHaveBeenCalledWith(expect.objectContaining({ lang: 'vi-VN' }))
-    );
+    expect(speak).toHaveBeenCalledWith(expect.objectContaining({ lang: 'vi-VN' }));
   });
 });

@@ -64,12 +64,7 @@ import { loadMediaBlob, mediaQueryKey, mediaQueryStaleTimeMs } from './media-cac
 import { ReviewControls } from './review-controls.js';
 import { ratingForShortcut, reviewSessionTimeProgress, type ReviewRating } from './review-utils.js';
 import { useSession, type User } from './session.js';
-import {
-  cancelSpeech,
-  getCardSpeechText,
-  SpeechControl,
-  SpeechReplayButton
-} from './speech-control.js';
+import { getCardSpeechText, SpeechControl, SpeechReplayButton } from './speech-control.js';
 import { ReviewScratchpad, useReviewScratchpad } from './review-scratchpad.js';
 import { NotesPage } from './notes-page.js';
 import { StudyPlanPage } from './study-plan-page.js';
@@ -2069,7 +2064,7 @@ function Review() {
       setIsPaused(false);
       return;
     }
-    cancelSpeech();
+    window.speechSynthesis?.cancel();
     setPausedAt(new Date());
     setIsPaused(true);
   };

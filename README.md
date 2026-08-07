@@ -78,7 +78,6 @@ Repository được tổ chức dưới dạng pnpm workspace với TypeScript s
 
 - Dùng Web Speech API có sẵn trong trình duyệt, không cần API key bên ngoài.
 - Tự động nhận diện nội dung tiếng Việt có dấu hoặc không dấu; khi nhận diện được, mặt thẻ được đọc bằng locale `vi-VN` và ưu tiên giọng Việt có sẵn trên thiết bị.
-- Nếu trình duyệt chưa nạp danh sách voice, lần đọc đầu chờ sự kiện `voiceschanged` tối đa khoảng 700 ms; các lần sau đọc ngay khi voice đã sẵn sàng.
 - Hỗ trợ tiếng Anh Mỹ, tiếng Anh Anh và một số ngôn ngữ phổ biến khác.
 - Có nút loa riêng trên từng mặt thẻ, chế độ tự đọc, chọn giọng và tốc độ từ `0,5×` đến `2×`.
 - Nội dung tiếng Anh ở mặt sau được lọc khỏi phần nghĩa/dịch tiếng Việt để phát âm tự nhiên hơn.
@@ -504,7 +503,6 @@ Phần **Âm thanh đọc thẻ** sử dụng `window.speechSynthesis` của tr�
 - Nếu phát hiện tiếng Việt, nội dung được giữ nguyên và phát bằng locale `vi-VN`.
 - Trình đọc ưu tiên voice tiếng Việt có sẵn trên thiết bị.
 - Nội dung tiếng Việt không dấu phổ biến cũng được nhận diện bằng danh sách từ thực dụng.
-- Nếu voice chưa sẵn sàng, hệ thống chỉ chờ tối đa khoảng 700 ms rồi tiếp tục đọc, tránh làm chậm phiên học.
 - Nếu không phải tiếng Việt, locale/voice đang chọn trong cài đặt được sử dụng.
 
 ### Mặt sau
