@@ -177,6 +177,9 @@ export function getCardSpeechText(fields: Record<string, string>, revealed: bool
 interface SpeechControlProps {
   contentKey: string;
   text: string;
+  hasAudio?: boolean;
+  audioRepeatCount?: number;
+  onAudioRepeatCountChange?: (value: number) => void;
 }
 
 interface SpeechReplayButtonProps {
@@ -228,7 +231,13 @@ export function SpeechReplayButton({ text, side }: SpeechReplayButtonProps) {
   );
 }
 
-export function SpeechControl({ contentKey, text }: SpeechControlProps) {
+export function SpeechControl({
+  contentKey,
+  text,
+  hasAudio = false,
+  audioRepeatCount = 1,
+  onAudioRepeatCountChange
+}: SpeechControlProps) {
   const supported =
     typeof window !== 'undefined' &&
     'speechSynthesis' in window &&
@@ -340,6 +349,21 @@ export function SpeechControl({ contentKey, text }: SpeechControlProps) {
             }
           />
         </label>
+        {hasAudio && onAudioRepeatCountChange !== undefined && (
+          <label>
+            Số lần phát khi xem mặt sau
+            <select
+              value={audioRepeatCount}
+              onChange={(event) => onAudioRepeatCountChange(Number(event.target.value))}
+            >
+              <option value={1}>1 lần</option>
+              <option value={2}>2 lần</option>
+              <option value={3}>3 lần</option>
+              <option value={4}>4 lần</option>
+              <option value={5}>5 lần</option>
+            </select>
+          </label>
+        )}
         <button
           className="secondary"
           type="button"

@@ -1573,6 +1573,9 @@ function DailyBrowse() {
           <SpeechControl
             contentKey={`${card.cardId}:${revealed ? 'back' : 'front'}`}
             text={getCardSpeechText(speechFields, revealed)}
+            hasAudio={fields.audioMediaId !== undefined}
+            audioRepeatCount={audioRepeatCount}
+            onAudioRepeatCountChange={setAudioRepeatCount}
           />
         </div>
         <div
@@ -1620,7 +1623,6 @@ function DailyBrowse() {
             mediaId={fields.audioMediaId}
             isBack={revealed}
             repeatCount={audioRepeatCount}
-            onRepeatCountChange={setAudioRepeatCount}
           />
         </div>
       </section>
@@ -2352,6 +2354,9 @@ function Review() {
                     <SpeechControl
                       contentKey={`${card.id}:${revealed ? 'back' : 'front'}`}
                       text={speechText}
+                      hasAudio={fields.audioMediaId !== undefined}
+                      audioRepeatCount={audioRepeatCount}
+                      onAudioRepeatCountChange={setAudioRepeatCount}
                     />
                   </div>
                   <div
@@ -2408,7 +2413,6 @@ function Review() {
                       mediaId={fields.audioMediaId}
                       isBack={revealed}
                       repeatCount={audioRepeatCount}
-                      onRepeatCountChange={setAudioRepeatCount}
                     />
                   </div>
                   {!revealed ? (
@@ -2473,13 +2477,11 @@ function Review() {
 function AudioControl({
   mediaId,
   isBack,
-  repeatCount,
-  onRepeatCountChange
+  repeatCount
 }: {
   mediaId: string | undefined;
   isBack: boolean;
   repeatCount: number;
-  onRepeatCountChange(value: number): void;
 }) {
   const userId = useSession((state) => state.user?.id);
   const media = useQuery({
@@ -2499,6 +2501,11 @@ function AudioControl({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const repeatCountRef = useRef(0);
   const autoReplayRef = useRef(false);
+
+  useEffect(() => {
+    repeatCountRef.current = 0;
+    autoReplayRef.current = false;
+  }, [repeatCount]);
 
   useEffect(() => {
     repeatCountRef.current = 0;
@@ -2539,23 +2546,6 @@ function AudioControl({
     <p className="muted">Đang tải âm thanh…</p>
   ) : (
     <div className="review-audio-control">
-      <label>
-        Số lần phát khi xem mặt sau
-        <select
-          value={repeatCount}
-          onChange={(event) => {
-            repeatCountRef.current = 0;
-            autoReplayRef.current = false;
-            onRepeatCountChange(Number(event.target.value));
-          }}
-        >
-          <option value={1}>1 lần</option>
-          <option value={2}>2 lần</option>
-          <option value={3}>3 lần</option>
-          <option value={4}>4 lần</option>
-          <option value={5}>5 lần</option>
-        </select>
-      </label>
       <audio
         key={`${userId}:${mediaId}:${isBack ? 'back' : 'front'}`}
         ref={audioRef}
