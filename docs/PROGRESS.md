@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 64 — Chụp lại ảnh giao diện trong README
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: chụp lại 12 màn hình chính từ phiên chạy local sau khi đăng nhập, thay ảnh trong `docs/screenshots` và cập nhật mô tả phần Ảnh giao diện trong README; ảnh không chứa thông tin đăng nhập thật.
+- Kiểm tra: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` và `git diff --check` đều đạt; `pnpm format:check` còn cảnh báo 16 file định dạng tồn tại từ trước.
+
 ## Milestone 63 — Tự động chấm sau khi đọc mặt sau
 
 - Trạng thái: Hoàn thành.

@@ -118,7 +118,7 @@ Repository được tổ chức dưới dạng pnpm workspace với TypeScript s
 
 ## Ảnh giao diện
 
-Các ảnh mới được chụp lại từ phiên chạy local sau khi đăng nhập thành công. Bộ ảnh tập trung vào giao diện và thao tác chính; không chụp menu tài khoản để tránh hiển thị thông tin nhận diện.
+Bộ ảnh dưới đây được chụp lại toàn trang từ phiên chạy local sau khi đăng nhập thành công, bao phủ các màn hình và thao tác chính. Không chụp menu tài khoản để tránh hiển thị thông tin nhận diện.
 
 ### Xác thực
 
