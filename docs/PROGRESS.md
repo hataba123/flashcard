@@ -638,3 +638,9 @@
 - Trạng thái: Hoàn thành.
 - Đã thực hiện: thêm tick ngắn mỗi giây, chuỗi âm báo khi chu kỳ kết thúc, cơ chế mở quyền Web Audio từ thao tác bắt đầu timer và công tắc bật/tắt âm thanh được lưu trên thiết bị.
 - Kiểm tra: `pnpm --filter @flashcard/web typecheck`, `pnpm --filter @flashcard/web test`, `pnpm lint`, `pnpm build` và `git diff --check` đều đạt.
+
+## Milestone 47 — Vá lỗi nanoid trong dependency
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: cập nhật dependency gián tiếp `nanoid` từ `3.3.16` lên `3.3.17`, là phiên bản đã vá lỗi custom generator có thể lặp vô hạn khi size bằng 0.
+- Kiểm tra: `pnpm install --frozen-lockfile --ignore-scripts` và `pnpm audit --audit-level high` đạt; còn 1 cảnh báo moderate không liên quan đến `nanoid`.
