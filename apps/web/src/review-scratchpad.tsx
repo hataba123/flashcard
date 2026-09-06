@@ -8,6 +8,7 @@ interface ReviewScratchpadValue {
 interface ReviewScratchpadProps {
   value: string;
   onChange(value: string): void;
+  onClose?(): void;
 }
 
 const storagePrefix = 'flashcard:review-scratchpad:';
@@ -68,7 +69,7 @@ export function useReviewScratchpad(
   return { text, setText, enabled, setEnabled };
 }
 
-export function ReviewScratchpad({ value, onChange }: ReviewScratchpadProps) {
+export function ReviewScratchpad({ value, onChange, onClose }: ReviewScratchpadProps) {
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
 
   useEffect(() => {
@@ -77,27 +78,62 @@ export function ReviewScratchpad({ value, onChange }: ReviewScratchpadProps) {
     return () => window.clearTimeout(timer);
   }, [value]);
 
+  const words = value.trim().length > 0 ? value.trim().split(/\s+/).length : 0;
+
+  const handleClear = () => {
+    if (value.trim().length === 0) return;
+    if (window.confirm('Xóa sạch nội dung ghi chú này?')) {
+      onChange('');
+    }
+  };
+
   return (
     <aside className="review-scratchpad" aria-label="Ghi chú phiên học">
       <header className="review-scratchpad-header">
         <div>
           <span className="review-scratchpad-kicker">Góc ghi nhanh</span>
-          <h2>Ghi chú phiên học</h2>
+          <h2>Ghi chú</h2>
         </div>
-        <span className="review-scratchpad-status" aria-live="polite">
-          {saveStatus === 'saving' ? 'Đang lưu…' : 'Đã lưu tạm'}
-        </span>
+        <div className="review-scratchpad-header-actions">
+          <span className="review-scratchpad-status" aria-live="polite">
+            {saveStatus === 'saving' ? 'Đang lưu…' : 'Đã lưu'}
+          </span>
+          {value.trim().length > 0 && (
+            <button
+              type="button"
+              className="scratchpad-clear-button"
+              title="Xóa nội dung ghi chú"
+              aria-label="Xóa nội dung ghi chú"
+              onClick={handleClear}
+            >
+              Xóa
+            </button>
+          )}
+          {onClose && (
+            <button
+              type="button"
+              className="scratchpad-close-button"
+              title="Thu gọn ghi chú (Phím N)"
+              aria-label="Thu gọn ghi chú"
+              onClick={onClose}
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </header>
       <textarea
         value={value}
         aria-label="Nội dung ghi chú phiên học"
-        placeholder="Viết điều cần nhớ, ví dụ, hoặc câu hỏi…"
+        placeholder="Viết điều cần nhớ, ngữ pháp, ví dụ của bạn…"
         spellCheck
         onChange={(event) => onChange(event.target.value)}
       />
       <footer className="review-scratchpad-footer">
-        <span>{value.length.toLocaleString('vi-VN')} ký tự</span>
-        <span>Chỉ lưu tạm trên thiết bị này</span>
+        <span>
+          {words.toLocaleString('vi-VN')} từ · {value.length.toLocaleString('vi-VN')} ký tự
+        </span>
+        <span className="review-scratchpad-hint">Phím tắt <kbd>N</kbd> để ẩn/hiện</span>
       </footer>
     </aside>
   );
