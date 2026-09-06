@@ -1,5 +1,11 @@
 # Tiến độ triển khai
 
+## Milestone 66 — Cập nhật dependency bảo mật cho CI
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện: nâng override `fast-uri` lên `3.1.6` và `nanoid` lên `3.3.18`, đồng bộ lockfile để loại bỏ các cảnh báo mức high khiến bước `pnpm audit --audit-level high` thất bại.
+- Kiểm tra: `pnpm audit --audit-level high`, lint, typecheck, test, build và `git diff --check`.
+
 ## Milestone 65 — Nâng cấp toàn diện UI và layout tiện ích học tập
 
 - Trạng thái: Hoàn thành.
