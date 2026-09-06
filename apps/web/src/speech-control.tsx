@@ -286,26 +286,29 @@ export function SpeechReplayButton({ text, side, repeatCount = 1 }: SpeechReplay
     'speechSynthesis' in window &&
     typeof SpeechSynthesisUtterance !== 'undefined';
   const sideLabel = side === 'front' ? 'mặt trước' : 'mặt sau';
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   if (!supported) return null;
 
   return (
     <button
-      className="review-speech-button"
+      className={`review-speech-button${isSpeaking ? ' is-speaking' : ''}`}
       type="button"
       aria-label={`Đọc lại ${sideLabel}`}
       title={`Đọc lại ${sideLabel}`}
       disabled={text.trim().length === 0}
       onTouchStart={(event) => event.stopPropagation()}
       onTouchEnd={(event) => event.stopPropagation()}
-      onClick={() =>
+      onClick={() => {
+        setIsSpeaking(true);
         speakText(
           text,
           loadSettings(),
           window.speechSynthesis.getVoices(),
-          side === 'back' ? repeatCount : 1
-        )
-      }
+          side === 'back' ? repeatCount : 1,
+          () => setIsSpeaking(false)
+        );
+      }}
     >
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path d="M4 10v4h4l5 4V6l-5 4H4Z" />

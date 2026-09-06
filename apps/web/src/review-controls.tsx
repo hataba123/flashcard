@@ -30,6 +30,14 @@ export function ReviewControls({
   if (!revealed)
     return (
       <button className="reveal" type="button" onClick={onReveal}>
+        <span className="reveal-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+            <path d="M21 3v5h-5" />
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+            <path d="M3 21v-5h5" />
+          </svg>
+        </span>
         <span className="reveal-copy">
           <span>Hiện đáp án</span>
           <small>Lật thẻ khi bạn đã trả lời</small>
