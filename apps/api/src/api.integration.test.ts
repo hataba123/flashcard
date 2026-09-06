@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { AppModule } from './app.module.js';
 import { UserEntity } from './auth/entities/user.entity.js';
+import { CardEntity } from './cards/entities/card.entity.js';
 import { ReviewLogEntity } from './reviews/entities/review-log.entity.js';
 import { StudyGoalDailyAvailabilityEntity } from './study-goals/entities/study-goal-daily-availability.entity.js';
 
@@ -60,6 +61,35 @@ describe('API integration', () => {
       .get(`/api/decks/${createdDeck.body.id}`)
       .set('Authorization', `Bearer ${secondAuth.accessToken}`)
       .expect(404);
+    const note = await request(app.getHttpServer())
+      .post('/api/notes')
+      .set('Authorization', `Bearer ${firstAuth.accessToken}`)
+      .send({
+        deckId: createdDeck.body.id,
+        noteType: 'Basic',
+        fields: { front: 'Cascade question', back: 'Cascade answer' },
+        tags: []
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/api/notes/${note.body.id}/generate-cards`)
+      .set('Authorization', `Bearer ${firstAuth.accessToken}`)
+      .send({})
+      .expect(201);
+    await request(app.getHttpServer())
+      .delete(`/api/decks/${createdDeck.body.id}`)
+      .set('Authorization', `Bearer ${firstAuth.accessToken}`)
+      .expect(204);
+    await request(app.getHttpServer())
+      .get(`/api/notes?deckId=${createdDeck.body.id}`)
+      .set('Authorization', `Bearer ${firstAuth.accessToken}`)
+      .expect(200)
+      .expect(({ body }) => expect(body).toEqual([]));
+    const cards = app.get(DataSource).getRepository(CardEntity);
+    expect(
+      await cards.count({ where: { noteId: note.body.id }, withDeleted: true })
+    ).toBe(1);
+    expect(await cards.count({ where: { noteId: note.body.id } })).toBe(0);
 
     const pulled = await request(app.getHttpServer())
       .get('/api/sync/pull?cursor=0&limit=10')

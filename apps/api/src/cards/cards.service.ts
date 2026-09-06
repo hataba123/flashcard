@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomUUID } from 'node:crypto';
 import ExcelJS from 'exceljs';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 
 import { CreateDeckDto, CreateNoteDto, UpdateDeckDto, UpdateNoteDto } from './dto/cards.dto.js';
 import { CardEntity, CardState } from './entities/card.entity.js';
@@ -153,6 +153,16 @@ export class CardsService {
     await this.decks.manager.transaction(async (manager) => {
       const decks = manager.getRepository(DeckEntity);
       const deck = await this.requireDeckWithRepository(decks, userId, id);
+      await manager.getRepository(CardEntity).softDelete({
+        userId,
+        deckId: deck.id,
+        deletedAtUtc: IsNull()
+      });
+      await manager.getRepository(NoteEntity).softDelete({
+        userId,
+        deckId: deck.id,
+        deletedAtUtc: IsNull()
+      });
       deck.version += 1;
       await decks.save(deck);
       await decks.softDelete(deck.id);
