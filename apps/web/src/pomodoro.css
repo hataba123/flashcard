@@ -125,10 +125,28 @@
   gap: var(--space-xs);
 }
 
-.pomodoro-actions button {
+.pomodoro-actions button,
+.pomodoro-study-link {
   min-height: 3rem;
   border-radius: var(--radius-pill);
   font-weight: 800;
+}
+
+.pomodoro-study-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-md);
+  border: 0;
+  background: var(--color-accent-2);
+  color: #fff;
+  text-decoration: none;
+  font-size: var(--text-sm);
+  transition: all var(--dur-short) var(--ease-out);
+}
+
+.pomodoro-study-link:hover {
+  background: var(--color-focus);
+  transform: translateY(-1px);
 }
 
 .pomodoro-primary {

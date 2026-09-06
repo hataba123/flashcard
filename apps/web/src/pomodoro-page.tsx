@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Link } from 'react-router';
 
 import {
   advancePomodoroTimer,
@@ -291,6 +292,9 @@ export function PomodoroPage() {
             <button className="pomodoro-reset" type="button" onClick={resetTimer}>
               Đặt lại
             </button>
+            <Link to="/review" className="button pomodoro-study-link">
+              Vào ôn tập cùng Pomodoro →
+            </Link>
           </div>
         </div>
 
