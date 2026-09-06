@@ -75,6 +75,7 @@ import { ReviewScratchpad, useReviewScratchpad } from './review-scratchpad.js';
 import { NotesPage } from './notes-page.js';
 import { StudyPlanPage } from './study-plan-page.js';
 import { PomodoroPage } from './pomodoro-page.js';
+import { MiniPomodoro } from './mini-pomodoro.js';
 import { WeaknessAnalysis, type WeaknessAnalysisData } from './weakness-analysis.js';
 import {
   ThemeToggle,
@@ -1555,6 +1556,7 @@ function DailyBrowse() {
     phaseDurationMs: phaseDuration,
     phaseRemainingMs
   });
+  const phaseFraction = Math.max(0, Math.min(1, phaseRemainingMs / phaseDuration));
   return (
     <Shell focus>
       <header className="review-header daily-browse-header">
@@ -1601,21 +1603,31 @@ function DailyBrowse() {
       </header>
       <section className="review-study daily-browse-study" aria-live="off">
         <div className="daily-browse-toolbar">
-          <label>
-            Tốc độ
-            <select value={speed} onChange={(event) => changeSpeed(Number(event.target.value))}>
-              <option value={0.75}>0.75×</option>
-              <option value={1}>1×</option>
-              <option value={1.5}>1.5×</option>
-              <option value={2}>2×</option>
-            </select>
-          </label>
-          <span role="status">
-            {paused ? 'Đã tạm dừng' : revealed ? 'Đang xem đáp án' : 'Đang nhớ câu trả lời'}
+          <div className="speed-segmented-control" role="group" aria-label="Tốc độ lướt thẻ">
+            <span className="speed-label">Tốc độ:</span>
+            {[0.75, 1, 1.5, 2].map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={`speed-pill${speed === s ? ' is-active' : ''}`}
+                onClick={() => changeSpeed(s)}
+              >
+                {s}×
+              </button>
+            ))}
+          </div>
+          <span className="daily-browse-phase-badge" role="status">
+            {paused ? '❚❚ Tạm dừng' : revealed ? '✓ Xem đáp án' : '● Nhớ câu hỏi'}
           </span>
-          <span aria-label="Thời gian còn lại">
-            Còn {formatDailyBrowseRemainingTime(browseRemainingMs)} để hoàn thành
+          <span className="daily-browse-countdown-text" aria-label="Thời gian còn lại">
+            Còn {formatDailyBrowseRemainingTime(browseRemainingMs)}
           </span>
+        </div>
+        <div className="daily-browse-countdown-track" aria-hidden="true">
+          <div
+            className="daily-browse-countdown-bar"
+            style={{ transform: `scaleX(${phaseFraction})` }}
+          />
         </div>
         <div className="review-support">
           <SpeechControl
@@ -1742,12 +1754,28 @@ function Review() {
   const originalDocumentMinHeight = useRef(document.documentElement.style.minHeight);
   const [sessionId, setSessionId] = useState<string>(() => crypto.randomUUID());
   const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [isZenMode, setIsZenMode] = useState(() => {
+    try {
+      return localStorage.getItem('flashcard:review-zen-mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const offline = useOffline();
   const clearAutoGradeTimer = useCallback(() => {
     if (autoGradeTimer.current === null) return;
     window.clearTimeout(autoGradeTimer.current);
     autoGradeTimer.current = null;
   }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem('flashcard:review-zen-mode', String(isZenMode));
+    } catch {
+      // Bỏ qua lỗi lưu bộ nhớ nếu bị chặn
+    }
+  }, [isZenMode]);
+  const toggleZenMode = () => setIsZenMode((prev) => !prev);
   useEffect(() => {
     try {
       localStorage.setItem(autoGradeSettingsStorageKey, JSON.stringify(autoGradeSettings));
@@ -2217,6 +2245,28 @@ function Review() {
         void toggleFullscreen();
         return;
       }
+      if (event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        toggleZenMode();
+        return;
+      }
+      if (event.key.toLowerCase() === 'n') {
+        event.preventDefault();
+        reviewScratchpad.setEnabled(!reviewScratchpad.enabled);
+        return;
+      }
+      if (event.key === 'Escape') {
+        if (isSettingsOpen) {
+          event.preventDefault();
+          setIsSettingsOpen(false);
+          return;
+        }
+        if (isZenMode) {
+          event.preventDefault();
+          setIsZenMode(false);
+          return;
+        }
+      }
       if (isPaused) return;
       if (event.key === ' ' && revealedAt === null) {
         event.preventDefault();
@@ -2230,7 +2280,7 @@ function Review() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [grade, isPaused, pausedAt, revealedAt, shownAt]);
+  }, [grade, isPaused, isSettingsOpen, isZenMode, pausedAt, revealedAt, reviewScratchpad, shownAt]);
   if (queue.isLoading)
     return (
       <Shell focus>
@@ -2325,52 +2375,137 @@ function Review() {
         );
   return (
     <Shell focus>
-      <header className="review-header">
-        <Link className="button-link" to="/" onClick={endTimeBoxedSession}>
-          Kết thúc phiên
-        </Link>
-        <div className="review-title">
-          <p className="eyebrow">Ôn tập</p>
-          <h1>Phiên ôn tập</h1>
-        </div>
-        <div className="review-progress" aria-label="Tiến độ phiên ôn tập">
-          {sessionPlan !== undefined && timeProgress !== null && (
-            <div className="review-session-progress">
-              <strong>Phiên học {sessionBudgetMinutes} phút</strong>
-              <span>Còn khoảng {timeProgress.remainingMinutes} phút</span>
-              <span>
-                Đã hoàn thành {completedCards}/{totalCards} lượt dự kiến
-              </span>
-            </div>
-          )}
-          <div className="review-progress-copy">
-            <span>
-              Thẻ {activeCardIndex + 1} / {totalCards}
-            </span>
-            <span>{progress}% hoàn thành</span>
-          </div>
+      {isZenMode && (
+        <aside className="zen-top-bar" aria-label="Tiến độ tập trung tối đa">
           <div
-            className="progress-track"
+            className="zen-top-progress"
+            style={{ width: `${progress}%` }}
             role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={totalCards}
             aria-valuenow={completedCards}
-            aria-valuetext={`Đã hoàn thành ${completedCards} trên ${totalCards} thẻ`}
-          >
-            <span className="progress-value" style={{ transform: `scaleX(${progress / 100})` }} />
+            aria-valuemax={totalCards}
+            aria-label="Tiến độ ôn tập"
+          />
+          <div className="zen-bar-content">
+            <MiniPomodoro compact />
+            <span className="zen-card-counter">
+              Thẻ {activeCardIndex + 1} / {totalCards} ({progress}%)
+            </span>
+            <div className="zen-actions">
+              <button
+                type="button"
+                className={`zen-tool-btn${reviewScratchpad.enabled ? ' is-active' : ''}`}
+                title="Bật/tắt ghi chú (Phím N)"
+                aria-label="Ghi chú (N)"
+                onClick={() => reviewScratchpad.setEnabled(!reviewScratchpad.enabled)}
+              >
+                ✎ {reviewScratchpad.enabled ? 'Đóng ghi chú' : 'Ghi chú'} <kbd>N</kbd>
+              </button>
+              {lastReviewId !== null && (
+                <button
+                  type="button"
+                  className="zen-tool-btn"
+                  title="Hoàn tác lần chấm cuối"
+                  onClick={() => undo.mutate(lastReviewId)}
+                >
+                  Hoàn tác
+                </button>
+              )}
+              <button
+                type="button"
+                className="zen-exit-btn"
+                title="Thoát chế độ tập trung (Phím Z hoặc Esc)"
+                onClick={toggleZenMode}
+              >
+                ✕ Thoát Zen <kbd>Z</kbd>
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="review-header-actions">
-          <button className="secondary" type="button" onClick={togglePause}>
-            {isPaused ? 'Tiếp tục' : 'Tạm dừng'} <kbd>P</kbd>
-          </button>
-          {lastReviewId !== null && (
-            <button className="secondary" onClick={() => undo.mutate(lastReviewId)}>
-              Hoàn tác
-            </button>
-          )}
-        </div>
-      </header>
+        </aside>
+      )}
+      {!isZenMode && (
+        <>
+          <header className="review-header">
+            <Link className="button-link" to="/" onClick={endTimeBoxedSession}>
+              Kết thúc phiên
+            </Link>
+            <div className="review-title">
+              <p className="eyebrow">Ôn tập</p>
+              <h1>Phiên ôn tập</h1>
+            </div>
+            <div className="review-progress" aria-label="Tiến độ phiên ôn tập">
+              {sessionPlan !== undefined && timeProgress !== null && (
+                <div className="review-session-progress">
+                  <strong>Phiên học {sessionBudgetMinutes} phút</strong>
+                  <span>Còn khoảng {timeProgress.remainingMinutes} phút</span>
+                  <span>
+                    Đã hoàn thành {completedCards}/{totalCards} lượt dự kiến
+                  </span>
+                </div>
+              )}
+              <div className="review-progress-copy">
+                <span>
+                  Thẻ {activeCardIndex + 1} / {totalCards}
+                </span>
+                <span>{progress}% hoàn thành</span>
+              </div>
+              <div
+                className="progress-track"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={totalCards}
+                aria-valuenow={completedCards}
+                aria-valuetext={`Đã hoàn thành ${completedCards} trên ${totalCards} thẻ`}
+              >
+                <span className="progress-value" style={{ transform: `scaleX(${progress / 100})` }} />
+              </div>
+            </div>
+            <div className="review-header-actions">
+              <button className="secondary" type="button" onClick={togglePause}>
+                {isPaused ? 'Tiếp tục' : 'Tạm dừng'} <kbd>P</kbd>
+              </button>
+              {lastReviewId !== null && (
+                <button className="secondary" onClick={() => undo.mutate(lastReviewId)}>
+                  Hoàn tác
+                </button>
+              )}
+            </div>
+          </header>
+
+          <section className="study-dock" aria-label="Thanh tiện ích học tập">
+            <div className="study-dock-main">
+              <MiniPomodoro />
+              <button
+                type="button"
+                className={`dock-btn${reviewScratchpad.enabled ? ' is-active' : ''}`}
+                title="Ghi chú phiên học (Phím N)"
+                onClick={() => reviewScratchpad.setEnabled(!reviewScratchpad.enabled)}
+              >
+                <span aria-hidden="true">✎</span> Ghi chú <kbd>N</kbd>
+              </button>
+              <button
+                type="button"
+                className="dock-btn dock-btn-zen"
+                title="Bật chế độ Siêu Tập Trung (Phím Z)"
+                onClick={toggleZenMode}
+              >
+                <span aria-hidden="true">◎</span> Tập trung tối đa <kbd>Z</kbd>
+              </button>
+            </div>
+            <div className="study-dock-aux">
+              <button
+                type="button"
+                className={`dock-btn${isSettingsOpen ? ' is-active' : ''}`}
+                aria-expanded={isSettingsOpen}
+                aria-label="Tùy chỉnh phiên học"
+                onClick={() => setIsSettingsOpen((prev) => !prev)}
+              >
+                ⚙ Tùy chỉnh
+              </button>
+              <ThemeToggle compact />
+            </div>
+          </section>
+        </>
+      )}
       {timeProgress?.budgetReached === true && (
         <section className="review-budget-notice" aria-live="polite">
           <div>
@@ -2397,99 +2532,105 @@ function Review() {
           </div>
         </section>
       )}
-      <details className="review-options">
-        <summary>Tùy chỉnh phiên học</summary>
-        <section className="review-toolbar" aria-label="Tùy chỉnh phiên học">
-          <label>
-            Cỡ chữ
-            <select
-              value={fontSize}
-              onChange={(event) => setFontSize(event.target.value as ReviewFontSize)}
-            >
-              <option value="small">Nhỏ</option>
-              <option value="medium">Vừa</option>
-              <option value="large">Lớn</option>
-            </select>
-          </label>
-          <label>
-            Chiều rộng thẻ
-            <select
-              value={cardWidth}
-              onChange={(event) => setCardWidth(event.target.value as ReviewCardWidth)}
-            >
-              <option value="compact">Gọn</option>
-              <option value="balanced">Cân bằng</option>
-              <option value="wide">Rộng</option>
-            </select>
-          </label>
-          <label className="review-notes-toggle">
-            <input
-              type="checkbox"
-              checked={reviewScratchpad.enabled}
-              onChange={(event) => reviewScratchpad.setEnabled(event.target.checked)}
-            />
-            <span className="review-notes-copy">
-              <strong>Ghi chú phiên học</strong>
-              <small>Mở bảng ghi chú cạnh flashcard</small>
-            </span>
-          </label>
-          <label className="review-notes-toggle review-auto-grade-toggle">
-            <input
-              type="checkbox"
-              checked={autoGradeSettings.enabled}
-              onChange={(event) =>
-                setAutoGradeSettings((current) => ({
-                  ...current,
-                  enabled: event.target.checked
-                }))
-              }
-            />
-            <span className="review-notes-copy">
-              <strong>Tự động chấm sau khi đọc mặt sau</strong>
-              <small>Chỉ chạy sau khi đọc đủ số lần lặp mặt sau</small>
-            </span>
-          </label>
-          <label>
-            Mức chấm tự động
-            <select
-              value={autoGradeSettings.rating}
-              disabled={!autoGradeSettings.enabled}
-              onChange={(event) =>
-                setAutoGradeSettings((current) => ({
-                  ...current,
-                  rating: event.target.value as ReviewRating
-                }))
-              }
-            >
-              <option value="Again">Again — Chưa nhớ</option>
-              <option value="Hard">Hard — Hơi khó</option>
-              <option value="Good">Good — Nhớ tốt</option>
-              <option value="Easy">Easy — Rất dễ</option>
-            </select>
-          </label>
-          <label className="review-auto-grade-delay">
-            Chờ trước khi chấm: {formatAutoGradeDelay(autoGradeSettings.delayMs)}
-            <input
-              type="range"
-              min="0"
-              max="10000"
-              step="500"
-              value={autoGradeSettings.delayMs}
-              disabled={!autoGradeSettings.enabled}
-              onChange={(event) =>
-                setAutoGradeSettings((current) => ({
-                  ...current,
-                  delayMs: Number(event.target.value)
-                }))
-              }
-            />
-          </label>
-          <ThemeToggle />
-          <button className="secondary" type="button" onClick={() => void toggleFullscreen()}>
-            {isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'} <kbd>F</kbd>
-          </button>
-        </section>
-      </details>
+      {!isZenMode && (
+        <details
+          className="review-options"
+          open={isSettingsOpen}
+          onToggle={(event) => setIsSettingsOpen(event.currentTarget.open)}
+        >
+          <summary>Tùy chỉnh phiên học</summary>
+          <section className="review-toolbar" aria-label="Tùy chỉnh phiên học">
+            <label>
+              Cỡ chữ
+              <select
+                value={fontSize}
+                onChange={(event) => setFontSize(event.target.value as ReviewFontSize)}
+              >
+                <option value="small">Nhỏ</option>
+                <option value="medium">Vừa</option>
+                <option value="large">Lớn</option>
+              </select>
+            </label>
+            <label>
+              Chiều rộng thẻ
+              <select
+                value={cardWidth}
+                onChange={(event) => setCardWidth(event.target.value as ReviewCardWidth)}
+              >
+                <option value="compact">Gọn</option>
+                <option value="balanced">Cân bằng</option>
+                <option value="wide">Rộng</option>
+              </select>
+            </label>
+            <label className="review-notes-toggle">
+              <input
+                type="checkbox"
+                checked={reviewScratchpad.enabled}
+                onChange={(event) => reviewScratchpad.setEnabled(event.target.checked)}
+              />
+              <span className="review-notes-copy">
+                <strong>Ghi chú phiên học</strong>
+                <small>Mở bảng ghi chú cạnh flashcard</small>
+              </span>
+            </label>
+            <label className="review-notes-toggle review-auto-grade-toggle">
+              <input
+                type="checkbox"
+                checked={autoGradeSettings.enabled}
+                onChange={(event) =>
+                  setAutoGradeSettings((current) => ({
+                    ...current,
+                    enabled: event.target.checked
+                  }))
+                }
+              />
+              <span className="review-notes-copy">
+                <strong>Tự động chấm sau khi đọc mặt sau</strong>
+                <small>Chỉ chạy sau khi đọc đủ số lần lặp mặt sau</small>
+              </span>
+            </label>
+            <label>
+              Mức chấm tự động
+              <select
+                value={autoGradeSettings.rating}
+                disabled={!autoGradeSettings.enabled}
+                onChange={(event) =>
+                  setAutoGradeSettings((current) => ({
+                    ...current,
+                    rating: event.target.value as ReviewRating
+                  }))
+                }
+              >
+                <option value="Again">Again — Chưa nhớ</option>
+                <option value="Hard">Hard — Hơi khó</option>
+                <option value="Good">Good — Nhớ tốt</option>
+                <option value="Easy">Easy — Rất dễ</option>
+              </select>
+            </label>
+            <label className="review-auto-grade-delay">
+              Chờ trước khi chấm: {formatAutoGradeDelay(autoGradeSettings.delayMs)}
+              <input
+                type="range"
+                min="0"
+                max="10000"
+                step="500"
+                value={autoGradeSettings.delayMs}
+                disabled={!autoGradeSettings.enabled}
+                onChange={(event) =>
+                  setAutoGradeSettings((current) => ({
+                    ...current,
+                    delayMs: Number(event.target.value)
+                  }))
+                }
+              />
+            </label>
+            <ThemeToggle />
+            <button className="secondary" type="button" onClick={() => void toggleFullscreen()}>
+              {isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'} <kbd>F</kbd>
+            </button>
+          </section>
+        </details>
+      )}
       {!offline.online && (
         <p className="offline-notice" role="status">
           Lượt ôn offline được lưu trên thiết bị này và sẽ đồng bộ khi có kết nối lại.
@@ -2499,9 +2640,10 @@ function Review() {
         <QueryError title="Không thể tải nội dung thẻ." onRetry={() => void note.refetch()} />
       ) : (
         <section
-          className="review-study"
+          className={`review-study${isZenMode ? ' is-zen-mode' : ''}`}
           data-font-size={fontSize}
           data-card-width={cardWidth}
+          data-zen={isZenMode}
           aria-busy={!hasCurrentNote || grade.isPending}
         >
           {isPaused ? (
@@ -2608,6 +2750,7 @@ function Review() {
                       <ReviewScratchpad
                         value={reviewScratchpad.text}
                         onChange={reviewScratchpad.setText}
+                        onClose={() => reviewScratchpad.setEnabled(false)}
                       />
                     )}
                   </div>
@@ -2649,6 +2792,12 @@ function Review() {
             </span>
             <span>
               <kbd>P</kbd> {isPaused ? 'Tiếp tục' : 'Tạm dừng'}
+            </span>
+            <span>
+              <kbd>Z</kbd> {isZenMode ? 'Thoát Zen' : 'Tập trung'}
+            </span>
+            <span>
+              <kbd>N</kbd> Ghi chú
             </span>
             <span>
               <kbd>F</kbd> Toàn màn hình

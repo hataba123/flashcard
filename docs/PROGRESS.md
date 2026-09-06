@@ -1,5 +1,18 @@
 # Tiến độ triển khai
 
+## Milestone 65 — Nâng cấp toàn diện UI và layout tiện ích học tập
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện:
+  - Bổ sung Chế độ Siêu Tập Trung (Zen Focus Mode — phím tắt `Z` hoặc `Esc` để thoát): ẩn triệt để các thanh điều hướng và tùy chỉnh thừa, căn giữa thẻ học ở trọng tâm màn hình cùng thanh tiến độ vi mô trên đỉnh (micro progress bar).
+  - Tạo thanh công cụ học tập thông minh (Study Utility Dock): gom các tùy chỉnh rườm rà thành thanh nổi gọn gàng, hỗ trợ mở/đóng ngăn cài đặt nhanh không gây xao nhãng.
+  - Tích hợp component Mini Pomodoro Focus Timer trực tiếp trong phiên ôn thẻ: đồng hồ đếm ngược 25 phút, chỉ báo chấm trạng thái, bắt đầu/tạm dừng/đổi pha ngay tại chỗ kèm chuông báo hoàn thành.
+  - Nâng cấp bảng ghi chú phiên học (`ReviewScratchpad`): hỗ trợ phím tắt `N` bật/tắt nhanh, đếm số từ và ký tự, nút xóa nhanh nội dung và nút đóng tiện lợi.
+  - Nâng cấp phiên Lướt lại hôm nay (`DailyBrowse`): bổ sung thanh đếm ngược thời gian lật mượt mà (countdown bar) cho từng mặt thẻ, thay thế dropdown tốc độ bằng bộ điều khiển segmented pills (0.75×, 1×, 1.5×, 2×) và huy hiệu trạng thái pha.
+  - Cải tiến hiệu ứng xúc giác cho bộ nút tương tác: nút Hiện đáp án (`Space`) dạng pill nổi kèm icon lật thẻ, hiệu ứng sóng âm phát âm sống động (`SpeechReplayButton`), 4 nút chấm điểm xúc giác với màu sắc phân cấp rõ nét.
+  - Thêm liên kết chuyển nhanh "Vào ôn tập cùng Pomodoro" trên trang Pomodoro.
+- Kiểm tra: `pnpm lint`, `pnpm typecheck`, vitest 44/44 bài kiểm tra đạt, build web thành công và `git diff --check` sạch sẽ.
+
 ## Milestone 64 — Chụp lại ảnh giao diện trong README
 
 - Trạng thái: Hoàn thành.
