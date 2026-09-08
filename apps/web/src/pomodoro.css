@@ -1,7 +1,8 @@
 .pomodoro-page {
-  width: min(100% - 2 * var(--space-lg), 72rem);
+  width: 100%;
+  max-width: 72rem;
   margin: 0 auto;
-  padding: clamp(var(--space-xl), 7vw, var(--space-3xl)) 0;
+  padding: var(--space-xs) 0 var(--space-2xl);
 }
 
 .pomodoro-intro {
@@ -123,6 +124,8 @@
   display: flex;
   justify-content: center;
   gap: var(--space-xs);
+  flex-wrap: wrap;
+  width: 100%;
 }
 
 .pomodoro-actions button,
@@ -274,7 +277,8 @@
 
 @media (max-width: 760px) {
   .pomodoro-page {
-    width: min(100% - 2 * var(--space-sm), 72rem);
+    width: 100%;
+    padding-block-start: 0;
   }
 
   .pomodoro-workbench {
@@ -294,7 +298,30 @@
 
 @media (max-width: 520px) {
   .pomodoro-timer-column {
-    padding: var(--space-lg) var(--space-sm);
+    padding: var(--space-md) var(--space-xs);
+  }
+
+  .pomodoro-dial {
+    width: min(18rem, 80vw);
+    margin: var(--space-md) 0;
+  }
+
+  .pomodoro-time {
+    font-size: clamp(2.5rem, 12vw, 3.8rem);
+  }
+
+  .pomodoro-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-xs);
+    width: 100%;
+  }
+
+  .pomodoro-actions button,
+  .pomodoro-study-link {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
   }
 
   .pomodoro-phase-tabs {

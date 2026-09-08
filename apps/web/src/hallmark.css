@@ -1395,6 +1395,11 @@ label {
   color: var(--color-success);
 }
 
+.import-result li {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .tag-list {
   gap: var(--space-xs);
 }
@@ -2370,9 +2375,11 @@ label {
 .mini-pomodoro-popover {
   position: absolute;
   top: calc(100% + var(--space-xs));
-  left: 0;
+  left: auto;
+  right: 0;
   z-index: var(--z-dropdown);
   min-width: 14rem;
+  max-width: calc(100vw - 2rem);
   padding: var(--space-sm);
   border: var(--rule-hair) solid var(--color-rule);
   border-radius: var(--radius-card);
@@ -3076,6 +3083,12 @@ audio {
 
   .actions {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actions button,
+  .actions .button {
+    width: 100%;
+    justify-content: center;
   }
 
   .review-header {

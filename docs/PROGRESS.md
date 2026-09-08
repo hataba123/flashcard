@@ -1,5 +1,18 @@
 # Tiến độ triển khai
 
+## Milestone 67 — Kiểm tra toàn diện và tối ưu responsive UI trên mọi thiết bị
+
+- Trạng thái: Hoàn thành.
+- Đã thực hiện:
+  - Khắc phục lỗi auto-zoom của iOS Safari khi nhập liệu bằng cách chuẩn hóa font-size 16px cho `input`, `select`, `textarea` trên mobile.
+  - Tối ưu thanh điều hướng topbar: hỗ trợ safe-area insets cho tai thỏ và home bar, thanh cuộn tab điều hướng mượt mà, giữ `ThemeToggle` luôn khả dụng trên màn hình nhỏ và tích hợp thêm tùy chọn đổi theme ngay trong menu tài khoản.
+  - Tối ưu trang Tổng quan (Dashboard): bổ sung cuộn ngang mượt mà cho biểu đồ nhịp học 14 ngày trên mobile (cột không bị co cụm dưới 32px), nút thao tác hero full-width cân đối, căn chỉnh vòng đo ghi nhớ và khối chẩn đoán điểm yếu (`WeaknessAnalysis`).
+  - Tối ưu trang Ôn tập (Review): thanh Zen Mode trên đỉnh co dãn 2 tầng hoặc lưới thu gọn trên mobile, Study Dock chuyển sang dạng thẻ bo tròn linh hoạt khi xuống dòng, ẩn phím tắt bàn phím thừa (`<kbd>`) trên thiết bị cảm ứng, bộ nút Hiện đáp án và 4 nút chấm điểm đạt kích thước chạm tối thiểu $\ge 48\text{px}$ thân thiện cho ngón tay cái.
+  - Tối ưu trang Pomodoro: khắc phục lỗi double-padding co hẹp khung hình, thanh nút thao tác hỗ trợ `flex-wrap` và chuyển sang lưới dọc trên mobile, đồng hồ đếm giờ co dãn linh hoạt ở 320px, giới hạn popover Mini Pomodoro trong khung nhìn.
+  - Tối ưu trang Lướt lại hôm nay (Daily Browse): 3 nút điều hướng dàn đều vừa vặn trên màn hình di động, thanh điều khiển tốc độ và đếm ngược responsive.
+  - Tối ưu Kế hoạch học tập (Study Plan) và Quản lý thẻ/bộ thẻ: số liệu mục tiêu chia lưới 2 cột ở 320px, hỗ trợ ngắt từ dài (`overflow-wrap: anywhere`) cho danh sách xem trước Excel, các nút hành động trên thẻ giãn đều full-width.
+- Kiểm tra: `pnpm lint`, `pnpm typecheck`, vitest 44/44 bài kiểm tra đạt, build web thành công và `git diff --check` sạch sẽ.
+
 ## Milestone 66 — Cập nhật dependency bảo mật cho CI
 
 - Trạng thái: Hoàn thành.
