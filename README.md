@@ -20,6 +20,8 @@ Repository được tổ chức dưới dạng pnpm workspace với TypeScript s
 - [API chính](#api-chính)
 - [Lệnh phát triển](#lệnh-phát-triển)
 - [Kiểm thử và CI](#kiểm-thử-và-ci)
+- [Deploy Ubuntu và tên miền](#deploy-ubuntu-và-tên-miền)
+- [Lộ trình DevOps](#lộ-trình-devops)
 - [Migration và dữ liệu](#migration-và-dữ-liệu)
 - [Bảo mật](#bảo-mật)
 - [Xử lý sự cố](#xử-lý-sự-cố)
@@ -640,6 +642,126 @@ Workflow `.github/workflows/ci.yml` chạy trên pull request và mỗi lần pu
 5. Tạo database và chạy migration.
 6. Chạy lint, typecheck, test và build.
 7. Cài Chromium và chạy Playwright E2E.
+
+## Deploy Ubuntu và tên miền
+
+### Trạng thái triển khai
+
+Website public: [cardify.io.vn](https://cardify.io.vn/). Mô hình hiện tại là phát triển trên Windows, đưa code lên GitHub và deploy thủ công trên Ubuntu. Repository đã có workflow CI; chưa triển khai CD tự động. Push lên `main` chưa tự cập nhật website.
+
+```text
+Trình duyệt → HTTPS cardify.io.vn → Cloudflare → cloudflared trên Ubuntu
+  → Nginx :80
+      ├─ /             → /var/www/cardify (React/Vite build)
+      ├─ /api/         → API :3000 → SQL Server :1433
+      └─ /socket.io/   → API :3000 (WebSocket)
+```
+
+Giao diện là file tĩnh sau build, nhưng toàn bộ ứng dụng là fullstack: đăng nhập, dữ liệu và đồng bộ cần API cùng SQL Server.
+
+| Thành phần | Cấu hình triển khai hiện tại |
+| --- | --- |
+| Máy Ubuntu | `192.168.1.8`, user `hataba123` |
+| Checkout | `/home/hataba123/flashcard`, nhánh `main` |
+| API | Service `flashcard-api`, Node chạy `apps/api/dist/main.js` |
+| Nginx | Site `/etc/nginx/sites-available/cardify`, web root `/var/www/cardify` |
+| Tunnel | Service `cloudflared`, chạy trực tiếp trên Ubuntu |
+| SQL Server | Container có sẵn `sqlserver2025`, cổng host `1433` |
+
+Không khởi động thêm SQL Server Compose trên cùng cổng `1433` khi container hiện tại đã chiếm cổng. Môi trường CI/local trong repository dùng SQL Server 2022; môi trường Ubuntu hiện tại dùng container SQL Server 2025.
+
+### Tên miền và cấu hình ứng dụng
+
+Trong Cloudflare, tên miền cần có DNS hợp lệ và Published Application của Tunnel cần ánh xạ `cardify.io.vn` tới `http://127.0.0.1:80`. Khi giao diện tách trường, chọn Type `HTTP`, URL `127.0.0.1:80`. DNS hostname trỏ tới `<ID-tunnel>.cfargotunnel.com`; dùng ID của tunnel thực tế. Với cấu hình DNS đầy đủ trên Cloudflare, nameserver tại nhà đăng ký phải khớp nameserver Cloudflare cấp.
+
+`localhost` ở đây là Ubuntu vì `cloudflared` chạy trực tiếp trên máy; nếu chuyển connector vào Docker, `localhost` sẽ là container và cần cấu hình lại địa chỉ đích. Không trỏ DNS public tới IP LAN `192.168.1.8`. Không trỏ toàn website tới cổng API `3000`.
+
+Nginx cần `server_name cardify.io.vn`, phục vụ SPA bằng `try_files $uri $uri/ /index.html`, giữ nguyên prefix `/api/` khi proxy và hỗ trợ Upgrade/Connection cho `/socket.io/`. Sau khi sửa cấu hình Nginx:
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+API production dùng `NODE_ENV=production` và `WEB_ORIGIN=https://cardify.io.vn`. Web build với `VITE_API_URL=https://cardify.io.vn/api`; thay đổi biến này cần build lại. Giữ `.env`, token Tunnel và credential trên server, ngoài Git. Không chép `.env` development từ Windows đè lên production.
+
+Ubuntu hiện có các chỉnh sửa API liên quan chứng chỉ SQL Server trong `app.module.ts`, `config/environment.ts` và `database/data-source.ts`. Cần đối chiếu và đưa thay đổi phù hợp về repository trước khi tự động deploy; không giả định chỉ thêm biến môi trường là code mọi phiên bản sẽ hỗ trợ. Không dùng `NODE_ENV=development` để né kiểm tra chứng chỉ trên production.
+
+### Cập nhật thủ công phiên bản chỉ thay đổi giao diện
+
+Các lệnh dưới đây dành cho máy Ubuntu đã cài đặt và đang chạy. Chạy từng bước, dừng nếu có lỗi. Trước tiên kiểm tra commit và thay đổi trên server:
+
+```bash
+cd /home/hataba123/flashcard
+git status --short
+git fetch origin
+git log --oneline HEAD..origin/main
+git diff --stat HEAD origin/main
+```
+
+Nếu checkout có sửa đổi chưa commit, đối chiếu trước khi cập nhật. Có thể lưu bản vá các file đã tracked bằng lệnh sau; file untracked, `.env` và media không được sao lưu bằng lệnh này:
+
+```bash
+git diff HEAD --binary --output="$HOME/flashcard-local-$(date +%Y%m%d-%H%M%S).patch"
+```
+
+Giữ bản vá riêng trên server vì nó có thể chứa cấu hình nhạy cảm. Nếu thay đổi trên GitHub chồng lên sửa đổi local, dừng để hợp nhất; không dùng reset/checkout để bỏ sửa đổi server.
+
+Khi đã xác nhận cập nhật chỉ liên quan giao diện/tài liệu và không xung đột:
+
+```bash
+git merge --ff-only origin/main
+pnpm install --frozen-lockfile
+VITE_API_URL=https://cardify.io.vn/api pnpm build
+```
+
+Build toàn workspace để cập nhật cả package dùng chung. Chỉ khi build thành công mới sao lưu giao diện đang chạy và publish:
+
+```bash
+sudo cp -a /var/www/cardify "/var/www/cardify-backup-$(date +%Y%m%d-%H%M%S)"
+sudo cp -a apps/web/dist/. /var/www/cardify/
+```
+
+Đây là quy trình thủ công đơn giản, copy chưa có tính nguyên tử. Giữ asset cũ giúp các tab đang mở còn tải được file của bản trước; theo dõi dung lượng các bản backup. Bản chỉ đổi giao diện không cần migration hay restart API. Nếu có thay đổi API/schema/dependency ảnh hưởng server, cần quy trình riêng: backup dữ liệu, build release, migration tương thích, restart và kiểm tra readiness. Chưa áp dụng tự động quy trình đó ở đây.
+
+### Kiểm tra sau publish và xử lý sự cố
+
+```bash
+git rev-parse --short HEAD
+git rev-parse --short origin/main
+diff -qr apps/web/dist /var/www/cardify
+curl -I -H "Host: cardify.io.vn" http://127.0.0.1/
+curl -i --fail --show-error --max-time 30 https://cardify.io.vn/api/health/ready
+```
+
+Hai commit bằng nhau chứng minh checkout khớp lần fetch gần nhất. `diff` không báo khác biệt chứng minh file build khớp file phục vụ; các dòng `Only in /var/www/cardify/assets` có thể là asset cũ được giữ lại. HTTP 200 của trang chủ chưa đủ chứng minh đúng phiên bản hoặc database sẵn sàng. Kiểm tra readiness và thao tác giao diện mới trên trình duyệt, thử cửa sổ ẩn danh khi nghi cache/PWA.
+
+- `Could not resolve host`: kiểm tra `getent hosts cardify.io.vn`, DNS và nameserver. Tunnel Active không đảm bảo hostname đã có DNS đúng.
+- `Welcome to nginx!`: kiểm tra site được enable, `server_name`, web root và Host header.
+- `Cannot GET /` từ API: kiểm tra Tunnel có đang trỏ nhầm cổng `3000` thay vì Nginx `80`.
+- API không kết nối được: xem `sudo journalctl -u flashcard-api -n 50 --no-pager`; che thông tin nhạy cảm trước khi chia sẻ log.
+- Tunnel lỗi: xem `sudo journalctl -u cloudflared -n 50 --no-pager` và trạng thái connector trên Cloudflare.
+
+Backup SQL Server không chứa file media local hay server-level SQL login. Khi chuyển máy hoặc phục hồi, phải kiểm tra thêm login, `.env` và thư mục media thực tế theo `MEDIA_LOCAL_PATH`; `src/media` và `dist/media` là code, không phải file người dùng upload.
+
+## Lộ trình DevOps
+
+Mục tiêu là chuyển từ deploy thủ công đã kiểm tra sang `push main → CI thành công → deploy đúng commit → readiness đạt`. Các mục sau là kế hoạch, chưa phải tính năng vận hành đã hoàn tất.
+
+| Bước | Việc dự kiến | Tiêu chí thực hành hoàn thành |
+| --- | --- | --- |
+| 1. CI/CD | Đưa sửa đổi riêng trên Ubuntu về Git; viết script deploy có dừng khi lỗi, khóa chạy đồng thời, ghi commit và chờ readiness; nối CD sau CI | Một commit vượt CI được deploy đúng phiên bản; commit lỗi không được publish |
+| 2. Staging/production | Tách cấu hình, hostname, database và media; thử release trên staging trước | Kiểm thử không tác động dữ liệu production |
+| 3. Backup database | Backup trước migration, lưu bản ngoài máy chủ, đặt thời gian lưu và kiểm tra phục hồi | Restore thành công vào database thử nghiệm; biết dữ liệu có thể mất bao lâu |
+| 4. Rollback | Build vào thư mục release riêng, chuyển bản phục vụ và giữ release cũ; thiết kế migration tương thích | Health check lỗi có thể quay lại release trước; hiểu rollback code không tự hoàn tác database |
+| 5. Secret và quyền | Tài khoản deploy riêng, quyền restart giới hạn, credential theo môi trường, xoay token đã lộ | Không có secret trong Git/log; job chỉ có quyền cần dùng |
+| 6. Log và monitoring | Theo dõi uptime, readiness, lỗi API, CPU/RAM/disk và tuổi backup; thêm cảnh báo | Chủ động phát hiện service chết, đầy đĩa hoặc backup thất bại |
+| 7. Docker Compose | Đóng gói API/web, quản lý network, volume, health check và phiên bản image | Khởi tạo lại môi trường từ tài liệu, giữ được database/media qua lần thay container |
+| 8. Infrastructure as Code | Học Terraform cho hạ tầng phù hợp; thực hành Kubernetes ở môi trường thử nghiệm khi đã vững nền tảng | Giải thích và tái tạo được hạ tầng; Kubernetes chưa là điều kiện để vận hành dự án này |
+
+Hướng CD đang cân nhắc là self-hosted runner trên Ubuntu vì IP LAN không truy cập trực tiếp từ GitHub-hosted runner. Trước khi cài cần kiểm tra repository public/private và giới hạn job production vào code tin cậy trên `main`; không chạy mã pull request không tin cậy trên máy chứa dữ liệu production. GitHub khuyến nghị self-hosted runner cho repository private. Runner và quyền deploy chưa được thiết lập bởi tài liệu này.
+
+Mỗi bước nên ghi lại lý do cấu hình, lỗi đã gặp, cách chẩn đoán và cách khôi phục trong runbook. Tài liệu tham khảo: [Cloudflare Tunnel routing](https://developers.cloudflare.com/tunnel/routing/), [GitHub self-hosted runner](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/add-runners).
 
 ## Migration và dữ liệu
 

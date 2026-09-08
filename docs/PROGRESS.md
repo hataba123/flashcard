@@ -671,6 +671,13 @@
 - Đã thực hiện: thêm tick ngắn mỗi giây, chuỗi âm báo khi chu kỳ kết thúc, cơ chế mở quyền Web Audio từ thao tác bắt đầu timer và công tắc bật/tắt âm thanh được lưu trên thiết bị.
 - Kiểm tra: `pnpm --filter @flashcard/web typecheck`, `pnpm --filter @flashcard/web test`, `pnpm lint`, `pnpm build` và `git diff --check` đều đạt.
 
+## Cập nhật tài liệu — Deploy Ubuntu và lộ trình DevOps (2026-09-08)
+
+- Trạng thái: Hoàn thành tài liệu; CD tự động vẫn là kế hoạch.
+- Đã bổ sung README: kiến trúc domain `cardify.io.vn` qua Cloudflare Tunnel/Nginx, cấu hình Ubuntu hiện tại, cập nhật thủ công giao diện, bảo toàn sửa đổi server, kiểm tra phiên bản và chẩn đoán sự cố.
+- Kế hoạch: CI/CD, staging, backup/restore, rollback, secret/quyền deploy, monitoring, Docker Compose và Infrastructure as Code.
+- Phạm vi kiểm tra: rà soát tài liệu và `git diff --check`; không chạy build/test ứng dụng hoặc deploy Ubuntu vì chỉ thay đổi Markdown.
+
 ## Milestone 47 — Vá lỗi nanoid trong dependency
 
 - Trạng thái: Hoàn thành.
