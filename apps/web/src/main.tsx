@@ -608,6 +608,10 @@ function Shell({ children, focus = false }: { children: ReactNode; focus?: boole
                     {syncLabel}
                   </span>
                 </div>
+                <div className="account-menu-theme-row">
+                  <span className="account-label">Giao diện</span>
+                  <ThemeToggle compact />
+                </div>
                 {transferNotice !== null && (
                   <span
                     className={`account-transfer-notice ${transferNotice.tone}`}
