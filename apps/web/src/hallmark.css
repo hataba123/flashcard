@@ -2832,16 +2832,26 @@ audio {
   .weakness-header {
     align-items: stretch;
     flex-direction: column;
+    gap: var(--space-sm);
   }
 
   .diagnostic-tabs {
-    align-self: flex-start;
+    align-self: stretch;
+    display: flex;
+    width: 100%;
+  }
+
+  .diagnostic-tabs button {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
   }
 
   .diagnostic-baseline {
     align-items: flex-start;
     flex-direction: column;
     gap: var(--space-2xs);
+    width: 100%;
   }
 
   .diagnostic-baseline > span {
@@ -3939,11 +3949,16 @@ audio {
   }
 
   .dashboard-activity-chart {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    grid-template-columns: repeat(14, minmax(2.1rem, 1fr));
     gap: var(--space-3xs);
+    padding-block-end: var(--space-2xs);
+    scrollbar-width: thin;
   }
 
   .dashboard-activity-value {
-    font-size: 0.6rem;
+    font-size: 0.65rem;
   }
 
   .dashboard-activity-footer {
@@ -3968,17 +3983,35 @@ audio {
 }
 
 @media (max-width: 30rem) {
+  .dashboard-hero-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    width: 100%;
+  }
+
+  .dashboard-hero-actions .button {
+    width: 100%;
+    justify-content: center;
+  }
+
   .dashboard-stat-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .dashboard-today-card {
-    min-height: 17rem;
+    min-height: auto;
+    padding: var(--space-md);
   }
 
   .dashboard-retention-layout {
     grid-template-columns: minmax(0, 1fr);
-    justify-items: start;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .dashboard-retention-list {
+    width: 100%;
   }
 }
 
